@@ -1,0 +1,342 @@
+{
+  "benchmark_version": "1.0",
+  "model": "current",
+  "timestamp": "2026-03-11T06:10:37.915978+00:00",
+  "duration_seconds": 0.13,
+  "total_score": 21.0,
+  "max_score": 35.0,
+  "r0_tier1_total": 19.5,
+  "r0_tier2_total": 29.5,
+  "dims_above_tier2": 0,
+  "qualifies_r1": false,
+  "dimensions": {
+    "SIG": {
+      "score": 1.0,
+      "raw_ratio": 0.214,
+      "tests_passed": 1,
+      "tests_total": 7,
+      "tests": [
+        {
+          "test": "sa_parsing_basic",
+          "dimension": "SIG",
+          "score": 1.0,
+          "max_score": 1.0,
+          "passed": true,
+          "detail": "SA(c,p,a,t) parses correctly"
+        },
+        {
+          "test": "wildcard_detection",
+          "dimension": "SIG",
+          "score": 0.0,
+          "max_score": 1.0,
+          "passed": false,
+          "detail": "cannot import name 'get_wildcards' from 'events_api.coordinate_system' (/sessions/gracious-compassionate-newton/mnt/polity/services/reflect-api/events_api/coordinate_system.py)"
+        },
+        {
+          "test": "keyword_emotion_detection",
+          "dimension": "SIG",
+          "score": 0.0,
+          "max_score": 1.0,
+          "passed": false,
+          "detail": "'SignalGenerator' object has no attribute '_generate_signals_keyword'"
+        },
+        {
+          "test": "multi_emotion_detection",
+          "dimension": "SIG",
+          "score": 0.0,
+          "max_score": 1.0,
+          "passed": false,
+          "detail": "'SignalGenerator' object has no attribute '_generate_signals_keyword'"
+        },
+        {
+          "test": "observation_bias_structure",
+          "dimension": "SIG",
+          "score": 0.0,
+          "max_score": 1.0,
+          "passed": false,
+          "detail": "Found 0/4 bias types in source"
+        },
+        {
+          "test": "embedding_quality",
+          "dimension": "SIG",
+          "score": 0.0,
+          "max_score": 1.0,
+          "passed": false,
+          "detail": "'SignalGenerator' object has no attribute 'compute_embedding'"
+        },
+        {
+          "test": "emotion_vocabulary",
+          "dimension": "SIG",
+          "score": 0.5,
+          "max_score": 1.0,
+          "passed": false,
+          "detail": "Emotion set exists but not importable as constant"
+        }
+      ]
+    },
+    "CLU": {
+      "score": 3.0,
+      "raw_ratio": 0.6,
+      "tests_passed": 2,
+      "tests_total": 5,
+      "tests": [
+        {
+          "test": "cluster_types_defined",
+          "dimension": "CLU",
+          "score": 0.5,
+          "max_score": 1.0,
+          "passed": false,
+          "detail": "Found 5 cluster type references"
+        },
+        {
+          "test": "strength_computation",
+          "dimension": "CLU",
+          "score": 0.5,
+          "max_score": 1.0,
+          "passed": false,
+          "detail": "strength=True, density=False, recency=True"
+        },
+        {
+          "test": "trajectory_tracking",
+          "dimension": "CLU",
+          "score": 1.0,
+          "max_score": 1.0,
+          "passed": true,
+          "detail": "trajectory=True, history=True"
+        },
+        {
+          "test": "dissolution_logic",
+          "dimension": "CLU",
+          "score": 1.0,
+          "max_score": 1.0,
+          "passed": true,
+          "detail": "dissolve=True, threshold=False, status=True"
+        },
+        {
+          "test": "coordinate_overlap",
+          "dimension": "CLU",
+          "score": 0.0,
+          "max_score": 1.0,
+          "passed": false,
+          "detail": "cannot import name 'compare_coordinates' from 'events_api.coordinate_system' (/sessions/gracious-compassionate-newton/mnt/polity/services/reflect-api/events_api/coordinate_system.py)"
+        }
+      ]
+    },
+    "CTX": {
+      "score": 1.0,
+      "raw_ratio": 0.25,
+      "tests_passed": 1,
+      "tests_total": 4,
+      "tests": [
+        {
+          "test": "entity_extraction",
+          "dimension": "CTX",
+          "score": 0.0,
+          "max_score": 1.0,
+          "passed": false,
+          "detail": "cannot import name 'extract_entities' from 'events_api.context_assembly' (/sessions/gracious-compassionate-newton/mnt/polity/services/reflect-api/events_api/context_assembly.py)"
+        },
+        {
+          "test": "graph_enrichment",
+          "dimension": "CTX",
+          "score": 0.0,
+          "max_score": 1.0,
+          "passed": false,
+          "detail": "Not functional: cannot import name 'enrich_from_graph' from 'events_api.context_assembly' (/sessions/gracious-compassionate-newton/mnt/polity/services/reflect-api/events_api/context_assembly.py)"
+        },
+        {
+          "test": "token_budget",
+          "dimension": "CTX",
+          "score": 1.0,
+          "max_score": 1.0,
+          "passed": true,
+          "detail": "budget=True, compress=True"
+        },
+        {
+          "test": "context_packet_assembly",
+          "dimension": "CTX",
+          "score": 0.0,
+          "max_score": 1.0,
+          "passed": false,
+          "detail": "assemble_context() got an unexpected keyword argument 'message'"
+        }
+      ]
+    },
+    "CONV": {
+      "score": 4.0,
+      "raw_ratio": 0.75,
+      "tests_passed": 3,
+      "tests_total": 4,
+      "tests": [
+        {
+          "test": "pipeline_exists",
+          "dimension": "CONV",
+          "score": 1.0,
+          "max_score": 1.0,
+          "passed": true,
+          "detail": "run=True, build_prompt_context=True"
+        },
+        {
+          "test": "graph_informs_llm",
+          "dimension": "CONV",
+          "score": 0.0,
+          "max_score": 1.0,
+          "passed": false,
+          "detail": "cannot import name 'enrich_from_graph' from 'events_api.context_assembly' (/sessions/gracious-compassionate-newton/mnt/polity/services/reflect-api/events_api/context_assembly.py)"
+        },
+        {
+          "test": "persona_modifier_injected",
+          "dimension": "CONV",
+          "score": 1.0,
+          "max_score": 1.0,
+          "passed": true,
+          "detail": "persona_ref=True, modifier=True"
+        },
+        {
+          "test": "post_response_signals",
+          "dimension": "CONV",
+          "score": 1.0,
+          "max_score": 1.0,
+          "passed": true,
+          "detail": "SignalGenerator=True"
+        }
+      ]
+    },
+    "GRAPH": {
+      "score": 4.5,
+      "raw_ratio": 0.9,
+      "tests_passed": 4,
+      "tests_total": 5,
+      "tests": [
+        {
+          "test": "core_node_types",
+          "dimension": "GRAPH",
+          "score": 1.0,
+          "max_score": 1.0,
+          "passed": true,
+          "detail": "Found 9/9 core node types"
+        },
+        {
+          "test": "advanced_node_types",
+          "dimension": "GRAPH",
+          "score": 0.5,
+          "max_score": 1.0,
+          "passed": false,
+          "detail": "Found 2/4 advanced node types"
+        },
+        {
+          "test": "relationship_types",
+          "dimension": "GRAPH",
+          "score": 1.0,
+          "max_score": 1.0,
+          "passed": true,
+          "detail": "Found 9/10 relationship types"
+        },
+        {
+          "test": "graph_write_pipeline",
+          "dimension": "GRAPH",
+          "score": 1.0,
+          "max_score": 1.0,
+          "passed": true,
+          "detail": "write_live_conversation_to_graph importable"
+        },
+        {
+          "test": "pipeline_trace",
+          "dimension": "GRAPH",
+          "score": 1.0,
+          "max_score": 1.0,
+          "passed": true,
+          "detail": "PipelineTrace recording: True"
+        }
+      ]
+    },
+    "AUTO": {
+      "score": 3.5,
+      "raw_ratio": 0.7,
+      "tests_passed": 3,
+      "tests_total": 5,
+      "tests": [
+        {
+          "test": "detection_cycle",
+          "dimension": "AUTO",
+          "score": 0.5,
+          "max_score": 1.0,
+          "passed": false,
+          "detail": "run_detection_cycle=True, run_continuous=False"
+        },
+        {
+          "test": "pending_insight_generation",
+          "dimension": "AUTO",
+          "score": 1.0,
+          "max_score": 1.0,
+          "passed": true,
+          "detail": "PendingInsight=True, creation=True"
+        },
+        {
+          "test": "stale_pruning",
+          "dimension": "AUTO",
+          "score": 1.0,
+          "max_score": 1.0,
+          "passed": true,
+          "detail": "pruning=True, expiry_config=True"
+        },
+        {
+          "test": "no_llm_in_agent",
+          "dimension": "AUTO",
+          "score": 1.0,
+          "max_score": 1.0,
+          "passed": true,
+          "detail": "LLM-free agent: True"
+        },
+        {
+          "test": "embedding_backfill",
+          "dimension": "AUTO",
+          "score": 0.0,
+          "max_score": 1.0,
+          "passed": false,
+          "detail": "embedding_backfill=False"
+        }
+      ]
+    },
+    "PERS": {
+      "score": 4.0,
+      "raw_ratio": 0.75,
+      "tests_passed": 3,
+      "tests_total": 4,
+      "tests": [
+        {
+          "test": "personas_defined",
+          "dimension": "PERS",
+          "score": 1.0,
+          "max_score": 1.0,
+          "passed": true,
+          "detail": "Found personas: {'direct_challenger', 'neutral_observer', 'gentle_explorer'}"
+        },
+        {
+          "test": "threshold_values",
+          "dimension": "PERS",
+          "score": 1.0,
+          "max_score": 1.0,
+          "passed": true,
+          "detail": "Found 4/5 threshold parameters"
+        },
+        {
+          "test": "thresholds_filter_context",
+          "dimension": "PERS",
+          "score": 0.0,
+          "max_score": 1.0,
+          "passed": false,
+          "detail": "cannot import name 'enrich_from_graph' from 'events_api.context_assembly' (/sessions/gracious-compassionate-newton/mnt/polity/services/reflect-api/events_api/context_assembly.py)"
+        },
+        {
+          "test": "prompt_modifier_injection",
+          "dimension": "PERS",
+          "score": 1.0,
+          "max_score": 1.0,
+          "passed": true,
+          "detail": "build_system_prompt=True, modifier=True"
+        }
+      ]
+    }
+  }
+}

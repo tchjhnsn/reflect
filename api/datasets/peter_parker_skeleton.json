@@ -1,0 +1,3645 @@
+{
+  "character": {
+    "name": "PETER",
+    "source_work": "Spider-Man (2002)",
+    "description": "A shy, intelligent high school student who gains spider powers after being bitten by a genetically modified spider. Struggles with identity, responsibility, and the tension between his ordinary life and his role as Spider-Man."
+  },
+  "psychology": {
+    "core_motivations": [],
+    "core_fears": [],
+    "defense_patterns": [],
+    "identity_conflicts": [],
+    "attachment_style": null,
+    "emotional_baseline": null
+  },
+  "relationships": {},
+  "scenes": [
+    {
+      "scene_number": 1,
+      "slugline": "EXT.  A BACK ALLEY - DAY",
+      "location": "A BACK ALLEY",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "FLASH",
+        "M.J.",
+        "MARY JANE",
+        "PETER",
+        "SPIDER-MAN"
+      ],
+      "witnesses": [
+        "MARY JANE",
+        "SPIDER-MAN"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "PETER",
+          "text": "Look, I'm going to warn you right up front. If somebody told you this was a happy story, if somebody said I was just your average, ordinary seventeen year old, not a care in the world...",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "FLASH",
+          "text": "You do NOT talk to her! How many times I gotta tell you that? Do you listen when I talk? Hey! I asked you a question! Do you LISTEN when I'm talking to you?!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "PETER",
+          "text": "Huh? Sorry, I wasn't listening.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "FLASH",
+          "text": "Next time you're gonna pay, puny Parker, you are gonna pay.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 5,
+          "speaker": "PETER",
+          "text": "Will a credit card be okay?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 6,
+          "speaker": "M.J.",
+          "text": "What kind of man-",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 7,
+          "speaker": "PETER",
+          "text": "Look, I know you mean that in a good way...",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 8,
+          "speaker": "M.J.",
+          "text": "Leave him alone, Flash.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 9,
+          "speaker": "PETER",
+          "text": "Thanks, M.J.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 10,
+          "speaker": "M.J.",
+          "text": "Huh?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 11,
+          "speaker": "PETER",
+          "text": "That's what I was trying to say on the bus, I live right next door to you. And I'm in your biology class.",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "The screen is filled by the face of PETER PARKER, a seventeen year old boy. High school must not be any fun for Peter, he's one hundred percent nerd- skinny, zitty, glasses. His face is just frozen there, a cringing expression on it, which strikes us odd until we realize the image is freeze framed. The image un-freezes. A FIST, at the end of a right hook, comes into frame and punches poor Peter. His head snaps back and bounces forward, his eyes roll. PETER (V.O.) (cont'd) ...somebody lied.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 2,
+      "slugline": "EXT.  COLUMBIA UNIVERSITY - DAY",
+      "location": "COLUMBIA UNIVERSITY",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "DRIVER",
+        "HARRY",
+        "M.J.",
+        "NORMAN",
+        "OSBORN",
+        "PETER",
+        "STUDENT",
+        "TEACHER",
+        "TOUR GUIDE"
+      ],
+      "witnesses": [
+        "NORMAN"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "TEACHER",
+          "text": "People, please, no wandering! If you are a Midtown High School student on the field trip, I need you in the building now!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "PETER",
+          "text": "This class. Our class. I'm Peter.",
+          "parenthetical": "no recognition"
+        },
+        {
+          "turn_number": 3,
+          "speaker": "M.J.",
+          "text": "(I've never seen you before in my life) Oh yeah! Well, you better get away from me. Flash has a real temper, and I might not be there to save your butt next time.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "PETER",
+          "text": "I was doing fine.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 5,
+          "speaker": "M.J.",
+          "text": "Sure you were, Tiger.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 6,
+          "speaker": "HARRY",
+          "text": "Anything wrong, Dad? You hardly said a word all the way from the house.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 7,
+          "speaker": "OSBORN",
+          "text": "You'll have to get dinner yourself tonight, I need to work.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 8,
+          "speaker": "HARRY",
+          "text": "They say if you talk about something that worries you, you take away its power.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 9,
+          "speaker": "OSBORN",
+          "text": "I was under the impression you asked me to give you a lift, not deliver a speech on the way.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 10,
+          "speaker": "HARRY",
+          "text": "Sorry.",
+          "parenthetical": "stung"
+        },
+        {
+          "turn_number": 11,
+          "speaker": "OSBORN",
+          "text": "John? Would you mind?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 12,
+          "speaker": "DRIVER",
+          "text": "Not at all, sir.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 13,
+          "speaker": "STUDENT",
+          "text": "Osborn. Gotta be Osborn.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 14,
+          "speaker": "OSBORN",
+          "text": "I don't appreciate the amateur psychoanalysis. Maybe you should stop seeing Dr. Hirsch, you're starting to think you've got his degree.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 15,
+          "speaker": "HARRY",
+          "text": "Is it the company? If there's a problem, you could tell me about it. Is there?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 16,
+          "speaker": "OSBORN",
+          "text": "Considering OsCorp's market capitalization just exceeded the gross national product of Spain, the answer to your question is no, there's nothing wrong at the company.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 17,
+          "speaker": "HARRY",
+          "text": "Then what?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 18,
+          "speaker": "OSBORN",
+          "text": "How many private academies have you been kicked out of? Has it sunk in for you that you're now attending a public school? Are you aware of the ramifications of that?",
+          "parenthetical": "Harry looks away"
+        },
+        {
+          "turn_number": 19,
+          "speaker": "HARRY",
+          "text": "I like it better.",
+          "parenthetical": "feebly"
+        },
+        {
+          "turn_number": 20,
+          "speaker": "OSBORN",
+          "text": "One day you will inherit OsCorp. One day you will run my company. My grandfather's company. Since you asked, Harry, that's what worries me. In fact, it terrifies me.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 21,
+          "speaker": "HARRY",
+          "text": "What are you looking at?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 22,
+          "speaker": "TOUR GUIDE",
+          "text": "There are more than 32,000 species of spider in the world.",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "-they're in Manhattan, in front of an impressive old building on the Columbia campus. A yellow school bus is parked at the curb; a bunch of HIGH SCHOOL STUDENTS scurry like insects up the marble steps. A stressed out TEACHER with a clipboard is next to the bus. She reaches out, wipes a bit of blood from his lower lip. Slowly. She smiles. She disappears into the crowd. Peter sighs, and sits at the edge of a fountain, starts cleaning himself off. He watches her walk away. She owns his heart. Ours too. We go with M.J. as she heads into the building. She passes a Town",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 3,
+      "slugline": "INT.  COLUMBIA GENETIC RESEARCH INSTITUTE - DAY",
+      "location": "COLUMBIA GENETIC RESEARCH INSTITUTE",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "FLASH",
+        "HARRY",
+        "M.J.",
+        "OSBORN",
+        "PETER",
+        "POPULAR KID",
+        "STUDENT",
+        "TOUR GUIDE"
+      ],
+      "witnesses": [
+        "OSBORN",
+        "STUDENT"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "TOUR GUIDE",
+          "text": "They are in the order Aranae, which is divided into three sub-orders- Mesothelea, Orthognatha, and Labidognatha. All spiders are carnivorous, ravenous eaters who feed on massive quantities of protein, in liquid form, usually the juices of their prey. Arachnids from each of the three groups possess varying strengths which help them in their constant search for food.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "M.J.",
+          "text": "I love spiders.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "FLASH",
+          "text": "I step on them.",
+          "parenthetical": "shudders"
+        },
+        {
+          "turn_number": 4,
+          "speaker": "TOUR GUIDE",
+          "text": "The crab spider- family Thomisidae, genus Misumena- spins no web to catch its prey, but hunts instead, using a set of reflexes with nerve conduction velocities so fast some researchers believe it almost borders on precognition, an early awareness of danger, a \"spider sense.\"",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 5,
+          "speaker": "PETER",
+          "text": "For the school paper?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 6,
+          "speaker": "HARRY",
+          "text": "Leave him alone.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 7,
+          "speaker": "POPULAR KID",
+          "text": "Or what?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 8,
+          "speaker": "HARRY",
+          "text": "Or my father will fire your father.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 9,
+          "speaker": "TOUR GUIDE",
+          "text": "Over five painstaking years, Columbia's genetic research facility has fully mapped the genetic codes of each of these spiders.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 10,
+          "speaker": "TOUR GUIDE",
+          "text": "Armed with these DNA blueprints, we have now begun what was once thought impossible- inter-species genetic transmutation.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 11,
+          "speaker": "TOUR GUIDE",
+          "text": "This is the Recombination Lab, where we use synthesized transfer-RNA to encode an entirely new genome, combining genetic information from all three spiders into these ten genetically-designed super-spiders, the first mankind has ever produced.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 12,
+          "speaker": "M.J.",
+          "text": "Disgusting.",
+          "parenthetical": "wide-eyed, loving it"
+        },
+        {
+          "turn_number": 13,
+          "speaker": "TOUR GUIDE",
+          "text": "Just imagine- if one day we can isolate the strengths, powers and immunities in human beings and transfer that DNA code among ourselves. All known disease could be wiped out. Of course, we're nowhere near ready to start experimenting with humans, nor do we know that we ever should. So for the moment we're concentrating on these ten spiders. Any questions?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 14,
+          "speaker": "PETER",
+          "text": "Nine.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 15,
+          "speaker": "TOUR GUIDE",
+          "text": "I beg your pardon?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 16,
+          "speaker": "PETER",
+          "text": "I only count nine spiders.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 17,
+          "speaker": "TOUR GUIDE",
+          "text": "No, there's ten. Aren't there?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 18,
+          "speaker": "PETER",
+          "text": "Can I take your picture? I need one with a student in it.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 19,
+          "speaker": "M.J.",
+          "text": "That's what my agent tells me.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 20,
+          "speaker": "PETER",
+          "text": "Ow!!!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 21,
+          "speaker": "M.J.",
+          "text": "I gotta go.",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "Thirty-odd students are lead around a cavernous laboratory by a TOUR GUIDE. They pass a number of large spider exhibits. Peter, who wears a 35MM camera around his neck, keeps his eye on M.J. She's with Flash Thompson again, his arm draped possessively over her shoulder. Peter winces and turns away, back to the tour. Hurts to look. The Guide points out a specific group of spiders in a glass-walled tank. TOUR GUIDE (cont'd) For example, the jumping spider-",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 4,
+      "slugline": "EXT.  GENETIC RESEARCH INSTITUTE - NIGHT",
+      "location": "GENETIC RESEARCH INSTITUTE",
+      "time_of_day": "NIGHT",
+      "characters_present": [
+        "PETER",
+        "STUDENT"
+      ],
+      "witnesses": [
+        "PETER",
+        "STUDENT"
+      ],
+      "dialogue_turns": [],
+      "action_summary": "Night has fallen, and the city has a different character, more ominous, sirens WAILING nearby. The group of students comes out of the Columbia building and pours down the stairs toward the waiting bus. Peter straggles along at the rear of the group. He stumbles and puts a hand to his head. Feeling strange.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 5,
+      "slugline": "INT.  BUS - NIGHT",
+      "location": "BUS",
+      "time_of_day": "NIGHT",
+      "characters_present": [
+        "FLASH",
+        "M.J.",
+        "PETER"
+      ],
+      "witnesses": [
+        "FLASH",
+        "M.J.",
+        "PETER"
+      ],
+      "dialogue_turns": [],
+      "action_summary": "The bus rolls through the city. In the very back seat, M.J. is making out with Flash. A few raucous rows up, Peter is alone, covered in sweat and pale as a ghost. Rubbing his hand, he notices it has turned red and blotchy where the spider bit him. He touches his wrists gently- they seem to cause him great pain. What the hell?",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 6,
+      "slugline": "INT.  PARKER HOUSE - LIVING ROOM - NIGHT",
+      "location": "PARKER HOUSE - LIVING ROOM",
+      "time_of_day": "NIGHT",
+      "characters_present": [
+        "ANNOUNCER",
+        "AUNT MAY",
+        "PETER",
+        "UNCLE BEN"
+      ],
+      "witnesses": [],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "ANNOUNCER",
+          "text": "-three thousand dollars, one thousand per minute in the ring, payable ONLY if you survive the full one hundred and eighty seconds!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "UNCLE BEN",
+          "text": "Hey, Pete. Take a look at the act this joker cooked up. Calls himself Bone Saw McGraw.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "PETER",
+          "text": "...don't feel well...",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "UNCLE BEN",
+          "text": "What?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 5,
+          "speaker": "AUNT MAY",
+          "text": "Hello, dear, how was the field trip. I saved a nice plate for you in the oven, we had pot roast with-",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 6,
+          "speaker": "PETER",
+          "text": "...not hungry...",
+          "parenthetical": "heading upstairs"
+        },
+        {
+          "turn_number": 7,
+          "speaker": "AUNT MAY",
+          "text": "Where are you going?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 8,
+          "speaker": "PETER",
+          "text": "...gotta sleep... everything's fine...",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 9,
+          "speaker": "AUNT MAY",
+          "text": "Is he alright? Does he have the flu?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 10,
+          "speaker": "UNCLE BEN",
+          "text": "He's seventeen.",
+          "parenthetical": "waves it off"
+        },
+        {
+          "turn_number": 11,
+          "speaker": "AUNT MAY",
+          "text": "He's depressed.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 12,
+          "speaker": "UNCLE BEN",
+          "text": "He's seventeen.",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "On TV, professional wrestlers go at it. BEN PARKER, a kindly man in his early sixties, watches from a Barcolounger in the living room of a modest two-story home. On the television, an ANNOUNCER is terribly excited. The front door opens and Peter staggers in. MAY PARKER, a frail woman the same age as Ben, appears in the doorway from the kitchen. Both of them seem way too old to be Peter's parents. His bedroom door SLAMS. She heads for the stairs, but Uncle Ben takes her arm and stops",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 7,
+      "slugline": "INT.  PETER'S BEDROOM - NIGHT",
+      "location": "PETER'S BEDROOM",
+      "time_of_day": "NIGHT",
+      "characters_present": [
+        "PETER"
+      ],
+      "witnesses": [],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "PETER",
+          "text": "Help.....",
+          "parenthetical": "gasping"
+        }
+      ],
+      "action_summary": "Peter drops to his knees in his bedroom and clutches his abdomen in pain. He falls to the floor, writhing in agony. He looks at the hand the spider bit, which is now completely red and swollen. He touches his wrists again, but yanks his fingers away. They are intensely sensitive. Now drenched in sweat, he begins to shake uncontrollably with chills. He manages to paw one hand up to the bed, rip the blanket and sheets off it, and drags them down over him. He huddles under them, trembling violently, face pale, eyes black and sunken, teeth",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 8,
+      "slugline": "INT.  PETER'S BEDROOM - DAY",
+      "location": "PETER'S BEDROOM",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "AUNT MAY",
+        "PETER"
+      ],
+      "witnesses": [],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "AUNT MAY",
+          "text": "Peter? Are you alright?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "PETER",
+          "text": "Fine! I'm fine. Just having... had a bad dream.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "AUNT MAY",
+          "text": "You must be starving, you ran right past your dinner last night, so I made an enormous breakfast. How's your flu? Any better this morning?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "PETER",
+          "text": "Change! Yes! Big... change!",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "Peter wakes up, morning sunlight streaming through his window. He blinks a few times, horrified by his dream. He hasn't moved from the position he collapsed into on the floor. But as he orients himself, he seems to feel better. Carefully he stretches his legs, takes a few deep breaths. Definitely feels better. Relieved, he throws aside the blanket and sheets- -and GASPS. A sticky white mass is all over him and the sheets, some kind of silky substance. Grossed out, Peter struggles to peel the sheets off and free himself from the gluey strands. As he",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 9,
+      "slugline": "INT.  BATHROOM - DAY",
+      "location": "BATHROOM",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "PETER"
+      ],
+      "witnesses": [],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "PETER",
+          "text": "Hey.",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "Peter comes into the bathroom and turns on the shower. He strips off his tee-shirt and does a double-take in the mirror. His chest, so underdeveloped yesterday, is now that of a Greek god. Nothing overdone, not a body builder's chest, but a perfect one. He checks out his arms, his calves, his thighs. Incredible. Puny Parker no more. He studies himself in the mirror. Notices something else different. He picks up his glasses from the counter top and puts them on. He squints, everything's fuzzy now. He takes them off and it's 20/20.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 10,
+      "slugline": "INT.  KITCHEN - DAY",
+      "location": "KITCHEN",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "AUNT MAY",
+        "PETER",
+        "UNCLE BEN"
+      ],
+      "witnesses": [],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "PETER",
+          "text": "\"...massive quantities of protein... natural juices of their prey...\"",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "AUNT MAY",
+          "text": "Everything okay?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "PETER",
+          "text": "Uh huh.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "UNCLE BEN",
+          "text": "Something you want to tell us?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 5,
+          "speaker": "PETER",
+          "text": "Nope!",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "The front door of the refrigerator is yanked open, hard, and Peter starts rummaging through the stuff inside, mumbling to himself. Aunt May and Uncle Ben look at each other, then back at him. Peter turns, gnawing on a piece of meat loaf. Peter stops chewing for a second, thinks. How exactly do you word this? Answer- you don't.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 11,
+      "slugline": "EXT.  STREET - DAY",
+      "location": "STREET",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "FLASH",
+        "M.J.",
+        "PETER"
+      ],
+      "witnesses": [
+        "FLASH",
+        "M.J."
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "PETER",
+          "text": "Talk to her, talk to her, talk to her, talk to her...",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "PETER",
+          "text": "Damn!",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "Peter walks to his bus stop, ravenously eating a chunk of leftover steak. He sees M.J., walking down the other side of the street. Feeling emboldened today, he raises a hand and waves. PETER (cont'd) Hi! She smiles, waves back. She stops and says something, but a car driving between them makes it impossible to hear. He cups a hand to his ear, can't hear you. She says it louder, still can't hear her. Curious, Peter steps off the curb- and into the path of a speeding delivery truck. The horn WAILS.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 12,
+      "slugline": "EXT.  BUILDING ROOF - DAY",
+      "location": "BUILDING ROOF",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "PETER"
+      ],
+      "witnesses": [],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "PETER",
+          "text": "Hard to aim...",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "-and lands on the roof of the three story building. Teetering for balance, he reaches out and grabs hold of a drainpipe- -and the metal CRUSHES under his grip. He laughs, giddy, thrilled beyond belief. He grabs another pipe, this one galvanized steel, and squeezes it with the other hand. Same result. Completely freaked out, Peter walks to the edge of the building and looks down, then across at the even taller building across the alley. He looks at his wrists again. He raises his right arm and extends it toward the building, tries to get the goop to spray out. But it",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 13,
+      "slugline": "INT.  MIDTOWN HIGH - CORRIDOR - DAY",
+      "location": "MIDTOWN HIGH - CORRIDOR",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "FLASH",
+        "HARRY",
+        "M.J.",
+        "OSBORN",
+        "PETER",
+        "TEACHER"
+      ],
+      "witnesses": [
+        "OSBORN"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "PETER",
+          "text": "Weird sense... danger...",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "FLASH",
+          "text": "Couldn't keep away from her, could you? You just had to stick your camera in her face.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "PETER",
+          "text": "I don't want to fight you, Flash.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "FLASH",
+          "text": "I wouldn't want to fight me either.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 5,
+          "speaker": "TEACHER",
+          "text": "What the hell is going on out here?!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 6,
+          "speaker": "TEACHER",
+          "text": "Parker? Sure he did.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 7,
+          "speaker": "PETER",
+          "text": "I did! Really!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 8,
+          "speaker": "HARRY",
+          "text": "I'm starting to like the little spazz.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 9,
+          "speaker": "M.J.",
+          "text": "By the way... I know.",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "CLOSE ON Peter's shirtsleeves, which he has pulled down as far as he can to cover his wrists. In fact, he's clutching them with his fingers to keep them down, not taking any chances as he walks down a crowded high school corridor. He reaches his locker and starts dialing a combination. Suddenly his brow furrows, he puts a hand on the back of his neck. We follow his hand and draw close to the back of his neck, very close, so close that we can see the very hairs on the back of his neck as they stand up! Reflexively, he whips around in defense posture, in time to see a",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 14,
+      "slugline": "EXT.  STREET - FOREST HILLS - NIGHT",
+      "location": "STREET - FOREST HILLS",
+      "time_of_day": "NIGHT",
+      "characters_present": [
+        "AUNT MAY",
+        "HARRY",
+        "M.J.",
+        "MARY JANE",
+        "OSBORN",
+        "PETER",
+        "UNCLE BEN"
+      ],
+      "witnesses": [
+        "AUNT MAY",
+        "HARRY",
+        "M.J.",
+        "MARY JANE",
+        "OSBORN"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "UNCLE BEN",
+          "text": "I won't ask what the fight was about, that's your business. You're changing, and that's normal. This is the age when a man becomes the man he's going to be for the rest of his life. All I'm saying is to be careful who you change into. Okay, pal?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "PETER",
+          "text": "I'm trying, Uncle Ben, I am. I feel all this, this- -power, but I don't know what it means, how to control it, even, or what I'm supposed to do with it.",
+          "parenthetical": "choosing words carefully"
+        },
+        {
+          "turn_number": 3,
+          "speaker": "UNCLE BEN",
+          "text": "You'll figure it out. You're one smart cookie, Pete, your teachers tell me they've never seen a science whiz like you at this age. Knowledge is power. But with great power comes great responsibility. Remember that. \"Of those to whom much is given, much is required.\" Much more than hallway fist fights.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "PETER",
+          "text": "Uncle Ben, I think you're about the best father a guy could ever have.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 5,
+          "speaker": "UNCLE BEN",
+          "text": "Uncle, Peter. Uncle. You had a father.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 6,
+          "speaker": "PETER",
+          "text": "What really happened to my parents?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 7,
+          "speaker": "UNCLE BEN",
+          "text": "Here we go again...",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 8,
+          "speaker": "PETER",
+          "text": "They worked for the government, didn't they?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 9,
+          "speaker": "UNCLE BEN",
+          "text": "It was a plane crash, son. Nothing more, and nothing less.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 10,
+          "speaker": "PETER",
+          "text": "I wish there was some way I could help you and Aunt May the way you helped me. Maybe get a job, pay some of the bills while you're laid off. Aunt May's medicine isn't exactly free, I mean, how are we-",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 11,
+          "speaker": "UNCLE BEN",
+          "text": "Paying bills is my job, not yours.",
+          "parenthetical": "gets up"
+        },
+        {
+          "turn_number": 12,
+          "speaker": "PETER",
+          "text": "I just want to help.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 13,
+          "speaker": "UNCLE BEN",
+          "text": "Love you for that, kiddo.",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "An expensive car pulls over, loud MUSIC playing from inside. Harry Osborn at the wheel. A laughing Mary Jane Watson climbs out, to the raucous good-byes of Harry and his friends. Always a party somewhere for M.J. As the car pulls away, a SHOUTED CURSE draws her attention to her house, a lower-middle class home just like Peter's. Through the living room windows, she can see a MAN and WOMAN arguing, plainly visible out here, their voices way too loud. M.J. races up the steps and goes into the house. We linger outside, hear the SHOUTS continue, her voice now adding to them. M.J. pulls",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 15,
+      "slugline": "EXT.  WATSON HOUSE - NIGHT",
+      "location": "WATSON HOUSE",
+      "time_of_day": "NIGHT",
+      "characters_present": [
+        "M.J.",
+        "PETER",
+        "THREE YEAR OLD"
+      ],
+      "witnesses": [
+        "M.J.",
+        "PETER"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "THREE YEAR OLD",
+          "text": "The man crawls up his house.",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "Next door, M.J. is slumped over, head in her lap. Next to her, the Three Year Old watches, still sucking his thumb, as Peter crawls up the side of his house, over the top of his window, then reaches over, upside-down, pulls the window open, and crawls down through it, across the ceiling of his room. He drops onto the floor and pulls the shade. The Three Year Old pulls his thumb from his mouth. The thumb goes back in. M.J. raises her head. She sees nothing unusual. She drops her head in her lap again. If only she'd been looking...",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 16,
+      "slugline": "INT.  PETER'S BEDROOM - NIGHT",
+      "location": "PETER'S BEDROOM",
+      "time_of_day": "NIGHT",
+      "characters_present": [
+        "PETER",
+        "THREE THOUSAND DOLLARS"
+      ],
+      "witnesses": [],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "THREE THOUSAND DOLLARS",
+          "text": "For just three minutes in the ring! Colorful characters a must!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "PETER",
+          "text": "A spider with wings?",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "A newspaper CRINKLES open to a large ad in the sports section. Attention Amateur Wrestlers! Peter's hand RIPS the ad from the paper. AT A DESK, Peter has a sketch pad in front of him and is drawing rapidly, the outline of a human figure and various costume possibilities. He draws a pair of wings on the figure. He scribbles them out. He tries antennae, hates those too, crumples up the page and starts over. He sketches some web-type lines over the face and arms- hey, that",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 17,
+      "slugline": "EXT.  JUNKYARD - DAY",
+      "location": "JUNKYARD",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "PETER"
+      ],
+      "witnesses": [
+        "PETER"
+      ],
+      "dialogue_turns": [],
+      "action_summary": "Peter stands in an abandoned junkyard, experimenting with the spinnerets that have grown in his wrists. He's set up a row of targets of varying sizes about fifty feet away. He tries to hit an old television set. Misses wildly. Tries something larger- a '68 Plymouth Duster. Not even close. Peter is frustrated. Jumping back a ways, we get a look at the whole junkyard. Web strands cover everything, everywhere. He's going to have to figure this out.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 18,
+      "slugline": "INT.  SCHOOL SCIENCE LAB - DAY",
+      "location": "SCHOOL SCIENCE LAB",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "PETER"
+      ],
+      "witnesses": [
+        "PETER"
+      ],
+      "dialogue_turns": [],
+      "action_summary": "Peter hunches over a microscope. He looks both ways, makes sure nobody is watching him, then shoots a little jet of web fluid from his wrist onto a slide and puts it under the microscope.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 19,
+      "slugline": "INT.  PETER'S BEDROOM - NIGHT",
+      "location": "PETER'S BEDROOM",
+      "time_of_day": "NIGHT",
+      "characters_present": [
+        "PETER"
+      ],
+      "witnesses": [
+        "PETER"
+      ],
+      "dialogue_turns": [],
+      "action_summary": "Sparks fly. Peter has dismantled several Zippo lighters, watches, and assorted old jewelry and is silver-soldering them together in a new way. He picks one up, blows on the solder, and puts it around his wrist. It's hinged in the middle, right underneath a small, delicately mounted nozzle that swivels in all directions. Peter closes the wrist-bracelet around his wrist, right over his biological spinnerets.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 20,
+      "slugline": "EXT.  JUNKYARD - DAY",
+      "location": "JUNKYARD",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "PETER"
+      ],
+      "witnesses": [
+        "PETER"
+      ],
+      "dialogue_turns": [],
+      "action_summary": "Back in the junkyard, Peter now wears the bracelets over his wrists. Peter shoots out a web- SPLAT! A direct hit on a Coke can fifty feet away. Peter grins. He shoots another web, SMACKS into a milk container a hundred feet away, pinpoint accuracy. He spins around like a gunslinger, shooting webs in all directions, giddy. One web SMACKS into the side of a car that's been crushed and stacked on top of ten other cars. Peter pulls, forgetting his strength, and the entire tower of wrecked cars begins to tip over toward him. He lunges forward,",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 22,
+      "slugline": "INT.  CAR - DAY",
+      "location": "CAR",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "PETER",
+        "UNCLE BEN"
+      ],
+      "witnesses": [],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "PETER",
+          "text": "You didn't have to drive me, Uncle Ben. The train stops right across from the Library.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "UNCLE BEN",
+          "text": "I thought this'd give us a chance to talk.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "PETER",
+          "text": "We hardly said a word!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "UNCLE BEN",
+          "text": "Who needs words?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 5,
+          "speaker": "PETER",
+          "text": "Thanks. I got it.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 6,
+          "speaker": "UNCLE BEN",
+          "text": "Pick you up on this corner at six o'clock!",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "Uncle Ben is at the wheel, Peter beside him. Peter laughs and shakes his head. Uncle Ben grabs a brown paper bag from the back seat and starts to hand it to Peter, who snatches it away from him anxiously. Peter waves and heads off down the street, walking against the tide of wrestling fans as his uncle pulls back into traffic. Peter watches till the Chevy is gone, then turns around and joins the crowd headed into the arena, just as a deafening ROAR comes over and-",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 23,
+      "slugline": "INT.  ARENA - DAY",
+      "location": "ARENA",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "ANNOUNCER",
+        "BONE SAW",
+        "FLASH",
+        "PETER",
+        "RING ANNOUNCER",
+        "SPIDER-MAN"
+      ],
+      "witnesses": [
+        "ANNOUNCER",
+        "FLASH",
+        "PETER"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "RING ANNOUNCER",
+          "text": "Seventeen seconds?! Seventeen seconds, ladies and gentlemen!! Is there no one who can last three minutes in the cage with Bone Saw McGraw?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "RING ANNOUNCER",
+          "text": "Will the next victim please enter the ring at this time! If he can withstand just three minutes in the cage with Bone Saw McGraw the sum of three thousand dollars will be paid to...",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "SPIDER-MAN",
+          "text": "\"Spider-Man.\" Yeah, Spider-Man!",
+          "parenthetical": "likes the sound of it"
+        },
+        {
+          "turn_number": 4,
+          "speaker": "RING ANNOUNCER",
+          "text": "Three thousand dollars will be paid to SPIDER-MAN! Will the guards please lock the cage doors!",
+          "parenthetical": "back into microphone"
+        },
+        {
+          "turn_number": 5,
+          "speaker": "SPIDER-MAN",
+          "text": "Not a bad costume, what is that, Spandex? I used Lycra for mine and it itches like crazy.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 6,
+          "speaker": "BONE SAW",
+          "text": "COME DOWN HERE!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 7,
+          "speaker": "SPIDER-MAN",
+          "text": "Okey-dokey!",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "-we see a COSTUMED AMATEUR WRESTLER slam into the wall of a cage match ring in the middle of a small, hot, dusty arena. The Wrestler GROANS in agony, a REFEREE jumps in to stop the match as BONE SAW McGRAW, six feet nine if he's an inch, three hundred pounds of pure muscle, ROARS at the crowd, standing over the broken body of his fallen challenger. This place is nasty. A GUARD hurries to a gate in the wall of the cage, unlocks it, and PARAMEDICS rush in to help the helpless amateur. A RING ANNOUNCER steps forward, grabs a dangling microphone.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 24,
+      "slugline": "INT.  ARENA OFFICES - NIGHT",
+      "location": "ARENA OFFICES",
+      "time_of_day": "NIGHT",
+      "characters_present": [
+        "PETER",
+        "PROMOTER",
+        "SPIDER-MAN"
+      ],
+      "witnesses": [
+        "PETER"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "PROMOTER",
+          "text": "Now get outta here.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "SPIDER-MAN",
+          "text": "A hundred bucks? The ad said three thousand!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "PROMOTER",
+          "text": "Check it again, webhead. It said three grand for three minutes. You pinned him in two. For that I'll give you a hundred, and you're lucky to get it, wise ass. You made my best fighter look like a girl out there.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "SPIDER-MAN",
+          "text": "You don't understand, it's not for me, it's for my aunt, she needs this medicine, see, and-",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 5,
+          "speaker": "PROMOTER",
+          "text": "A sick aunt? Are you for real? I missed the part where this is my problem.",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "The administrative offices, upstairs at the arena. The PROMOTER puts a single hundred dollar bill into Spider-Man's palm (Peter is still wearing the costume). Behind them, a squirrelly-looking guy slips into the office, hair dyed platinum blonde. Spider-Man stares at him for a long moment, burning with rage, he wants to bust this guy right in the nose, he trembles, his hands curl into fists, he could put him right through the wall if he wanted to- -but he turns and leaves instead.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 25,
+      "slugline": "INT.  HALLWAY - NIGHT",
+      "location": "HALLWAY",
+      "time_of_day": "NIGHT",
+      "characters_present": [
+        "COP",
+        "PROMOTER",
+        "SPIDER-MAN",
+        "THIEF"
+      ],
+      "witnesses": [],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "PROMOTER",
+          "text": "Hey! What the hell do you-",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "COP",
+          "text": "Hey, you! Stop that guy!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "THIEF",
+          "text": "Thanks, freak.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "COP",
+          "text": "What the hell's the matter with you?! You just had to knock him down!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 5,
+          "speaker": "PROMOTER",
+          "text": "You coulda taken that guy apart! Now he's gonna get away with my money!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 6,
+          "speaker": "SPIDER-MAN",
+          "text": "I missed the part where this is my problem.",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "Spider-Man walks away down the corridor, clutching the lousy hundred dollar bill, muttering under his breath. He's nearly to the elevator when he hears a SHOUT from behind him. He turns. Silhouettes move violently in the frosted glass window in the door to the administrative offices. The Promoter's shadow is thrown violently to the floor, the door BANGS open hard, shattering the glass, and the squirrelly-looking guy races out, clutching a canvas bag. He is a THIEF. PROMOTER (cont'd) Help! Police! That guy stole the",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 26,
+      "slugline": "EXT.  ARENA - NIGHT",
+      "location": "ARENA",
+      "time_of_day": "NIGHT",
+      "characters_present": [
+        "COP",
+        "FLASH",
+        "PARAMEDIC",
+        "PETER",
+        "UNCLE BEN"
+      ],
+      "witnesses": [
+        "COP",
+        "FLASH",
+        "UNCLE BEN"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "PETER",
+          "text": "UNCLE BEN!!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "PETER",
+          "text": "My Uncle! That's my uncle!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "PETER",
+          "text": "What happened?!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "PETER",
+          "text": "Oh, God, no!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 5,
+          "speaker": "PETER",
+          "text": "They're not doing anything! Why aren't you doing anything?! What's the matter with you?! Is he okay? Is he gonna be okay? Why are you stopping?!",
+          "parenthetical": "bursts away from the cops"
+        },
+        {
+          "turn_number": 6,
+          "speaker": "PARAMEDIC",
+          "text": "He passed away, sir.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 7,
+          "speaker": "PETER",
+          "text": "He....?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 8,
+          "speaker": "PARAMEDIC",
+          "text": "I'm sorry, sir.",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "As night falls, Peter comes out of the arena, dressed in street clothes again. On the far corner, there are flashing lights and a small crowd gathered, but he doesn't notice, just starts looking around for Uncle Ben's car. Peter stands on the corner where Ben said he'd pick him up. Looks to the left, to the right. Not there yet. Another POLICE CAR races by him, SIREN wailing, and heads for the far corner. Peter ignores that too. Checks his watch. Looks up the block. Still no Uncle Ben. An ambulance SCREAMS past him, also headed for the far corner.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 27,
+      "slugline": "EXT.  A DARK ALLEY - NIGHT",
+      "location": "A DARK ALLEY",
+      "time_of_day": "NIGHT",
+      "characters_present": [
+        "PETER",
+        "SPIDER-MAN"
+      ],
+      "witnesses": [
+        "PETER",
+        "SPIDER-MAN"
+      ],
+      "dialogue_turns": [],
+      "action_summary": "An exaggerated shadow falls on the brick wall of an alley. A man tears off his clothes, violently. The shadow grows rapidly bigger as the man starts to run, suddenly the shadow leaps, high into the air, and lands on the side of the building right in front of us. THE AMAZING SPIDER-MAN begins to climb, straight up the side of the building. Peter may have been in the Spider-Man suit when he climbed into the ring, but now he truly is Spider-Man. We climb with him, rising higher and higher until we burst out over the roof's edge. ON THE ROOF,",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 29,
+      "slugline": "INT.  FACTORY - NIGHT",
+      "location": "FACTORY",
+      "time_of_day": "NIGHT",
+      "characters_present": [
+        "CARJACKER",
+        "COP",
+        "PETER",
+        "SPIDER-MAN",
+        "THIEF"
+      ],
+      "witnesses": [
+        "COP",
+        "PETER",
+        "THIEF"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "SPIDER-MAN",
+          "text": "This is for the man you killed.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "CARJACKER",
+          "text": "Don't hurt me! Give me a chance, man, give me a chance!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "SPIDER-MAN",
+          "text": "DID YOU GIVE HIM A CHANCE!? THE MAN YOU KILLED?! DID YOU?! ANSWER ME!",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "Spider-Man crawls, upside-down, across the roof of the factory. His eyes scan the abandoned factory floor below, which we see upside-down too, the way he does. Over in the far corner, the Carjacker huddles, a dark figure trying to hide in the middle of the rusted-out equipment. Spider-Man creeps close, fast and silent, until he is directly above the Carjacker, looking down at him. DOWN ON THE FLOOR, The Carjacker cowers, MUTTERING to himself, obsessively checking his weapon to make sure it's loaded. Can't make out a word he's",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 33,
+      "slugline": "EXT.  FACTORY - NIGHT",
+      "location": "FACTORY",
+      "time_of_day": "NIGHT",
+      "characters_present": [
+        "COP",
+        "SERGEANT",
+        "SPIDER-MAN",
+        "THIEF"
+      ],
+      "witnesses": [
+        "COP",
+        "THIEF"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "SERGEANT",
+          "text": "OPEN FIRE!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "SPIDER-MAN",
+          "text": "I can't!",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "Outside the factory, the Cops stare in wonder at the strange pair, framed by the brilliant lights now shining into the broken-out second floor windows of the factory. COP 1 What the hell is that!? The Cops open up on the figures in the window. IN THE WINDOW More glass breaks, wood splinters, the Thief SCREAMS as bullets fly everywhere. Spider-Man SCREAMS right back, in rage and pain- -and HURLS the Thief off the building!",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 34,
+      "slugline": "EXT.  ROOF OF FACTORY - NIGHT",
+      "location": "ROOF OF FACTORY",
+      "time_of_day": "NIGHT",
+      "characters_present": [
+        "COP",
+        "FLASH",
+        "SPIDER-MAN",
+        "UNCLE BEN"
+      ],
+      "witnesses": [
+        "COP",
+        "FLASH"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "SPIDER-MAN",
+          "text": "NOOOOO!!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "UNCLE BEN",
+          "text": "Always remember, Peter.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "SPIDER-MAN",
+          "text": "OH GOD, PLEASE NO, I'M SORRY, UNCLE BEN, FORGIVE ME...!!!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "UNCLE BEN",
+          "text": "....great responsibility.",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "Spider-Man falls to his knees on the roof of the factory in the whipping wind of the helicopter, arms thrown up in anguish as he faces the dramatic skyline of the unforgiving city. Another image comes to him, this one billowing right out of the black-bottomed clouds above him, a gigantic image of Uncle Ben's face: Lightning flashes in the sky, outlining Uncle Ben's face, turning it into a skeleton's head for a split-second before wiping it out completely. As Spider-Man dissolves into SCREAMS of anguish, Uncle Ben's VOICE resonates over the BOOMING thunder of the coming",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 36,
+      "slugline": "EXT.  CITY STREET - NIGHT",
+      "location": "CITY STREET",
+      "time_of_day": "NIGHT",
+      "characters_present": [
+        "CAN'T ANYBODY TAKE A DECENT PICTURE",
+        "JAMESON",
+        "M.J.",
+        "SPIDER-MAN"
+      ],
+      "witnesses": [],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "SPIDER-MAN",
+          "text": "We do not hit women!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "M.J.",
+          "text": "Who are you?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "SPIDER-MAN",
+          "text": "You know.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "M.J.",
+          "text": "I do?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 5,
+          "speaker": "SPIDER-MAN",
+          "text": "Your friendly neighborhood Spider-Man.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 6,
+          "speaker": "JAMESON",
+          "text": "I said a picture, not an ink blot!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 7,
+          "speaker": "CAN'T ANYBODY TAKE A DECENT PICTURE",
+          "text": "OF THAT FREAK?!",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "Snow flies, it's wintertime now. A bunch of THUGS have surrounded M.J., who has just come up from a subway stop in a not-great part of town. The Thugs are taunting her, harassing her, putting their hands on her. M.J.'s looking around for help, but it's late, cold and empty streets around here. One of the Thugs grabs her by the jacket, pulls her forward, and raises his other hand, CLICKING open a switchblade. Suddenly the Thug stiffens, hit in the back by a web line. The second Thug does likewise, then they both fly backwards off their feet, yanked hard by Spider-Man, who clings to the building across",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 37,
+      "slugline": "EXT.  PARKER HOUSE - NIGHT",
+      "location": "PARKER HOUSE",
+      "time_of_day": "NIGHT",
+      "characters_present": [
+        "AUNT MAY",
+        "HARRY",
+        "OSBORN",
+        "PETER"
+      ],
+      "witnesses": [
+        "HARRY",
+        "OSBORN"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "AUNT MAY",
+          "text": "You don't have to give up your room, Peter.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "PETER",
+          "text": "You need the extra money, you know you do. And I'll send more, as much as I can, as soon as I get a job.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "AUNT MAY",
+          "text": "College, a job, your own place... You're not Superman, you know.",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "CLOSE ON a sign in the window of the Parker home- \"ROOM FOR RENT.\" Peter comes out of the house he shares with Aunt May, carrying a box of his possessions, and loads it into the back of Harry Osborn's car. Harry waits beside it. Peter laughs, grabs her in a ferocious hug.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 38,
+      "slugline": "EXT.  CITY STREET - NIGHT",
+      "location": "CITY STREET",
+      "time_of_day": "NIGHT",
+      "characters_present": [
+        "COP",
+        "JAMESON",
+        "ROBBIE",
+        "SPIDER-MAN"
+      ],
+      "witnesses": [],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "COP",
+          "text": "Hey! What the hell do-",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "SPIDER-MAN",
+          "text": "Leave him alone.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "ROBBIE",
+          "text": "You know that isn't true.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "JAMESON",
+          "text": "That's why we put quotes around it!",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "In a rough part of town, a COP beats a TEENAGER with his night stick while his PARTNER stands awkwardly a few feet away, not joining in, but not stopping him either. The Cop raises his nightstick for a vicious blow, but suddenly THWIP-THWIP! Two web strands wrap around the nightstick and yank it out of his hand. The Cop whirls around. Spider-Man clings to the side of a building behind him, upside down. THWIP! A strand of webbing shoots out, SPLATS over the Cop's mouth. In the moment of distraction, the Teenager gets to his feet",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 40,
+      "slugline": "INT.  PETER'S APARTMENT - DAY",
+      "location": "PETER'S APARTMENT",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "HARRY",
+        "PETER"
+      ],
+      "witnesses": [],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "HARRY",
+          "text": "What a dump.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "PETER",
+          "text": "Expensive dump.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "HARRY",
+          "text": "How you gonna pay for it?",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "Holding a box with his meager possessions, Peter stands in the doorway of his new apartment. One tiny room, cracked walls, dirty window, SIREN WAILING right below. Harry stands next to him, helping him move in.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 41,
+      "slugline": "INT.  PETER'S APARTMENT - NIGHT",
+      "location": "PETER'S APARTMENT",
+      "time_of_day": "NIGHT",
+      "characters_present": [
+        "PETER"
+      ],
+      "witnesses": [
+        "PETER"
+      ],
+      "dialogue_turns": [],
+      "action_summary": "Peter is hunched over a table in his apartment, delicately assembling a complicated-looking camera apparatus.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 43,
+      "slugline": "INT.  DAILY BUGLE - JAMESON'S OFFICE - DAY",
+      "location": "DAILY BUGLE - JAMESON'S OFFICE",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "JAMESON",
+        "PETER",
+        "SPIDER-MAN"
+      ],
+      "witnesses": [
+        "SPIDER-MAN"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "PETER",
+          "text": "Your ad mentioned a reward?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "JAMESON",
+          "text": "Where'd you get these?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "PETER",
+          "text": "If I tell you that, you'll send your own photographer next time. I want a job.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "JAMESON",
+          "text": "No jobs! Free lance, Perky, best thing in the world for a man your age, don't get tied down! I'll give you a hundred bucks for the lot.",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "-the resultant photograph, an action shot of Spider-Man. CLOSE ON the photo as a hand flips past it, to another, and another- all good shots, swinging shots, flying shots, web-shooting shots. Jonah Jameson looks up, trying to hide his enthusiasm. Peter stands across his desk. He turns and leaves his office. Peter follows.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 44,
+      "slugline": "INT.  NEWSROOM - DAY",
+      "location": "NEWSROOM",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "JAMESON",
+        "PETER",
+        "SPIDER-MAN"
+      ],
+      "witnesses": [
+        "SPIDER-MAN"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "PETER",
+          "text": "A hundred?!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "JAMESON",
+          "text": "Deal!",
+          "parenthetical": "holds out his hand"
+        },
+        {
+          "turn_number": 3,
+          "speaker": "PETER",
+          "text": "No! Five hundred!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "JAMESON",
+          "text": "Two!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 5,
+          "speaker": "PETER",
+          "text": "Four!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 6,
+          "speaker": "JAMESON",
+          "text": "You win. Hoffman. HOFFMAN!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 7,
+          "speaker": "PETER",
+          "text": "It's Parker, P-A-R-",
+          "parenthetical": "to Hoffman"
+        },
+        {
+          "turn_number": 8,
+          "speaker": "JAMESON",
+          "text": "-social security, and voluntary contribution to that charity my wife likes.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 9,
+          "speaker": "PETER",
+          "text": "Sir, if you could just put me on the payroll, see, I really need the insurance I'd get with a full-time job, my aunt has this condition she-",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 10,
+          "speaker": "JAMESON",
+          "text": "Insurance?! What are you, a photographer or a claims adjuster?! What happened to hard drinking and Australian bush hats and lying to foreign women? Stick around, Kid, I'll make a journalist out of you, hell, HOFFMAN!, remind me to send him some Christmas meat, NOW GET ME MORE PICTURES!",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "Jameson walks fast; Peter struggles to keep up. HOFFMAN, a tired guy, looks up from his cubicle. JAMESON (cont'd) Cut a check to Peter Porker for three hundred dollars, less taxes- THE DAILY BUGLE Displays one of Peter's dramatic shots of Spider-Man, over the headline: SPIDER-MAN: HERO OR MENACE?!",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 49,
+      "slugline": "EXT.  STREET - DAY",
+      "location": "STREET",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "M.J.",
+        "MARY JANE",
+        "PETER"
+      ],
+      "witnesses": [
+        "MARY JANE"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "PETER",
+          "text": "Hey!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "M.J.",
+          "text": "Buzz off.",
+          "parenthetical": "doesn't look up"
+        },
+        {
+          "turn_number": 3,
+          "speaker": "PETER",
+          "text": "No, wait!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "M.J.",
+          "text": "Oh, hey, right, how are you?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 5,
+          "speaker": "PETER",
+          "text": "Good, good, okay, I'm... I'm alright. What are you doing here?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 6,
+          "speaker": "M.J.",
+          "text": "I live around the corner.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 7,
+          "speaker": "PETER",
+          "text": "Wow, I'm right here! I'm moving, though. This is hilarious, we can't get away from each other, huh?",
+          "parenthetical": "points to the building"
+        },
+        {
+          "turn_number": 8,
+          "speaker": "M.J.",
+          "text": "Yeah. Hey, I gotta take a shower and get over to an audition, so, uh...",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 9,
+          "speaker": "PETER",
+          "text": "An audition, that's great, so you're an actress now, you're a real actress!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 10,
+          "speaker": "M.J.",
+          "text": "Yeah, I'm working steady. It's great, you know, I've never been happier. It's like some kind of dream.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 11,
+          "speaker": "PETER",
+          "text": "Good for you. I'm going to college, Empire State. I could have stayed at home, but after... Well, a buncha stuff happened and money got pretty tight for my aunt, so I let her sublet my old room and I got a job here.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 12,
+          "speaker": "M.J.",
+          "text": "Peter, I'm so sorry. I heard about your uncle, when that happened. I'm sorry, man.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 13,
+          "speaker": "PETER",
+          "text": "You wanna, um... grab a coffee or something? With me? I mean?",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "Peter walks down a grungy street in Manhattan. It's still raining, he holds a newspaper over his head. He stops right in front of us, at the door to a decrepit apartment building you wouldn't wish on your enemy. As he's putting his key in the door, he stops, squints down the sidewalk, recognizes somebody. Mary Jane Watson is walking straight toward him. She walks right past him and continues on down the sidewalk. He turns and follows, catches up to her. PETER (cont'd) M.J., it's me.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 50,
+      "slugline": "INT.  M.J.'S APARTMENT - DAY",
+      "location": "M.J.'S APARTMENT",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "M.J.",
+        "PETER"
+      ],
+      "witnesses": [
+        "PETER"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "M.J.",
+          "text": "Some dream.",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "A door opens on a tiny, crappy, unfurnished apartment. M.J. comes in. Hardly the place you'd pick if you were living a dream. She takes off the overcoat she was clinging to so tightly while she spoke with Peter. Underneath, she's wearing a hideous orange waitress uniform. She takes the name tag off, hurls it onto a dresser. She goes to the kitchenette sink, all of four steps from the door. She picks up a water glass and turns on the tap. No water comes out, just a hideous loud CLUNKING and GRINDING sound. She CURSES and SLAMS the glass back down. At least it",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 51,
+      "slugline": "INT.  PETER'S APARTMENT - DAY",
+      "location": "PETER'S APARTMENT",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "HARRY",
+        "OSBORN",
+        "PETER"
+      ],
+      "witnesses": [
+        "OSBORN"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "HARRY",
+          "text": "Your stuff's not even packed?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "PETER",
+          "text": "I don't have stuff, Harry, this'll take me about three minutes.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "HARRY",
+          "text": "Sorry I'm late, my father was inflicting permanent psychic damage on me. That takes time, even for him. And he's good. What's the matter with you? You should see your face, you look like a pound puppy.",
+          "parenthetical": "noticing Peter"
+        },
+        {
+          "turn_number": 4,
+          "speaker": "PETER",
+          "text": "Ran into a friend.",
+          "parenthetical": "shrugs"
+        },
+        {
+          "turn_number": 5,
+          "speaker": "HARRY",
+          "text": "Wow, yeah, that's horrible. Dude, lighten up? This is the day you kiss this dump goodbye.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 6,
+          "speaker": "PETER",
+          "text": "You sure you've got room for me?",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "A door opens on Peter's tiny, crappy, unfurnished apartment. Peter flicks a switch. Bare bulb. Air mattress for a bed. String crisscrossing the room, black and white eight by tens drying from it. From behind him, a VOICE speaks up. Peter turns. Harry Osborn stands in the doorway, still in the suit and tie he wore earlier. Harry comes in and flops on the \"bed.\" Peter starts putting things in a moving box.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 52,
+      "slugline": "INT.  HARRY'S APARTMENT - DAY",
+      "location": "HARRY'S APARTMENT",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "HARRY",
+        "M.J.",
+        "MARY JANE",
+        "PETER"
+      ],
+      "witnesses": [
+        "MARY JANE"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "HARRY",
+          "text": "I think I can squeeze you in.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "PETER",
+          "text": "Oh, my...",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "HARRY",
+          "text": "Eh? Eh?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "PETER",
+          "text": "I'm gonna live here?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 5,
+          "speaker": "HARRY",
+          "text": "Can't beat the rent.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 6,
+          "speaker": "PETER",
+          "text": "This is too generous. You've gotta let me pay you my share.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 7,
+          "speaker": "HARRY",
+          "text": "Okay. Your share is half of what I pay, so you owe me... hang on, let me run the numbers... nothing. My dad bought it for me, for God's sake! A three bedroom apartment in the middle of Manhattan? If I don't give a room to somebody I'll go to hell. You're saving my soul.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 8,
+          "speaker": "PETER",
+          "text": "I insist. I'm totally broke as usual, but I want to pay something.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 9,
+          "speaker": "HARRY",
+          "text": "Look, all you have to do is meet the old bastard and make him like you, and believe me, that'll be payment enough. He's coming by tomorrow, after the parade. Hey, you wanna come to the parade with me? My dad got me tickets, great seats.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 10,
+          "speaker": "PETER",
+          "text": "Thanks, but I've gotta work the parade. Taking pictures.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 11,
+          "speaker": "HARRY",
+          "text": "Pete, there's something I gotta tell you.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 12,
+          "speaker": "PETER",
+          "text": "What is it? Aren't you gonna...",
+          "parenthetical": "answer the door?"
+        },
+        {
+          "turn_number": 13,
+          "speaker": "HARRY",
+          "text": "Yeah, I just... yeah. I... oh, hell. Hang on a second.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 14,
+          "speaker": "M.J.",
+          "text": "Hey, Tiger.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 15,
+          "speaker": "HARRY",
+          "text": "You remember M.J., don't you, Pete? Peter Parker, Mary Jane Watson. Mary Jane Watson, Peter Parker. Peter Watson, Mary Parker Jane...",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 16,
+          "speaker": "PETER",
+          "text": "Hi.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 17,
+          "speaker": "M.J.",
+          "text": "Can't keep away from one another, right?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 18,
+          "speaker": "PETER",
+          "text": "Guess not.",
+          "parenthetical": "trouble forming words"
+        },
+        {
+          "turn_number": 19,
+          "speaker": "HARRY",
+          "text": "So we, um, M.J. and me, I mean, uh, obviously we, uh- kinda got back together again.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 20,
+          "speaker": "PETER",
+          "text": "Great! 'Scuse me a sec.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 21,
+          "speaker": "HARRY",
+          "text": "I had to do it, man, she's all I thought about for the past year. I couldn't get her out of my mind. She drives me insane, Dude, just look at her...",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 22,
+          "speaker": "PETER",
+          "text": "Why would I care?",
+          "parenthetical": "not a good actor"
+        },
+        {
+          "turn_number": 23,
+          "speaker": "HARRY",
+          "text": "Well, I mean, I know you, uh-",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 24,
+          "speaker": "PETER",
+          "text": "Harry, I really don't know what you mean. I'm happy for you. Woah, I gotta get to work.",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "The door opens on a stunning Upper East Side corner apartment with a spectacular view. Peter stops in the doorway, thunderstruck. Harry pulls the key from the door. There is a KNOCK at the door. Harry looks at it, then back at Peter, suddenly nervous. Peter looks at him- what? Harry hesitates. This is awkward. The knock comes at the door again. He goes to the door, opens it- -and M.J. walks in. Peter stares, stunned, uncomprehending. She gives Harry a deep kiss. Peter comprehends. He is devastated,",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 57,
+      "slugline": "EXT.  COLUMBUS CIRCLE - DAY",
+      "location": "COLUMBUS CIRCLE",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "COP",
+        "FLASH",
+        "GREEN GOBLIN",
+        "HARRY",
+        "M.J.",
+        "MAYOR",
+        "OCTAVIUS",
+        "OSBORN",
+        "PETER",
+        "SPIDER-MAN"
+      ],
+      "witnesses": [
+        "COP",
+        "FLASH",
+        "OCTAVIUS",
+        "OSBORN",
+        "PETER"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "HARRY",
+          "text": "Isn't it great?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "MAYOR",
+          "text": "Ah! Yes, that one is Snoopy, a sort of devil-may-care dog who flies his doghouse around and pretends to be a World War I pilot.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "MAYOR",
+          "text": "Oh, here comes Garfield, my favorite! Garfield is a wonderful sort of, uh, sarcastic cat. (the Interpreter looks puzzled) \"Sarcastic cat?\" Don't you have a word for that?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "MAYOR",
+          "text": "I, uh... I'm not familiar with that one, it must be new this year.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 5,
+          "speaker": "SPIDER-MAN",
+          "text": "Hey.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 6,
+          "speaker": "M.J.",
+          "text": "Oh, no...",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 7,
+          "speaker": "GREEN GOBLIN",
+          "text": "Get out of my way or I'll destroy you!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 8,
+          "speaker": "SPIDER-MAN",
+          "text": "\"Get out of my way or I'll destroy you, please.\"",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "Harry Osborn stares up into the sky, a look of childlike innocence and wonder on his face. Harry and M.J. are in the middle of the crowd in Columbus Circle on a beautiful early winter morning. Giant balloons float high in the air as the Thanksgiving Day Parade makes its way down Central Park West, bound for Broadway and Times Square. Harry looks down at the tickets in his hand. HARRY (cont'd) Come on, our seats are right up front!",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 61,
+      "slugline": "EXT.  ROOFTOP - DAY",
+      "location": "ROOFTOP",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "COP",
+        "GREEN GOBLIN",
+        "HARRY",
+        "M.J.",
+        "OSBORN",
+        "SPIDER-MAN"
+      ],
+      "witnesses": [
+        "COP",
+        "OSBORN"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "HARRY",
+          "text": "M.J.!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "SPIDER-MAN",
+          "text": "M.J.!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "HARRY",
+          "text": "I'll get help!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "M.J.",
+          "text": "No! Don't leave me here!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 5,
+          "speaker": "M.J.",
+          "text": "Thank God! Help me!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 6,
+          "speaker": "SPIDER-MAN",
+          "text": "HANG ON!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 7,
+          "speaker": "M.J.",
+          "text": "I knew you'd call!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 8,
+          "speaker": "GREEN GOBLIN",
+          "text": "I may not be able to kill you, Spider-Man... but if it's the last thing I do, I'll make you wish you were dead!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 9,
+          "speaker": "SPIDER-MAN",
+          "text": "This is where you get off.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 10,
+          "speaker": "M.J.",
+          "text": "Promise?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 11,
+          "speaker": "SPIDER-MAN",
+          "text": "I... got to go...",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 12,
+          "speaker": "M.J.",
+          "text": "Hey! Don't I get to say thank you this time?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 13,
+          "speaker": "SPIDER-MAN",
+          "text": "I really gotta go.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 14,
+          "speaker": "M.J.",
+          "text": "How come? Got a Mrs. Spider-Man waiting somewhere?",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "-and SMACKS neatly up against the side of a glass building, splay- legged. ON THE REVIEWING STAND, Harry and M.J. are part of the crowd that's madly climbing across the swaying bleachers, trying like hell to get off them. A huge support beam CRACKS and falls, SMASHING through the bleachers between them. M.J. stumbles, falls, the beam rolls over and pins her leg beneath it- not hard enough to break it, just hard enough to trap her there. Harry hears her SCREAM, but he claws at his eyes, he can't see her",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 64,
+      "slugline": "INT.  PETER'S BEDROOM - DAY",
+      "location": "PETER'S BEDROOM",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "HARRY",
+        "M.J.",
+        "NORMAN",
+        "OSBORN",
+        "PETER",
+        "SPIDER-MAN"
+      ],
+      "witnesses": [
+        "NORMAN",
+        "PETER",
+        "SPIDER-MAN"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "OSBORN",
+          "text": "Speak of the devil.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "HARRY",
+          "text": "That's weird, I didn't know he was here.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "M.J.",
+          "text": "Peter?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "OSBORN",
+          "text": "Tell him we don't have maid service.",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "Peter pulls off his mask and drops onto the floor in his bedroom. He's bleeding from the cut on his hand and his ankle is killing him. IN THE LIVING ROOM, They hear a THUD as he hits the floor. She gets up and heads for his bedroom. IN PETER'S BEDROOM, He whips around and looks at the door, wild-eyed. He sees shadows moving in the light under it, hears M.J.'s voice calling to him. He's still in his costume, mask off, holding a bundle of street",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 65,
+      "slugline": "INT.  HARRY'S APARTMENT - DAY",
+      "location": "HARRY'S APARTMENT",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "HARRY",
+        "M.J.",
+        "NORMAN",
+        "OSBORN",
+        "PETER"
+      ],
+      "witnesses": [
+        "NORMAN"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "PETER",
+          "text": "Did you see it? Did you see what happened? Man, I hope I got a decent picture!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "HARRY",
+          "text": "Pete, there you are. This is my father, Norman Osborn.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "PETER",
+          "text": "Oh! Pleasure to meet you, sir.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "OSBORN",
+          "text": "Likewise.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 5,
+          "speaker": "PETER",
+          "text": "Broken glass. Landed on it.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 6,
+          "speaker": "M.J.",
+          "text": "You landed on it?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 7,
+          "speaker": "PETER",
+          "text": "Yeah. I'm an idiot. I was trying to get a picture of that thing in the sky and I stepped right out in front of a taxi. Must have knocked me twenty feet.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 8,
+          "speaker": "OSBORN",
+          "text": "Better have me take a look at it.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 9,
+          "speaker": "PETER",
+          "text": "Just a... few cuts and scrapes. I'll be fine.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 10,
+          "speaker": "OSBORN",
+          "text": "I really should be going. Harry?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 11,
+          "speaker": "OSBORN",
+          "text": "A word to the not-so-wise. That little tart will be gone at the first sign of trouble and she'll take half your trust fund with her.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 12,
+          "speaker": "HARRY",
+          "text": "But-",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 13,
+          "speaker": "OSBORN",
+          "text": "I'm not finished.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 14,
+          "speaker": "M.J.",
+          "text": "Thanks for standing up for me, Harry.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 15,
+          "speaker": "HARRY",
+          "text": "He just doesn't understand.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 16,
+          "speaker": "M.J.",
+          "text": "You know what? He's right. I don't know what I'm doing with you either. That creep is right.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 17,
+          "speaker": "HARRY",
+          "text": "That \"creep\" is my father! If I'm lucky, I've got the brains and the guts to become half of what he is, so you just watch your mouth, you little-",
+          "parenthetical": "suddenly angry"
+        },
+        {
+          "turn_number": 18,
+          "speaker": "M.J.",
+          "text": "You're becoming somebody's father, all right. Mine.",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "The front door to Harry's apartment opens again. Peter attempts a casual entry, now dressed in street clothes. Osborn steps forward. Forgetting, Peter extends his right hand, the one with the cut, which has been hastily wrapped up. Osborn takes it and squeezes, Peter GASPS. OSBORN (cont'd) Sorry... hurt your hand? Still holding Peter's hand, he pulls it into view. Osborn unwraps the handkerchief, takes it off Peter's hand, revealing the jagged cut made by the Goblin's boomerang.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 66,
+      "slugline": "EXT.  APARTMENT BUILDING - DAY",
+      "location": "APARTMENT BUILDING",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "M.J.",
+        "PETER"
+      ],
+      "witnesses": [],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "PETER",
+          "text": "M.J., wait, you've got to understand Harry-",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "M.J.",
+          "text": "I do, better than I ever have. Twice today, I needed him, really needed him, and he wasn't there. I need, I need- look, I don't have a clue what I need, okay? There isn't a person on this earth who knows me, including me.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "PETER",
+          "text": "I know you. I grew up six feet away from you. I knew when you were happy, I knew when things were bad- you'd play Nirvana. I'd lie in bed and listen to you crying. \"All alone is all we are.\" Well, you're not alone, okay? You never have been. (embarrassed, this is going too well) I want you to know that.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "M.J.",
+          "text": "There's only one guy who's ever been there when I needed him. And he wears a leotard. (laughs, in spite of herself) God, I'm a mess.",
+          "parenthetical": "Peter looks hopeful"
+        }
+      ],
+      "action_summary": "M.J. storms out of the building and hurries down the sidewalk. Peter hurries up behind her, takes her by the arm to stop her. She covers her face. Peter reaches out, puts a hand on her shoulder. She looks at him, thinking about him, in a way, for the first time.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 67,
+      "slugline": "INT.  HARRY'S APARTMENT - DAY",
+      "location": "HARRY'S APARTMENT",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "COP",
+        "DOC OCK",
+        "FLASH",
+        "GREEN GOBLIN",
+        "HARRY",
+        "JAMESON",
+        "M.J.",
+        "OCTAVIUS",
+        "PETER",
+        "SPIDER-MAN"
+      ],
+      "witnesses": [
+        "COP",
+        "DOC OCK",
+        "FLASH",
+        "GREEN GOBLIN",
+        "HARRY",
+        "M.J.",
+        "SPIDER-MAN"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "JAMESON",
+          "text": "You like that, \"Green Goblin?\" Made it up myself. Ever since Spider-Man, they all gotta have a name. HOFFMAN! Call the patent office and copyright the name Green Goblin! I want a quarter every time somebody says it!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "PETER",
+          "text": "Spider-Man wasn't terrorizing the city, he was trying to save it! How could you say that, it's libel!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "JAMESON",
+          "text": "What are you, his lawyer?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "PETER",
+          "text": "It's slander!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 5,
+          "speaker": "JAMESON",
+          "text": "So let him sue me, and get rich like a normal person, that's what makes this country GAAAACK!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 6,
+          "speaker": "OCTAVIUS",
+          "text": "I am Otto Octavius. Where is Peter Parker?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 7,
+          "speaker": "JAMESON",
+          "text": "He isn't here! He's a free-lancer, we don't even know where he lives!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 8,
+          "speaker": "OCTAVIUS",
+          "text": "You're lying.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 9,
+          "speaker": "PETER",
+          "text": "I'm Peter Parker.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 10,
+          "speaker": "OCTAVIUS",
+          "text": "The man in the mask, the \"Green Goblin.\" Who is he?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 11,
+          "speaker": "PETER",
+          "text": "Why?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 12,
+          "speaker": "OCTAVIUS",
+          "text": "I HAVE BUSINESS WITH HIM! WHO IS HE?!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 13,
+          "speaker": "PETER",
+          "text": "I don't know. I never saw his face.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 14,
+          "speaker": "OCTAVIUS",
+          "text": "How did you get that picture?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 15,
+          "speaker": "PETER",
+          "text": "Got lucky. Right place at the right time.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 16,
+          "speaker": "OCTAVIUS",
+          "text": "I'll be watching you, Peter Parker. In case you're ever \"lucky\" again.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 17,
+          "speaker": "JAMESON",
+          "text": "Next time call for an appointment, Doctor... Doctor... Octopus.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 18,
+          "speaker": "OCTAVIUS",
+          "text": "Don't call me that!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 19,
+          "speaker": "JAMESON",
+          "text": "City just isn't the same since Rudy's gone.",
+          "parenthetical": "shaking his head"
+        }
+      ],
+      "action_summary": "Harry stands at the window in his apartment, looking down at the street, far below. He sees M.J. and Peter, in urgent conversation. He steps over to a telescope that's pointed out over the park. He swings it down into position, to look at them. THROUGH THE TELESCOPE LENS, We see M.J. and Peter, talking urgently, Peter explaining things, comforting her, touching her arm, pleading Harry's case on his behalf. M.J. listens, listens- and then steps forward, puts her arms around Peter, and holds on tight. Peter turns, we see his face as",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 68,
+      "slugline": "INT.  NORMAN OSBORN'S DRESSING ROOM - NIGHT",
+      "location": "NORMAN OSBORN'S DRESSING ROOM",
+      "time_of_day": "NIGHT",
+      "characters_present": [
+        "NORMAN",
+        "OSBORN",
+        "PETER",
+        "SPIDER-MAN"
+      ],
+      "witnesses": [
+        "NORMAN",
+        "OSBORN",
+        "PETER",
+        "SPIDER-MAN"
+      ],
+      "dialogue_turns": [],
+      "action_summary": "At home, in his dressing room, Norman Osborn pulls Peter's bloodied handkerchief from his pocket, looks at it. He raises his other hand. He's holding the Goblin's boomerang, its serrated edge red with crusty blood. Spider-Man's blood.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 71,
+      "slugline": "INT.  AUNT MAY'S BEDROOM - NIGHT",
+      "location": "AUNT MAY'S BEDROOM",
+      "time_of_day": "NIGHT",
+      "characters_present": [
+        "AUNT MAY",
+        "GREEN GOBLIN",
+        "PETER"
+      ],
+      "witnesses": [
+        "PETER"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "AUNT MAY",
+          "text": "Our Father, who art in Heaven, hallowed be thy name.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "GREEN GOBLIN",
+          "text": "FINISH IT! FINISH IT!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "AUNT MAY",
+          "text": "...DELIVER US FROM EVIL!!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "GREEN GOBLIN",
+          "text": "Amen.",
+          "parenthetical": "piously"
+        }
+      ],
+      "action_summary": "Back in Peter's boyhood home, Aunt May is in her flannel nightgown, getting ready for bed. She turns the bed down carefully, smoothes the pillow. She walks to her bathroom past a window. The drapes are still open. She fills a glass of water, carries it past the window again, and brings it to the night table. She sets it down on the night table, next to a raft of prescription pill bottles. She turns, her back to the window, and kneels down next to the bed. Her knees CREAK, it's painful for her, she folds her hands",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 73,
+      "slugline": "INT.  HARRY'S APARTMENT - DAY",
+      "location": "HARRY'S APARTMENT",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "AUNT MAY",
+        "HARRY",
+        "OSBORN",
+        "PETER"
+      ],
+      "witnesses": [
+        "AUNT MAY",
+        "OSBORN"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "HARRY",
+          "text": "She's gone.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "PETER",
+          "text": "What?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "HARRY",
+          "text": "M.J. She just broke up with me, man. She scraped me off her shoe. She's in love with somebody else.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "PETER",
+          "text": "Who?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 5,
+          "speaker": "HARRY",
+          "text": "I wonder.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 6,
+          "speaker": "PETER",
+          "text": "What?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 7,
+          "speaker": "HARRY",
+          "text": "Get that innocent look off your face, you can't pull it off.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 8,
+          "speaker": "PETER",
+          "text": "You're way out of line, man, you're paranoid. You don't know what you're talking about.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 9,
+          "speaker": "HARRY",
+          "text": "We're not finished. Hello. Yeah? What?",
+          "parenthetical": "snatches up the phone"
+        }
+      ],
+      "action_summary": "Harry Osborn stands over the telephone in his apartment, his hand still on the receiver. He looks up. He has some sad news for us: Peter has just come out of his bedroom. The phone starts to ring. HARRY (cont'd) Things just come to you, don't they, Golden Boy? You don't even have to try, you just have to want it. The brains. The grades. This apartment, but all that wasn't",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 74,
+      "slugline": "EXT.  APARTMENT BUILDING - DAY",
+      "location": "APARTMENT BUILDING",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "DRIVER",
+        "PETER"
+      ],
+      "witnesses": [
+        "DRIVER",
+        "PETER"
+      ],
+      "dialogue_turns": [],
+      "action_summary": "-BANG! The front door of the apartment building flies open and Peter races outside to the curb, looking for a cab. Peter runs right out into traffic, desperate. It's morning rush hour, traffic is bumper to bumper, even if he could find a cab it wouldn't be able to move. Peter POUNDS the hood of a car in frustration, the DRIVER SHOUTS out the window, HORNS HONK, chaos. Peter takes off, down a side street.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 75,
+      "slugline": "EXT.  ALLEY - DAY",
+      "location": "ALLEY",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "PETER"
+      ],
+      "witnesses": [
+        "PETER"
+      ],
+      "dialogue_turns": [],
+      "action_summary": "Peter ducks into an alley and turns to his alternative mode of transportation. Still in his street clothes, he hurls himself at the side of a building and begins to climb, shrugging off the pain from his injured ankle.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 76,
+      "slugline": "EXT.  ROOFTOP - DAY",
+      "location": "ROOFTOP",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "PETER"
+      ],
+      "witnesses": [
+        "PETER"
+      ],
+      "dialogue_turns": [],
+      "action_summary": "Gaining the building's rooftop, Peter slings out a web and takes off across the city, not even bothering to strip down to his Spidey suit.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 77,
+      "slugline": "INT.  HOSPITAL CORRIDOR - DAY",
+      "location": "HOSPITAL CORRIDOR",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "PETER"
+      ],
+      "witnesses": [
+        "PETER"
+      ],
+      "dialogue_turns": [],
+      "action_summary": "Peter races down a hospital corridor, checking room numbers. He reaches the last one on the right, ducks inside, and sees-",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 78,
+      "slugline": "INT.  HOSPITAL ROOM - DAY",
+      "location": "HOSPITAL ROOM",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "AUNT MAY",
+        "PETER"
+      ],
+      "witnesses": [],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "PETER",
+          "text": "I'm sorry... I should have been there with you... I should have been there...",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "AUNT MAY",
+          "text": "Those eyes... the devil's eyes...",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "PETER",
+          "text": "Whose eyes? Who was it?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "AUNT MAY",
+          "text": "...horrible yellow eyes!",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "-Aunt May, semi-conscious in a hospital bed. TWO NURSES are at work on her, she looks rough. The Nurses look up, see Peter and nod to him to come over. Peter comes up to the bed, takes Aunt May's frail, papery hand. She turns her head, sees him through milky blue eyes. Peter's own eyes fill with tears. With a frightened shudder at the memory, Aunt May rolls over and lapses back into unconsciousness. Peter's own eyes pop open. Oh, God. Surely she doesn't mean...",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 80,
+      "slugline": "INT.  OSBORN MANSION - UPSTAIRS HALLWAY - NIGHT",
+      "location": "OSBORN MANSION - UPSTAIRS HALLWAY",
+      "time_of_day": "NIGHT",
+      "characters_present": [
+        "HARRY",
+        "M.J.",
+        "NORMAN",
+        "OSBORN",
+        "PETER"
+      ],
+      "witnesses": [
+        "M.J.",
+        "NORMAN",
+        "PETER"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "HARRY",
+          "text": "Dad?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "OSBORN",
+          "text": "Peter... Parker?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "HARRY",
+          "text": "Are you kidding? He tries to deny it, but he's been in love with her since he was twelve years old.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "OSBORN",
+          "text": "Reeeeeally. What a... tangled web.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 5,
+          "speaker": "HARRY",
+          "text": "I'm sorry. You must think I'm so weak. Oh God, Dad, you hate me... I know you hate me.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 6,
+          "speaker": "OSBORN",
+          "text": "Harry... no, Harry, you mustn't say that, you mustn't ever say that. Whatever's happened with us in the past, it doesn't matter. I love you. I love you and I'll do anything I can to help you.",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "Harry Osborn tiptoes up the stairs of the townhouse. He walks toward the end of a long, long dark hallway, where a light is on. From the room at the end of the hall, he hears an ANGRY MUTTERING, but he can't make out any of the words. Norman Osborn, dressed in normal clothes, steps into the hallway, startled. They talk, from this great distance. Osborn is just a dark shadow. HARRY (cont'd) You were right about M.J. You were right about everything. I think",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 81,
+      "slugline": "INT.  HOSPITAL ROOM - NIGHT",
+      "location": "HOSPITAL ROOM",
+      "time_of_day": "NIGHT",
+      "characters_present": [
+        "AUNT MAY",
+        "FLASH",
+        "M.J.",
+        "PETER"
+      ],
+      "witnesses": [
+        "AUNT MAY",
+        "FLASH"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "M.J.",
+          "text": "Will she be okay?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "PETER",
+          "text": "Maybe. Maybe not.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "M.J.",
+          "text": "I been there. I know it feels like your fault. I thought it was my fault when my dad left, but it wasn't. You're good to her. That's all you can be. You're good to everyone, Peter.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "PETER",
+          "text": "What is this, an audition?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 5,
+          "speaker": "M.J.",
+          "text": "What?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 6,
+          "speaker": "PETER",
+          "text": "Are you trying out for a new part? The best friend? That's what you're about to tell me, isn't it? You respect me, you admire me, you love me, as a friend. Right?! Don't bother with that speech, M.J., I've heard it plenty of times before.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 7,
+          "speaker": "M.J.",
+          "text": "Hey, wait, I...",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 8,
+          "speaker": "PETER",
+          "text": "If you knew the first thing about me, you'd, you'd... if I could just tell you...",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 9,
+          "speaker": "M.J.",
+          "text": "Peter? Peter?",
+          "parenthetical": "closer"
+        },
+        {
+          "turn_number": 10,
+          "speaker": "PETER",
+          "text": "Keep away from me. I love- people get hurt. That's how it works.",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "Late at night. Dark. Peter sits a lonely vigil next to Aunt May's bed, in and out of consciousness. He hears a soft TAPPING from the door behind him. He turns. M.J. stands in the doorway, holding a bouquet of flowers. Peter looks at her, then looks away, back at his Aunt. M.J. comes in, sets the flowers down. She bends over, puts her arms around Peter's neck, gives him a hug. He closes his eyes, almost can't bear it. They speak in hushed whispers. Words flow out of him, almost against his will. They speak in hushed whispers.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 82,
+      "slugline": "INT.  PARKER LIVING ROOM - NIGHT",
+      "location": "PARKER LIVING ROOM",
+      "time_of_day": "NIGHT",
+      "characters_present": [
+        "AUNT MAY",
+        "PETER"
+      ],
+      "witnesses": [
+        "AUNT MAY",
+        "PETER"
+      ],
+      "dialogue_turns": [],
+      "action_summary": "-and we see Peter through them, standing in the living room of the Parker house, where he has built a raging fire in the fireplace. He's clutching his costume, bunched up in his right hand, staring down at it, tears streaking his cheeks. He looks up, at the mantle, at a picture of himself, with Uncle Ben and Aunt May, taken a couple years ago. He stares, he clutches his costume, his hand shakes with the agony, the indecision, the choice. He hurls his costume into the fire. The flames ROAR, the orange tongues licking up, consuming it, the",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 83,
+      "slugline": "EXT.  PARKER HOUSE - NIGHT",
+      "location": "PARKER HOUSE",
+      "time_of_day": "NIGHT",
+      "characters_present": [
+        "PETER"
+      ],
+      "witnesses": [
+        "PETER"
+      ],
+      "dialogue_turns": [],
+      "action_summary": "Out in front of the Parker house, a DARK FIGURE in an overcoat stands in the shadows, just outside the arc of light thrown by a streetlamp. The Dark Figure stares into the living room of the Parker house, its drapes wide open. The Figure watches Peter, still leaning against the mantle, the fire burning brightly in the fireplace. The Figure waits. Puts a cigarette in its mouth. CLINKS open a Zippo lighter. Swats a mosquito. And unscrews the lightbulb in the streetlight. All at once. Guess who.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 84,
+      "slugline": "INT.  PARKER HOUSE - BATHROOM - NIGHT",
+      "location": "PARKER HOUSE - BATHROOM",
+      "time_of_day": "NIGHT",
+      "characters_present": [
+        "PETER"
+      ],
+      "witnesses": [
+        "PETER"
+      ],
+      "dialogue_turns": [],
+      "action_summary": "Peter comes into the bathroom of the Parker house, runs the taps in the sink.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 88,
+      "slugline": "EXT.  CENTRAL PARK - DAY",
+      "location": "CENTRAL PARK",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "AUNT MAY",
+        "FLASH",
+        "PETER",
+        "UNCLE BEN"
+      ],
+      "witnesses": [
+        "AUNT MAY",
+        "FLASH"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "PETER",
+          "text": "You...",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "UNCLE BEN",
+          "text": "Relax, kiddo.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "PETER",
+          "text": "This isn't possible...",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "UNCLE BEN",
+          "text": "It's a dream, Pete. You're still back at home. You fell asleep on the sofa, it's about seven in the morning. You're gonna wake up in a few minutes.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 5,
+          "speaker": "PETER",
+          "text": "Uncle Ben... Oh God, I'm sorry, I'm so sor-",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 6,
+          "speaker": "UNCLE BEN",
+          "text": "Hey.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 7,
+          "speaker": "PETER",
+          "text": "There's so much I want to ask you, so much I want to tell you...",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 8,
+          "speaker": "UNCLE BEN",
+          "text": "I've only got a minute or two, before the doorbell wakes you up.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 9,
+          "speaker": "PETER",
+          "text": "I love her, Uncle Ben.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 10,
+          "speaker": "UNCLE BEN",
+          "text": "I know you do.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 11,
+          "speaker": "PETER",
+          "text": "All I'd have to do is tell her, tell her who I really am, and she'd-",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 12,
+          "speaker": "UNCLE BEN",
+          "text": "Be pretty easy, huh?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 13,
+          "speaker": "PETER",
+          "text": "Sure would.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 14,
+          "speaker": "UNCLE BEN",
+          "text": "So why don't you tell her?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 15,
+          "speaker": "PETER",
+          "text": "Because she wouldn't be safe a single minute for the rest of her life.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 16,
+          "speaker": "UNCLE BEN",
+          "text": "Is that why?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 17,
+          "speaker": "PETER",
+          "text": "(looks at him, knows there's more) Partly.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 18,
+          "speaker": "UNCLE BEN",
+          "text": "She needs to love you, Pete. Not the guy in the mask. But burning that mask isn't the way to protect her, or yourself. You can't deny who you are, buddy.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 19,
+          "speaker": "PETER",
+          "text": "Who I am? Because of who I am, you were killed. Aunt May almost- who's next? How can I be sure no one else will get hurt?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 20,
+          "speaker": "UNCLE BEN",
+          "text": "You can't. It's called life. You can't bet on it, you can't manage it or control it, all you can do is lead the one you were meant to live.",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "Central Park on a cold day. Peter sits on a park bench, overcoat pulled up against the snow. A figure walks past him, turns, sits. We can't see the figure, he's just out of frame. A moment goes by. Peter has a strange feeling. He turns, looks at the person who just sat down next to him. It's Uncle Ben! Peter GASPS. Makes some inarticulate sounds. Uncle Ben flashes an enigmatic smile. Peter just stares, stunned for a long moment, absorbing this information. And then, he launches himself across the bench,",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 89,
+      "slugline": "INT.  PARKER LIVING ROOM - DAY",
+      "location": "PARKER LIVING ROOM",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "AUNT MAY",
+        "MAN",
+        "PETER"
+      ],
+      "witnesses": [
+        "AUNT MAY"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "MAN",
+          "text": "Peter Parker?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "PETER",
+          "text": "Yes?",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "-the front door of Aunt May's house, in reality, a MAN standing outside it, ringing the bell, visible through the skinny glass window beside the door. Peter sits up, groggy, still fully dressed, same clothes as last night. He goes to the front door, opens it. A MAN IN A BLACK SUIT stands in front. Wordlessly, the Man in the Black Suit hands Peter a creamy white envelope, then turns and walks away. Peter looks down at the envelope, curious. He opens it, his eyes scan the page, the typed letters dissolve into the image,",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 90,
+      "slugline": "EXT.  OSCORP PLAZA - DAY",
+      "location": "OSCORP PLAZA",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "HARRY",
+        "M.J.",
+        "PETER"
+      ],
+      "witnesses": [],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "HARRY",
+          "text": "Well? What do you want?",
+          "parenthetical": "to Peter"
+        },
+        {
+          "turn_number": 2,
+          "speaker": "PETER",
+          "text": "Me? She sent me a-",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "M.J.",
+          "text": "Harry, you're the one who-",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "HARRY",
+          "text": "Oh, God...",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 5,
+          "speaker": "PETER",
+          "text": "Danger!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 6,
+          "speaker": "M.J.",
+          "text": "What?!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 7,
+          "speaker": "PETER",
+          "text": "The elevator! Don't go in it!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 8,
+          "speaker": "HARRY",
+          "text": "Fine, stay down here and die!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 9,
+          "speaker": "M.J.",
+          "text": "PETER!",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "-OSCORP. The early morning is thick with fog. We're high above OsCorp Plaza, on top of the towering black OsCorp Building, behind its red neon sign. Down below, we see three solitary figures approaching the middle of the plaza from three different directions. The plaza and the building are deserted at this hour. DOWN ON THE GROUND, Peter, walking toward the plaza, recognizes one of the people coming toward him. It's M.J.  Peter looks to his left, recognizes the other person.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 91,
+      "slugline": "INT.  GLASS ELEVATOR - DAY",
+      "location": "GLASS ELEVATOR",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "M.J.",
+        "PETER"
+      ],
+      "witnesses": [
+        "PETER"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "M.J.",
+          "text": "PETER!!",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "In the ascending elevator, M.J. turns to the window, sees Peter stranded in the plaza below, amid the smoke of the explosions.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 92,
+      "slugline": "EXT.  OSCORP PLAZA - DAY",
+      "location": "OSCORP PLAZA",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "DRIVER",
+        "MAN",
+        "PETER"
+      ],
+      "witnesses": [
+        "DRIVER",
+        "MAN",
+        "PETER"
+      ],
+      "dialogue_turns": [],
+      "action_summary": "Peter stands in the plaza, watching as the elevator slowly rises. Instinctively, his hands dart up to his shirt, pull it open, he feels underneath for his costume. But of course, it isn't there. He burned it. Peter turns, thinks like crazy. In the distance, SIRENS start to sound, PEOPLE start to emerge from the fog, having heard the explosions. Peter looks around frantically. He sees something, his eyes light up. Across the street, a sign in the window of a souvenir shop on",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 93,
+      "slugline": "INT.  SOUVENIR SHOP - DAY",
+      "location": "SOUVENIR SHOP",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "MAN",
+        "PETER",
+        "SPIDER-MAN"
+      ],
+      "witnesses": [
+        "MAN",
+        "PETER"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "SPIDER-MAN",
+          "text": "Can I wear it home?",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "Peter races past a rack of Halloween costumes. There's a clown, a cowboy, Mr. Potato Head, Wolverine- ah hah! He yanks a Spider-Man costume off the rack. He tugs at the sleeves, checks out the crotch. AT THE REGISTER, A twenty dollar bill lands on the counter. Peter stands in front of the CLERK, now in the Spider-man costume.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 101,
+      "slugline": "EXT.  OSCORP BUILDING - DAY",
+      "location": "OSCORP BUILDING",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "DOC OCK",
+        "GREEN GOBLIN",
+        "MAN",
+        "SPIDER-MAN"
+      ],
+      "witnesses": [
+        "DOC OCK",
+        "MAN"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "GREEN GOBLIN",
+          "text": "Do you like my razor bats?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "SPIDER-MAN",
+          "text": "Hang on, hang on!!",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "Down below, Spider-Man squeezes the cable as hard as he can. Blood seeps through his gloves. He's in agony! The Goblin opens his Goblin bag, releasing half a dozen small black winged objects into the air. They swarm over Spider-Man, BUZZING and BEEPING horribly. Spider-Man is forced to take one hand off the cable, to try and swat them away. He reaches out and snares one, but he immediately releases it, SHOUTING in pain. The razor bats swarm around Spider-Man, slashing his skin and costume. But he is forced to put both hands back on the cable, to",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 104,
+      "slugline": "EXT.  OSCORP BUILDING - DAY",
+      "location": "OSCORP BUILDING",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "DOC OCK",
+        "GREEN GOBLIN",
+        "HARRY",
+        "M.J.",
+        "MAN",
+        "NORMAN",
+        "OSBORN",
+        "SPIDER-MAN"
+      ],
+      "witnesses": [
+        "M.J.",
+        "MAN",
+        "NORMAN",
+        "OSBORN"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "DOC OCK",
+          "text": "Thought you'd never see me again, didn't you Osborn?!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "DOC OCK",
+          "text": "I've awaited this moment, Norman!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "HARRY",
+          "text": "Stop him! Please!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "GREEN GOBLIN",
+          "text": "I'll kill you!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 5,
+          "speaker": "HARRY",
+          "text": "He's my father...",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 6,
+          "speaker": "DOC OCK",
+          "text": "NOOOO!!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 7,
+          "speaker": "SPIDER-MAN",
+          "text": "M.J.!!!!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 8,
+          "speaker": "GREEN GOBLIN",
+          "text": "LET'S SEE HOW THIS SPIDER FLIES!",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "-the ongoing fight, which includes, (1) the Goblin, held aloft by the ground, his hands torn to shreds by the elevator cable. Harry turns, eyes wide, to look at Doc Ock. Who, me? Spider-Man turns, eyes wide, and looks at Harry. Who, him? Harry and Spider-Man both turn, eyes wide, and look at the Goblin. Who, HIM?! Using a free tentacle, Doc Ock reaches up and RIPS the helmet from the Green Goblin's head, revealing Norman Osborn's maniacal face underneath. Spider-Man, Harry, and M.J. are, well, you know. Surprised.",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 109,
+      "slugline": "EXT.  BROOKLYN BRIDGE - DAY",
+      "location": "BROOKLYN BRIDGE",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "CO-PILOT",
+        "COP",
+        "DOC OCK",
+        "FLASH",
+        "GREEN GOBLIN",
+        "HARRY",
+        "M.J.",
+        "MAN",
+        "OSBORN",
+        "SPIDER-MAN"
+      ],
+      "witnesses": [
+        "COP",
+        "FLASH",
+        "MAN",
+        "OSBORN"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "GREEN GOBLIN",
+          "text": "WHY LOOK! IT'S YOUR BOYFRIEND, COMING TO DIE WITH YOU!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "GREEN GOBLIN",
+          "text": "HAPPY TO SEE YOU!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "GREEN GOBLIN",
+          "text": "HOW ABOUT SEEING ME?!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "M.J.",
+          "text": "Watch out! Don't let him-",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 5,
+          "speaker": "DOC OCK",
+          "text": "KILL HIM! KILL HIM!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 6,
+          "speaker": "DOC OCK",
+          "text": "NOOO!!!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 7,
+          "speaker": "SPIDER-MAN",
+          "text": "M.J.!!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 8,
+          "speaker": "CO-PILOT",
+          "text": "PULL UP, PULL UP, PULL UP!!!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 9,
+          "speaker": "M.J.",
+          "text": "Kiss me now.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 10,
+          "speaker": "DOC OCK",
+          "text": "He's alive! You fool, you left him alive! Spider-Man!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 11,
+          "speaker": "HARRY",
+          "text": "SPIIIIIIDERRRMAAAAAANNNN!!!!",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 12,
+          "speaker": "M.J.",
+          "text": "....SPIDER-MAN....",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "-the Brooklyn Bridge, the six thousand foot suspension bridge that links Manhattan to Brooklyn. Its twin towers stand both feet buried in the East River, miles of suspension cables shining like prison bars in the morning sunlight that's breaking through the fog. It's rush hour now and the bridge is busy- extremely busy. In fact, cars are stopped, SIRENS are WAILING, half a dozen news and police helicopters are circling over the Manhattan tower- ATOP THE MANHATTAN TOWER -where the Goblin stands defiant, SCREAMING A HORRIBLE LAUGH up to",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 110,
+      "slugline": "EXT.  COURTHOUSE - DAY",
+      "location": "COURTHOUSE",
+      "time_of_day": "DAY",
+      "characters_present": [
+        "HARRY",
+        "M.J.",
+        "MAN",
+        "NEW YORK STATE SUPREME COURT",
+        "OSBORN",
+        "PETER",
+        "SPIDER-MAN"
+      ],
+      "witnesses": [
+        "MAN",
+        "NEW YORK STATE SUPREME COURT",
+        "OSBORN"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "HARRY",
+          "text": "Thanks for everything, Peter.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 2,
+          "speaker": "PETER",
+          "text": "I'm so sorry.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 3,
+          "speaker": "HARRY",
+          "text": "Me too, Buddy. Me too.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 4,
+          "speaker": "PETER",
+          "text": "We're sort of orphans, aren't we? What do we have left?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 5,
+          "speaker": "HARRY",
+          "text": "Not much.",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 6,
+          "speaker": "M.J.",
+          "text": "Us too? Friends again?",
+          "parenthetical": null
+        },
+        {
+          "turn_number": 7,
+          "speaker": "SPIDER-MAN",
+          "text": "Tell her. Tell her.",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "Letters are etched in stone: Harry Osborn, dressed in a suit, walks slowly down the front steps of the courthouse downtown, flanked by LAWYERS. It's a grim day. He nods, the Lawyers offer supportive pats on the back, we catch a few stray words of hope- \"parole,\" \"thirty years,\" \"visitation,\" that sort of thing, but they're more than outweighed by the term \"life in prison,\" which we also pick up. Peter, also dressed in a suit, draws close, takes a deep breath. Here goes a tough moment. Harry sees him, holds out a hand to shake. Good thing it's still winter, Peter can wear gloves to",
+      "lens_data": {}
+    },
+    {
+      "scene_number": 111,
+      "slugline": "EXT.  OVER THE CITY",
+      "location": "OVER THE CITY",
+      "time_of_day": "UNKNOWN",
+      "characters_present": [
+        "CUT TO BLACK.",
+        "MAN",
+        "SPIDER-MAN"
+      ],
+      "witnesses": [
+        "CUT TO BLACK.",
+        "MAN"
+      ],
+      "dialogue_turns": [
+        {
+          "turn_number": 1,
+          "speaker": "SPIDER-MAN",
+          "text": "But I can't. I will never forget these words: \"With great power comes great responsibility.\"",
+          "parenthetical": null
+        }
+      ],
+      "action_summary": "-we swing through the sky, first-person Spidey-cam again, rushing past the buildings in great, graceful arcs. Our gloved hand rises up into frame, shoots out a web, we swing off in another direction. It's exhilarating, dizzying, we see only the buildings racing by, but not ourselves. SPIDER-MAN (V.O.) (cont'd) Because I love her, she will never, ever know. Up ahead, an enormous mirrored building looms up in front of us, maybe it's the one Saul Bass used in the opening of \"North By",
+      "lens_data": {}
+    }
+  ],
+  "arc": {
+    "trajectory": [],
+    "turning_points": [],
+    "transformation": null
+  },
+  "buildup_threads": [],
+  "analysis_metadata": {
+    "total_scenes_analyzed": 70,
+    "total_dialogue_turns": 384,
+    "lenses_applied": []
+  }
+}

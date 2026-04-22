@@ -1,0 +1,35 @@
+version: '3.9'
+
+services:
+  memgraph:
+    image: memgraph/memgraph:latest
+    container_name: thrivesight-memgraph
+    ports:
+      - "7687:7687"
+      - "7444:7444"
+    volumes:
+      - memgraph_data:/var/lib/memgraph
+    environment:
+      - MEMGRAPH_BOLT_SERVER_NAME_FOR_INIT=memgraph
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/7687"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  memgraph-lab:
+    image: memgraph/lab:latest
+    container_name: thrivesight-memgraph-lab
+    ports:
+      - "3001:3000"
+    depends_on:
+      memgraph:
+        condition: service_healthy
+    environment:
+      - MEMGRAPH_HOST=memgraph
+      - MEMGRAPH_PORT=7687
+
+volumes:
+  memgraph_data:
+    driver: local
