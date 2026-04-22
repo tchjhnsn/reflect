@@ -40,20 +40,28 @@ reflect/
 │   ├── insight_engine.py
 │   ├── llm_prompts.py
 │   └── persona_config.py
+├── api/                      ← Django REST backend (squash-imported 2026-04-22 from tchjhnsn/reflect-api)
+│   ├── manage.py
+│   ├── requirements.txt
+│   ├── reflect_api/          (Django project configuration + root URL wiring)
+│   ├── events_api/           (HTTP transport, services, live-conversation, graph helpers, analytics)
+│   ├── datasets/
+│   ├── scripts/
+│   └── …
 └── _ideas/                   idea notes (will migrate to docs/ideas/)
 ```
 
-The internal Python package is still named `thrivesight_core` for import stability. Renaming it to `reflect_core` is tracked as an issue.
+The internal Python package is still named `thrivesight_core` for import stability. Renaming it to `reflect_core` is tracked as an issue. The `api/` subfolder was imported from the (now-archived) standalone `tchjhnsn/reflect-api` repo via a squash import — full per-commit history of the Django backend remains preserved at that archived repo.
 
 ## Planned consolidation
 
-Reflect is being consolidated into a single repository from previously separate codebases. These folders will land here over time via `git subtree` merges:
+Reflect is being consolidated into a single repository from previously separate codebases.
 
-- `api/` — the Django REST backend (currently at [tchjhnsn/reflect-api](https://github.com/tchjhnsn/reflect-api), archived)
-- `docs/` — architecture, research, and thesis documents (currently in my vault; see the migration tracking issue)
-- `packages/` — TypeScript domain packages (values ontology, scoring, number-theory framework) from what was previously [tchjhnsn/ai-lab](https://github.com/tchjhnsn/ai-lab)
+- ✅ **`api/`** — Django REST backend. Imported 2026-04-22 from the archived [tchjhnsn/reflect-api](https://github.com/tchjhnsn/reflect-api).
+- ⏳ **`docs/`** — architecture, research, and thesis documents (currently in my vault; see the migration tracking issue).
+- ⏳ **`packages/`** — TypeScript domain packages (values ontology, scoring, number-theory framework) from the archived [tchjhnsn/ai-lab](https://github.com/tchjhnsn/ai-lab).
 
-Track the consolidation progress in the [issues](https://github.com/tchjhnsn/reflect/issues).
+Track the remaining consolidation progress in the [issues](https://github.com/tchjhnsn/reflect/issues).
 
 ## Install (Python engine)
 
