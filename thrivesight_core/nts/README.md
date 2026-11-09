@@ -24,7 +24,9 @@ The periodic table of the soul from the Number Theory of the Soul v7, as data, r
 
     python -m unittest thrivesight_core.nts.test_nts
 
-## Run the reader on a local model
+## Run the reader on Ollama
 
     ollama pull qwen3.8
     python -m thrivesight_core.nts.run_reader --ollama qwen3.8 > readings.json
+
+On Ollama Cloud, set `OLLAMA_HOST=https://ollama.com` and `OLLAMA_API_KEY`, and use a model from `https://ollama.com/api/tags`.

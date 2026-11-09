@@ -7,6 +7,7 @@ the entry word for word (citation fails closed).
 from __future__ import annotations
 
 import json
+import os
 import re
 import urllib.request
 from pathlib import Path
@@ -71,7 +72,8 @@ def read_entry(entry_text: str, client, model: str) -> tuple[list[Proposal], lis
 
 
 def read_entry_ollama(entry_text: str, model: str, host: str = "http://localhost:11434") -> tuple[list[Proposal], list[str]]:
-    """Ask a local Ollama model to read one entry (for example model="qwen3.8")."""
+    """Ask an Ollama model to read one entry: a local server, or Ollama Cloud
+    (host="https://ollama.com") with OLLAMA_API_KEY set."""
     body = json.dumps({
         "model": model,
         "stream": False,
@@ -83,7 +85,10 @@ def read_entry_ollama(entry_text: str, model: str, host: str = "http://localhost
             {"role": "user", "content": entry_text},
         ],
     }).encode()
-    request = urllib.request.Request(f"{host}/api/chat", data=body, headers={"Content-Type": "application/json"})
+    headers = {"Content-Type": "application/json"}
+    if os.environ.get("OLLAMA_API_KEY"):
+        headers["Authorization"] = "Bearer " + os.environ["OLLAMA_API_KEY"]
+    request = urllib.request.Request(f"{host}/api/chat", data=body, headers=headers)
     with urllib.request.urlopen(request, timeout=600) as response:
         text = json.loads(response.read())["message"]["content"]
     return parse_answer(entry_text, text)

@@ -3,8 +3,9 @@
   python -m thrivesight_core.nts.run_reader --model <model id> [entries.json]
   python -m thrivesight_core.nts.run_reader --ollama qwen3.8 [entries.json]
 
---model uses the Anthropic API and needs ANTHROPIC_API_KEY. --ollama uses a local
-Ollama server (OLLAMA_HOST, default http://localhost:11434) and needs no key. person_labels in the file is a list of prime ids per entry,
+--model uses the Anthropic API and needs ANTHROPIC_API_KEY. --ollama uses an Ollama
+server: OLLAMA_HOST (default http://localhost:11434), or https://ollama.com for
+Ollama Cloud with OLLAMA_API_KEY. person_labels in the file is a list of prime ids per entry,
 filled in by the person; entries without labels are read but not scored.
 """
 from __future__ import annotations
