@@ -109,3 +109,29 @@ test("the Me page has no axe violations", async ({ page }) => {
   });
   expect(result).toEqual([]);
 });
+
+test("the theme is a setting that sticks, and Paper is the default", async ({ page }) => {
+  await onboardAs(page, "Em");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "paper");
+  await page.goto("/me");
+  for (const t of ["Stream", "Calm"] as const) {
+    await page.getByRole("button", { name: t, exact: true }).click();
+    await expect(page.getByRole("button", { name: t, exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", t.toLowerCase());
+    await page.waitForLoadState("networkidle");
+    await page.goto("/journal");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", t.toLowerCase());
+    await page.getByLabel("What would you like to remember?").fill(`Written in ${t}.`);
+    await page.getByRole("button", { name: "Post" }).click();
+    await expect(page.getByTestId("entry").first()).toContainText(`Written in ${t}.`);
+    await shot(page, `5-theme-${t.toLowerCase()}`);
+    await page.addScriptTag({ content: axeSource });
+    const violations = await page.evaluate(async () => {
+      const axe = (window as unknown as { axe: { run: () => Promise<{ violations: { id: string }[] }> } }).axe;
+      return (await axe.run()).violations.map((v) => v.id);
+    });
+    expect(violations).toEqual([]);
+    await page.goto("/me");
+    await shot(page, `6-me-${t.toLowerCase()}`);
+  }
+});

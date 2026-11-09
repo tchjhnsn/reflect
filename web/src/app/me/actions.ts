@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
+import { THEMES, THEME_COOKIE } from "@/core/theme";
 import { acceptLocalDate, clean } from "@/core/journal";
 import { isoDate, type IsoDate } from "@/core/person";
 import { requireUser } from "@/server/session";
@@ -67,4 +69,13 @@ export async function setPack(packId: string, chosen: boolean): Promise<Result> 
     return { error: "Unknown pack." };
   }
   return done();
+}
+
+/** The look is a preference on this device, kept in a cookie. Nothing about it reaches the journal. */
+export async function setTheme(theme: string): Promise<Result> {
+  await requireUser();
+  if (!THEMES.some((t) => t.id === theme)) return { error: "Unknown theme." };
+  (await cookies()).set(THEME_COOKIE, theme, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax", secure: process.env.NODE_ENV === "production" });
+  revalidatePath("/", "layout");
+  return { ok: true };
 }

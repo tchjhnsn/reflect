@@ -6,7 +6,8 @@ import type { Belief, Dated, Me } from "@/server/me-store";
 import { longDate, shortDate, useToday } from "@/lib/today";
 import { Nav, initialOf } from "../nav";
 import { SignOut } from "../sign-out";
-import { changeFact, letGoBelief, setPack, stateBelief } from "./actions";
+import { THEMES, type ThemeId } from "@/core/theme";
+import { changeFact, letGoBelief, setPack, setTheme, stateBelief } from "./actions";
 
 type Result = { error: string } | { ok: true };
 type FieldId = "name" | "date_of_birth" | "occupation" | "closest_friend";
@@ -188,7 +189,38 @@ function Packs({ chosen: saved }: { chosen: string[] }) {
   );
 }
 
-export function MePage({ me }: { me: Me }) {
+function Themes({ current }: { current: ThemeId }) {
+  const [theme, setLocal] = useState<ThemeId>(current);
+  const [, start] = useTransition();
+  const pick = (id: ThemeId) => {
+    const before = theme;
+    setLocal(id);
+    document.documentElement.dataset.theme = id;
+    start(async () => {
+      const r: Result = await setTheme(id);
+      if ("error" in r) {
+        setLocal(before);
+        document.documentElement.dataset.theme = before;
+      }
+    });
+  };
+  return (
+    <div className="themes" role="group" aria-label="Theme">
+      {THEMES.map((t) => (
+        <button key={t.id} type="button" className="theme" aria-pressed={theme === t.id} title={t.about} onClick={() => pick(t.id)}>
+          <span className={`swatch ${t.id}`} aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </span>
+          {t.title}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export function MePage({ me, theme }: { me: Me; theme: ThemeId }) {
   const today = useToday();
   const [editing, setEditing] = useState<FieldId | null>(null);
   const name = me.facts.name.find((h) => h.validTo === null)?.value ?? null;
@@ -234,6 +266,16 @@ export function MePage({ me }: { me: Me }) {
         </div>
         <p className="sec-note">The journal offers a question only from these, and only when you ask.</p>
         <Packs chosen={me.packs} />
+      </section>
+
+      <section className="sec" aria-labelledby="h-settings">
+        <div className="sec-head">
+          <h2 id="h-settings" className="lbl">
+            Settings
+          </h2>
+        </div>
+        <p className="sec-note">Theme. Only the look changes; what you write stays the same.</p>
+        <Themes current={theme} />
       </section>
 
       <div className="foot">

@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/server/session";
 import { hasOnboarded } from "@/server/person-store";
 import { loadMe } from "@/server/me-store";
+import { cookies } from "next/headers";
+import { THEME_COOKIE, asTheme } from "@/core/theme";
 import { MePage } from "./me";
 
 export const metadata: Metadata = { title: "Me" };
@@ -11,5 +13,6 @@ export const dynamic = "force-dynamic";
 export default async function Page() {
   const user = await requireUser();
   if (!(await hasOnboarded(user.id))) redirect("/welcome");
-  return <MePage me={await loadMe(user.id)} />;
+  const theme = asTheme((await cookies()).get(THEME_COOKIE)?.value);
+  return <MePage me={await loadMe(user.id)} theme={theme} />;
 }
