@@ -18,7 +18,6 @@ def list (xs : List String) : String := "[" ++ ",".intercalate xs ++ "]"
 def destJson : Destination → String
   | .profile k => "{\"store\":\"profile\",\"key\":\"" ++ k ++ "\"}"
   | .relationship .closestFriend => "{\"store\":\"relationships\",\"kind\":\"closest_friend\"}"
-  | .puzzles => "{\"store\":\"puzzles\"}"
 
 def main : IO Unit := do
   let primes := list (Prime.all.map fun p => "{\"id\":\"" ++ p.id ++ "\",\"number\":" ++ toString p.number ++ "}")

@@ -1,3 +1,4 @@
+import "./globals.css";
 import type { ReactNode } from "react";
 
 export const metadata = { title: "Reflect", description: "A private journal." };

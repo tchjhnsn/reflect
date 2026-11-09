@@ -20,30 +20,29 @@ def run(answers):
 class OnboardingTest(unittest.TestCase):
     def test_order_comes_from_lean(self):
         self.assertEqual([q["id"] for q in ORDER],
-                         ["name", "date_of_birth", "occupation", "closest_friend", "puzzle"])
+                         ["name", "date_of_birth", "occupation", "closest_friend"])
 
     def test_full_run_files_each_answer(self):
-        p = run(["Ada", "1990-04-01", "Engineer", "Sam", "Why do I keep starting over?"])
+        p = run(["Ada", "1990-04-01", "Engineer", "Sam"])
         self.assertEqual(p.current("name"), "Ada")
         self.assertEqual(p.current("date_of_birth"), "1990-04-01")
         self.assertEqual(p.current("occupation"), "Engineer")
         self.assertEqual(p.current_relationship("closest_friend"), "Sam")
-        self.assertEqual([x.text for x in p.puzzles], ["Why do I keep starting over?"])
         self.assertTrue(all(f.status == "confirmed" for f in p.facts))
 
     def test_all_skipped_writes_nothing(self):
-        p = run(["", "  ", "", "", ""])
-        self.assertEqual((p.facts, p.relationships, p.puzzles), ([], [], []))
+        p = run(["", "  ", "", ""])
+        self.assertEqual((p.facts, p.relationships), ([], []))
 
-    def test_puzzle_only(self):
+    def test_friend_only(self):
         ob = Onboarding(TODAY)
-        for _ in range(4):
+        for _ in range(3):
             ob.skip()
-        ob.answer("What is enough?")
+        ob.answer("Sam")
         p = Person("p1")
         ob.finish(p, AT)
-        self.assertEqual((len(p.facts), len(p.relationships), len(p.puzzles)), (0, 0, 1))
-        self.assertIsNone(p.puzzles[0].kind)
+        self.assertEqual((len(p.facts), len(p.relationships)), (0, 1))
+        self.assertIsNone(ob.question)
 
     def test_back_keeps_and_replaces_answers(self):
         ob = Onboarding(TODAY)
@@ -73,8 +72,6 @@ class OnboardingTest(unittest.TestCase):
     def test_journal_source_refused(self):
         p = Person("p1")
         src = FromJournal("e1", "q", "g1")
-        with self.assertRaises(PermissionError):
-            p.state_puzzle("x", AT, source=src)
         with self.assertRaises(PermissionError):
             p.state_relationship("Sam", "closest_friend", AT, AT, source=src)
 

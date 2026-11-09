@@ -1,4 +1,4 @@
-"""Onboarding: five questions, each answered or skipped by the person. No model runs.
+"""Onboarding: four questions, each answered or skipped by the person. No model runs.
 
 Mirrors lean/NTS/Onboarding.lean. The order and where each answer goes come from
 structure.json, which Lean exports. Nothing is written until the person finishes.
@@ -75,8 +75,6 @@ class Onboarding:
                 written.append(person.state_fact(dest["key"], value, at, at, Stated()))
             elif dest["store"] == "relationships":
                 written.append(person.state_relationship(value, dest["kind"], at, at))
-            elif dest["store"] == "puzzles":
-                written.append(person.state_puzzle(value, at))
             else:
                 raise ValueError(f"unknown store {dest['store']}")
         return written
