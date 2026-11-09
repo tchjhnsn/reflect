@@ -35,16 +35,16 @@ The first reader labelled entries; it read each one at the surface, and a journa
 | `journal.py` | The journal. No model: a fixed "tell me more" after each thing the person writes, until they say they are done. Cues stay hidden unless the person asks, entry by entry (`show_cues`). |
 | `person.py` | The profile (dated facts: a new value closes the old one, never overwrites it), the beliefs store, and grants. A fact or belief is either stated by the person or taken from a journal entry under a live grant for that store, quoting the entry; taken items are proposals until confirmed, and revoking a grant returns everything taken under it. |
 | `records.py` `Act` | A will as weighted drivers (the person's weights, 0 to 10) plus what it was aimed at: whose, and which element. |
-| `../../lean/NTS/Person.lean` | The same rules in Lean: two sources only, a revoked grant allows nothing, a grant feeds one store. It also holds `Relationship` (dated, so a new closest friend closes the old one) and `Puzzle` (its own store, not a belief). |
+| `../../lean/NTS/Person.lean` | The same rules in Lean: two sources only, a revoked grant allows nothing, a grant feeds one store. It also holds `Relationship` (dated, so a new closest friend closes the old one). |
 
 ## Onboarding
 
-The first thing a person does is answer five questions, each skippable: name, date of birth, work, closest friend, and the puzzle of their life. No model runs and every answer is stated by the person.
+The first thing a person does is answer four questions, each skippable: name, date of birth, work, and closest friend. The puzzle of their life is not asked here: it has its own schema, like the founder puzzle, and gets its own flow. No model runs and every answer is stated by the person.
 
 | File | Holds |
 |---|---|
 | `onboarding.py` | `Onboarding`: answer, skip, back and finish. The order and where each answer is filed come from `structure.json`. Nothing is written until `finish`. A future date of birth is refused, and a blank answer counts as a skip. |
-| `../../lean/NTS/Onboarding.lean` | The questions, where each is filed, the order, and proofs that the puzzle is asked last and that every answer is `stated`. |
+| `../../lean/NTS/Onboarding.lean` | The questions, where each is filed, the order, and proofs that the closest friend is asked last and that every answer is `stated`. |
 
 ## Decisions in the code
 

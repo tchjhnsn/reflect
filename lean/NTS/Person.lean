@@ -123,20 +123,4 @@ structure Relationship where
   source : Source
   deriving Repr
 
-/-- What kind of puzzle it is, if the person chooses to say: perennial (it cannot be stated
-solved), generational (solved only over a lifetime or more), or tractable (it can become a
-problem with goals). [P] -/
-inductive PuzzleKind where
-  | perennial | generational | tractable
-  deriving DecidableEq, Repr
-
-/-- The puzzle of the person's life, in their words. It is not a belief: it is a question the
-person lives with, not a claim they hold true. [D] -/
-structure Puzzle where
-  text : String
-  kind : Option PuzzleKind := none
-  statedAt : String
-  source : Source
-  deriving Repr
-
 end NTS

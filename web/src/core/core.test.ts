@@ -11,28 +11,26 @@ function run(answers: string[]): OnboardingState {
 
 describe("onboarding", () => {
   it("follows the order Lean exports", () => {
-    expect(ONBOARDING.map((q) => q.id)).toEqual(["name", "date_of_birth", "occupation", "closest_friend", "puzzle"]);
+    expect(ONBOARDING.map((q) => q.id)).toEqual(["name", "date_of_birth", "occupation", "closest_friend"]);
   });
 
   it("files each answer where it belongs", () => {
-    const p = finish(run(["Ada", "1990-04-01", "Engineer", "Sam", "Why do I keep starting over?"]), EMPTY_PERSON, TODAY);
+    const p = finish(run(["Ada", "1990-04-01", "Engineer", "Sam"]), EMPTY_PERSON, TODAY);
     expect(currentFact(p, "name")).toBe("Ada");
     expect(currentFact(p, "date_of_birth")).toBe("1990-04-01");
     expect(currentFact(p, "occupation")).toBe("Engineer");
     expect(currentRelationship(p, "closest_friend")).toBe("Sam");
-    expect(p.puzzles.map((x) => x.text)).toEqual(["Why do I keep starting over?"]);
-    expect([...p.facts, ...p.relationships, ...p.puzzles].every((r) => r.source.kind === "stated")).toBe(true);
+    expect([...p.facts, ...p.relationships].every((r) => r.source.kind === "stated")).toBe(true);
   });
 
   it("writes nothing when every question is skipped", () => {
-    const s = run(["", "  ", "", "", ""]);
+    const s = run(["", "  ", "", ""]);
     expect(finish(s, EMPTY_PERSON, TODAY)).toEqual(EMPTY_PERSON);
   });
 
-  it("writes only the puzzle when only the puzzle is answered", () => {
-    const p = finish(run(["", "", "", "", "What is enough?"]), EMPTY_PERSON, TODAY);
-    expect([p.facts.length, p.relationships.length, p.puzzles.length]).toEqual([0, 0, 1]);
-    expect(p.puzzles[0]?.kind).toBeNull();
+  it("writes only the friend when only the friend is answered", () => {
+    const p = finish(run(["", "", "", "Sam"]), EMPTY_PERSON, TODAY);
+    expect([p.facts.length, p.relationships.length]).toEqual([0, 1]);
   });
 
   it("keeps earlier answers when going back", () => {
@@ -43,7 +41,7 @@ describe("onboarding", () => {
   });
 
   it("returns to the review after editing or removing one answer", () => {
-    let s = run(["Ada", "1990-04-01", "Engineer", "Sam", ""]);
+    let s = run(["Ada", "1990-04-01", "Engineer", "Sam"]);
     s = reduce(s, { type: "edit", step: 2 });
     expect(s.answers.occupation).toBe("Engineer");
     s = reduce(s, { type: "answer", text: "Teacher", today: TODAY });

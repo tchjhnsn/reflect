@@ -19,7 +19,7 @@ export function Onboarding() {
   const q = currentQuestion(state);
 
   if (saved) {
-    const count = saved.facts.length + saved.relationships.length + saved.puzzles.length;
+    const count = saved.facts.length + saved.relationships.length;
     return (
       <main className="shell">
         <section className="screen" aria-live="polite">

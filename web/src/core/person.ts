@@ -28,22 +28,12 @@ export type Relationship = {
   source: { kind: "stated" };
 };
 
-export type PuzzleKind = "perennial" | "generational" | "tractable";
-
-export type Puzzle = {
-  text: string;
-  kind: PuzzleKind | null;
-  statedAt: IsoDate;
-  source: { kind: "stated" };
-};
-
 export type PersonState = {
   facts: readonly Fact[];
   relationships: readonly Relationship[];
-  puzzles: readonly Puzzle[];
 };
 
-export const EMPTY_PERSON: PersonState = { facts: [], relationships: [], puzzles: [] };
+export const EMPTY_PERSON: PersonState = { facts: [], relationships: [] };
 
 export function isoDate(text: string): IsoDate | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return null;
@@ -64,10 +54,6 @@ export function stateRelationship(p: PersonState, name: string, kind: Relationsh
   const relationships = p.relationships.map((r) => (r.kind === kind && r.validTo === null ? { ...r, validTo: at } : r));
   const rel: Relationship = { name, kind, validFrom: at, validTo: null, recordedAt: at, source: { kind: "stated" } };
   return { ...p, relationships: [...relationships, rel] };
-}
-
-export function statePuzzle(p: PersonState, text: string, at: IsoDate, kind: PuzzleKind | null = null): PersonState {
-  return { ...p, puzzles: [...p.puzzles, { text, kind, statedAt: at, source: { kind: "stated" } }] };
 }
 
 export function currentFact(p: PersonState, key: string): string | null {

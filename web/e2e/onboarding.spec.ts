@@ -32,7 +32,7 @@ async function seriousAxe(page: Page) {
   expect(result).toEqual([]);
 }
 
-test("a full run reaches the review with five cards and keeps them", async ({ page }) => {
+test("a full run reaches the review with four cards and keeps them", async ({ page }) => {
   const requests: string[] = [];
   page.on("request", (r) => requests.push(`${r.url()} ${r.postData() ?? ""}`));
   await page.goto("/welcome");
@@ -44,26 +44,24 @@ test("a full run reaches the review with five cards and keeps them", async ({ pa
   await answer(page, "What do you do?", "Engineer");
   await shot(page, "4-friend");
   await answer(page, "Who is your closest friend?", "Sam");
-  await shot(page, "5-puzzle");
-  await answer(page, "What is the puzzle of your life right now?", "Why do I keep starting over?");
   await expect(page.getByRole("heading", { name: "Here’s what you told us." })).toBeVisible();
-  for (const id of ["name", "date_of_birth", "occupation", "closest_friend", "puzzle"]) {
+  for (const id of ["name", "date_of_birth", "occupation", "closest_friend"]) {
     await expect(page.getByTestId(`card-${id}`)).toBeVisible();
   }
-  await expect(page.getByTestId("card-puzzle")).toContainText("Why do I keep starting over?");
+  await expect(page.getByTestId("card-closest_friend")).toContainText("Sam");
   await shot(page, "6-review");
   await seriousAxe(page);
   await page.getByRole("button", { name: "Keep these" }).click();
-  await expect(page.getByTestId("saved-count")).toHaveText("Kept 5 of your answers.");
+  await expect(page.getByTestId("saved-count")).toHaveText("Kept 4 of your answers.");
   await shot(page, "7-done");
-  for (const secret of ["Ada", "Sam", "starting over"]) {
+  for (const secret of ["Ada", "Sam", "Engineer"]) {
     expect(requests.some((r) => r.includes(secret))).toBe(false);
   }
 });
 
 test("skipping everything keeps nothing", async ({ page }) => {
   await page.goto("/welcome");
-  for (let i = 0; i < 5; i++) await page.getByRole("button", { name: "Skip" }).click();
+  for (let i = 0; i < 4; i++) await page.getByRole("button", { name: "Skip" }).click();
   await expect(page.getByTestId("nothing")).toBeVisible();
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByTestId("saved-count")).toHaveText("Nothing was kept. You can add any of it later.");
@@ -75,7 +73,6 @@ test("edit and remove on the review", async ({ page }) => {
   await answer(page, "When were you born?", "1990-04-01");
   await answer(page, "What do you do?", "Engineer");
   await answer(page, "Who is your closest friend?", "Sam");
-  await page.getByRole("button", { name: "Skip" }).click();
   await page.getByTestId("card-occupation").getByRole("button", { name: "Edit" }).click();
   await expect(page.getByLabel("What do you do?")).toHaveValue("Engineer");
   await page.getByLabel("What do you do?").fill("Teacher");
@@ -108,7 +105,5 @@ test("the whole flow works from the keyboard", async ({ page }) => {
   await page.keyboard.press("Enter");
   await page.keyboard.type("Sam");
   await page.keyboard.press("Enter");
-  await page.keyboard.type("What is enough?");
-  await page.keyboard.press("Control+Enter");
-  await expect(page.getByTestId("card-puzzle")).toContainText("What is enough?");
+  await expect(page.getByTestId("card-closest_friend")).toContainText("Sam");
 });

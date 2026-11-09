@@ -2,8 +2,7 @@ import raw from "./structure.json";
 
 export type Destination =
   | { store: "profile"; key: string }
-  | { store: "relationships"; kind: "closest_friend" }
-  | { store: "puzzles" };
+  | { store: "relationships"; kind: "closest_friend" };
 
 export type OnboardingQuestion = { id: string; destination: Destination };
 
@@ -16,7 +15,6 @@ function parseDestination(value: unknown, path: string): Destination {
   const d = value as Record<string, unknown>;
   if (d.store === "profile" && typeof d.key === "string") return { store: "profile", key: d.key };
   if (d.store === "relationships" && d.kind === "closest_friend") return { store: "relationships", kind: "closest_friend" };
-  if (d.store === "puzzles") return { store: "puzzles" };
   fail(path);
 }
 

@@ -1,6 +1,6 @@
 // Mirrors lean/NTS/Onboarding.lean and thrivesight_core/nts/onboarding.py. No model runs.
 import { ONBOARDING, type OnboardingQuestion } from "./structure";
-import { isoDate, stateFact, statePuzzle, stateRelationship, type IsoDate, type PersonState } from "./person";
+import { isoDate, stateFact, stateRelationship, type IsoDate, type PersonState } from "./person";
 
 export type OnboardingState = {
   step: number;
@@ -77,8 +77,6 @@ export function finish(
         return stateFact(p, d.key, value, at);
       case "relationships":
         return stateRelationship(p, value, d.kind, at);
-      case "puzzles":
-        return statePuzzle(p, value, at);
     }
   }, person);
 }
