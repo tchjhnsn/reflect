@@ -11,7 +11,7 @@ The periodic table of the soul from the Number Theory of the Soul v7, as data, r
 | `prompts/reader.md` | The reader's system prompt. The category and element list is filled in from `elements.json`, so the prompt never drifts from the table. |
 | `reader.py` | Builds the prompt and checks a model's answer. Citation fails closed: an unknown element, an identity offered as a finding, a bad scope path or a quote not in the entry is refused. |
 | `agreement.py` | Per-prime agreement between the model and the person's own labels, with Cohen's kappa. This replaces training as the measure of whether the prompt works. |
-| `run_reader.py` | Reads a file of entries with a model and prints readings and agreement. Needs `ANTHROPIC_API_KEY` and `--model`. |
+| `run_reader.py` | Reads a file of entries with a model and prints readings and agreement. `--ollama <name>` uses a local Ollama server; `--model <id>` uses the Anthropic API and needs `ANTHROPIC_API_KEY`. |
 | `fixtures/sample_entries.json` | Eight synthetic entries, unlabelled. Not anyone's journal. |
 
 ## Decisions in the code
@@ -23,3 +23,8 @@ The periodic table of the soul from the Number Theory of the Soul v7, as data, r
 ## Test
 
     python -m unittest thrivesight_core.nts.test_nts
+
+## Run the reader on a local model
+
+    ollama pull qwen3.8
+    python -m thrivesight_core.nts.run_reader --ollama qwen3.8 > readings.json

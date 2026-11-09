@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import re
+import urllib.request
 from pathlib import Path
 
 from .records import Proposal, RealityTags, ScopePath
@@ -66,4 +67,23 @@ def read_entry(entry_text: str, client, model: str) -> tuple[list[Proposal], lis
         messages=[{"role": "user", "content": entry_text}],
     )
     text = "".join(block.text for block in message.content if getattr(block, "type", "") == "text")
+    return parse_answer(entry_text, text)
+
+
+def read_entry_ollama(entry_text: str, model: str, host: str = "http://localhost:11434") -> tuple[list[Proposal], list[str]]:
+    """Ask a local Ollama model to read one entry (for example model="qwen3.8")."""
+    body = json.dumps({
+        "model": model,
+        "stream": False,
+        "think": False,
+        "format": "json",
+        "options": {"temperature": 0},
+        "messages": [
+            {"role": "system", "content": system_prompt()},
+            {"role": "user", "content": entry_text},
+        ],
+    }).encode()
+    request = urllib.request.Request(f"{host}/api/chat", data=body, headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(request, timeout=600) as response:
+        text = json.loads(response.read())["message"]["content"]
     return parse_answer(entry_text, text)
