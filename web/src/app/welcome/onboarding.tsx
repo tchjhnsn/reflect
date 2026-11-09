@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer, useState } from "react";
+import { useReducer, useState, useTransition } from "react";
 import { ONBOARDING } from "@/core/structure";
 import { EMPTY_PERSON, type IsoDate, type PersonState } from "@/core/person";
 import { START, currentQuestion, finish, isDone, reduce, type OnboardingEvent, type OnboardingState } from "@/core/onboarding";
@@ -13,7 +13,11 @@ function today(): IsoDate {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` as IsoDate;
 }
 
-export function Onboarding() {
+type Keep = (answers: Record<string, string>) => Promise<{ error: string } | undefined | void>;
+
+export function Onboarding({ keep }: { keep?: Keep }) {
+  const [pending, startTransition] = useTransition();
+  const [keepError, setKeepError] = useState<string | null>(null);
   const [state, dispatch] = useReducer((s: OnboardingState, e: OnboardingEvent) => reduce(s, e), START);
   const [saved, setSaved] = useState<PersonState | null>(null);
   const q = currentQuestion(state);
@@ -49,7 +53,15 @@ export function Onboarding() {
             dispatch({ type: "skip" });
           }}
           onBack={() => dispatch({ type: "back" })}
-          onConfirm={() => setSaved(finish(state, EMPTY_PERSON, today()))}
+          pending={pending}
+          error={keepError}
+          onConfirm={() => {
+            if (!keep) return setSaved(finish(state, EMPTY_PERSON, today()));
+            startTransition(async () => {
+              const result = await keep({ ...state.answers });
+              if (result && "error" in result) setKeepError(result.error);
+            });
+          }}
         />
       ) : (
         <Question

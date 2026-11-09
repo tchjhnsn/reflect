@@ -9,9 +9,11 @@ type Props = {
   onRemove: (step: number) => void;
   onBack: () => void;
   onConfirm: () => void;
+  pending?: boolean;
+  error?: string | null;
 };
 
-export function Review({ answers, onEdit, onRemove, onBack, onConfirm }: Props) {
+export function Review({ answers, onEdit, onRemove, onBack, onConfirm, pending = false, error = null }: Props) {
   const given = ONBOARDING.map((q, step) => ({ q, step, value: answers[q.id] })).filter((x) => x.value !== undefined);
 
   return (
@@ -40,11 +42,16 @@ export function Review({ answers, onEdit, onRemove, onBack, onConfirm }: Props) 
         </ul>
       )}
       <p className="note">Nothing is kept until you say so.</p>
+      {error ? (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      ) : null}
       <div className="actions">
         <button type="button" className="quiet" onClick={onBack}>
           Back
         </button>
-        <button type="button" className="primary" onClick={onConfirm}>
+        <button type="button" className="primary" onClick={onConfirm} disabled={pending}>
           {given.length === 0 ? "Continue" : "Keep these"}
         </button>
       </div>
