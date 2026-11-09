@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { TELL_ME_MORE, type Entry } from "@/core/journal";
+import { promptById } from "@/core/packs";
 import { done, more } from "./actions";
 
 function time(iso: string): string {
@@ -29,6 +30,7 @@ export function EntryCard({ entry, label }: { entry: Entry; label?: string }) {
         <span>{label ?? time(entry.createdAt)}</span>
         {closed ? <span className="badge">Done</span> : null}
       </header>
+      {promptById(entry.promptId) ? <p className="entry-prompt">{promptById(entry.promptId)!.text}</p> : null}
       {entry.parts.map((p) => (
         <p key={p.seq} className="entry-text">
           {p.text}

@@ -92,3 +92,42 @@ button:disabled { opacity: 0.6; cursor: default; }
 .on-this-day { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 4px 16px 8px; margin-bottom: 8px; }
 .on-this-day .entry:last-child { border-bottom: 0; }
 .empty { margin-top: 24px; }
+.composer-prompt { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 4px; }
+.composer-prompt label { font-weight: 600; font-size: 18px; line-height: 1.35; padding-top: 4px; }
+.composer-prompt button { padding: 4px 10px; font-size: 14px; flex: none; }
+.entry-prompt { margin: 0 0 4px; color: var(--muted); font-size: 15px; font-style: italic; }
+h1 { font-size: 28px; letter-spacing: -0.01em; margin: 0 0 4px; }
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin: 16px 0; }
+.panel h2, .panel h3 { font-size: 17px; margin: 0 0 2px; }
+.section-title { font-size: 17px; margin: 32px 0 2px; }
+.fields { margin: 12px 0 0; }
+.me-field { padding: 10px 0; border-top: 1px solid var(--line); }
+.me-field:first-child { border-top: 0; }
+.me-field dt { color: var(--muted); font-size: 13px; }
+.me-field dd { margin: 0; }
+.field-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.field-row button { margin-left: auto; padding: 4px 10px; font-size: 14px; }
+.me-value { overflow-wrap: anywhere; }
+.muted { color: var(--muted); }
+.since { color: var(--muted); font-size: 13px; }
+.inline-edit input {
+  font: inherit; width: 100%; color: var(--ink); background: transparent; border: 0;
+  border-bottom: 1.5px solid var(--line); padding: 8px 0; outline: none;
+}
+.inline-edit input:focus { border-bottom-color: var(--accent); }
+.inline-edit .actions { justify-content: flex-end; gap: 4px; margin-top: 8px; }
+.inline-edit .actions button { padding: 6px 14px; font-size: 15px; }
+.earlier { margin-top: 6px; font-size: 15px; }
+.earlier summary { color: var(--muted); cursor: pointer; font-size: 14px; }
+.earlier ul, .beliefs { list-style: none; padding: 0; margin: 6px 0 0; }
+.beliefs li { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.beliefs li span:first-child { overflow-wrap: anywhere; }
+.beliefs li button { margin-left: auto; padding: 4px 10px; font-size: 14px; }
+.packs { border: 0; padding: 0; margin: 12px 0 0; display: flex; flex-direction: column; gap: 4px; }
+.pack { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; cursor: pointer; }
+.pack input { width: 20px; height: 20px; margin-top: 3px; accent-color: var(--accent); flex: none; }
+.pack span { display: flex; flex-direction: column; }
+.tools { display: flex; margin-left: -12px; flex-wrap: wrap; }
+.tools button { padding: 10px 12px; }
+.tools button { font-size: 15px; padding: 8px 10px; white-space: nowrap; }
+.tools { flex-wrap: nowrap; }

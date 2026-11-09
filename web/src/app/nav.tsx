@@ -13,6 +13,9 @@ export function Nav({ current }: { current: "journal" | "me" }) {
         <Link href="/journal" aria-current={current === "journal" ? "page" : undefined}>
           Journal
         </Link>
+        <Link href="/me" aria-current={current === "me" ? "page" : undefined}>
+          Me
+        </Link>
         <button
           type="button"
           className="quiet"

@@ -1,17 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { byDay, onThisDay, type Entry } from "@/core/journal";
 import type { IsoDate } from "@/core/person";
 import { Composer } from "./composer";
 import { EntryCard } from "./entry-card";
 import { Nav } from "../nav";
-
-function localToday(): IsoDate {
-  const d = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` as IsoDate;
-}
+import { useToday } from "@/lib/today";
 
 function dayLabel(day: IsoDate, today: IsoDate): string {
   if (day === today) return "Today";
@@ -22,16 +16,15 @@ function dayLabel(day: IsoDate, today: IsoDate): string {
   return d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: day.slice(0, 4) === today.slice(0, 4) ? undefined : "numeric" });
 }
 
-export function Journal({ name, entries }: { name: string | null; entries: Entry[] }) {
-  const [today, setToday] = useState<IsoDate | null>(null);
-  useEffect(() => setToday(localToday()), []);
+export function Journal({ name, entries, packs, used }: { name: string | null; entries: Entry[]; packs: string[]; used: string[] }) {
+  const today = useToday();
   const past = today ? onThisDay(entries, today) : [];
 
   return (
     <main className="shell wide">
       <Nav current="journal" />
       <h1 className="sr-only">{name ? `${name}'s journal` : "Your journal"}</h1>
-      {today ? <Composer today={today} /> : <div className="composer placeholder" />}
+      {today ? <Composer today={today} packs={packs} used={used} /> : <div className="composer placeholder" />}
       {past.length > 0 && today ? (
         <section className="on-this-day" aria-label="On this day">
           <h2 className="day">On this day</h2>
