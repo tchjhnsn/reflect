@@ -15,6 +15,8 @@ export function EntryCard({ entry, label }: { entry: Entry; label?: string }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const closed = entry.closedAt !== null;
+  const prompt = promptById(entry.promptId);
+  const finish = () => start(async () => void (await done(entry.id)));
 
   const add = () =>
     start(async () => {
@@ -26,17 +28,13 @@ export function EntryCard({ entry, label }: { entry: Entry; label?: string }) {
 
   return (
     <article className="entry" data-testid="entry">
-      <header className="entry-meta">
-        <span>{label ?? time(entry.createdAt)}</span>
-        {closed ? <span className="badge">Done</span> : null}
-      </header>
-      {promptById(entry.promptId) ? <p className="entry-prompt">{promptById(entry.promptId)!.text}</p> : null}
-      {entry.parts.map((p) => (
-        <p key={p.seq} className="entry-text">
+      {prompt ? <p className="entry-prompt">{prompt.text}</p> : null}
+      {entry.parts.map((p, i) => (
+        <p key={p.seq} className={`entry-text${i > 0 ? " more-part" : ""}`}>
           {p.text}
         </p>
       ))}
-      {closed || label ? null : open ? (
+      {open && !closed ? (
         <form
           className="more"
           onSubmit={(e) => {
@@ -54,7 +52,7 @@ export function EntryCard({ entry, label }: { entry: Entry; label?: string }) {
             </p>
           ) : null}
           <div className="actions">
-            <button type="button" className="quiet" onClick={() => start(async () => void (await done(entry.id)))} disabled={pending}>
+            <button type="button" className="quiet" onClick={finish} disabled={pending}>
               I&rsquo;m done
             </button>
             <button type="submit" className="primary" disabled={pending || text.trim() === ""}>
@@ -62,14 +60,22 @@ export function EntryCard({ entry, label }: { entry: Entry; label?: string }) {
             </button>
           </div>
         </form>
-      ) : (
-        <div className="entry-actions">
-          <button type="button" className="quiet" onClick={() => setOpen(true)}>
-            {TELL_ME_MORE}
-          </button>
-          <button type="button" className="quiet" onClick={() => start(async () => void (await done(entry.id)))} disabled={pending}>
-            I&rsquo;m done
-          </button>
+      ) : null}
+      {label ? null : (
+        <div className="entry-meta">
+          <span>{time(entry.createdAt)}</span>
+          {closed ? (
+            <span>Done</span>
+          ) : open ? null : (
+            <>
+              <button type="button" onClick={() => setOpen(true)}>
+                {TELL_ME_MORE}
+              </button>
+              <button type="button" onClick={finish} disabled={pending}>
+                I&rsquo;m done
+              </button>
+            </>
+          )}
         </div>
       )}
     </article>

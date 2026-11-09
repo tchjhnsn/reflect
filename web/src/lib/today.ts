@@ -19,3 +19,7 @@ export function useToday(): IsoDate | null {
 export function longDate(day: string): string {
   return new Date(`${day}T12:00:00`).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
 }
+
+export function shortDate(day: string): string {
+  return new Date(`${day}T12:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}

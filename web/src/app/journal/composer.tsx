@@ -55,7 +55,6 @@ export function Composer({
           <label htmlFor="compose">{prompt.text}</label>
           <button
             type="button"
-            className="quiet"
             onClick={() => setPrompt(null)}
             aria-label="Clear the prompt"
           >
@@ -84,13 +83,12 @@ export function Composer({
       <div className="actions">
         <div className="tools">
           {packs.length > 0 ? (
-            <button type="button" className="quiet" onClick={ask}>
+            <button type="button" onClick={ask}>
               {prompt ? "Another" : "Give me a prompt"}
             </button>
           ) : null}
           <button
             type="button"
-            className="quiet"
             onClick={() => setLong(!long)}
             aria-pressed={long}
           >
