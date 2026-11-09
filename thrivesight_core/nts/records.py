@@ -99,3 +99,29 @@ class LogEntry:
         d = asdict(self)
         d["scope"] = str(self.scope)
         return d
+
+
+@dataclass(frozen=True)
+class Act:
+    """An act of will as the person describes it: weighted drivers, and what it was aimed at.
+
+    "I had to cheer myself up": drivers {conscience: 7}, target ("self", "emotion").
+    "I couldn't let her sulk all day": drivers {conscience: 6, attachment: 8}, target ("her", "emotion").
+    "I felt called": drivers {numinous-sense: 9}. Weights are the person's, 0 to 10.
+    """
+
+    drivers: tuple[tuple[str, int], ...]
+    target: tuple[str, str] | None = None  # (whose: "self" or a name, prime id)
+
+    def __post_init__(self) -> None:
+        table = load_table()
+        ids = [d for d, _ in self.drivers]
+        if not ids or len(set(ids)) != len(ids):
+            raise ValueError("an act names each driver once, and has at least one")
+        for d, w in self.drivers:
+            if table.element(d)["kind"] != "prime":
+                raise ValueError("drivers are primes")
+            if not 0 <= w <= 10:
+                raise ValueError("weights are 0 to 10")
+        if self.target and table.element(self.target[1])["kind"] != "prime":
+            raise ValueError("an act is aimed at a prime")

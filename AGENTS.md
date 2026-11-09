@@ -20,7 +20,7 @@ Reflect, an open-source reference project. Vault: `projects/reflect/`.
 ## Build and test
 
 - Python project: see `pyproject.toml` / `requirements.txt` for dependencies.
-- `python -m unittest thrivesight_core.nts.test_nts thrivesight_core.nts.test_investigate` tests the element model.
+- `python -m unittest thrivesight_core.nts.test_nts thrivesight_core.nts.test_investigate thrivesight_core.nts.test_person` tests the element model.
 - `cd lean && lake build` checks the Lean model (toolchain in `lean/lean-toolchain`, no Mathlib); `lake exe nts-export > ../thrivesight_core/nts/structure.json` refreshes the export.
 
 ## Rules

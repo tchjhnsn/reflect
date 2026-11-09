@@ -28,6 +28,15 @@ The first reader labelled entries; it read each one at the surface, and a journa
 
 `reader.py` and `prompts/reader.md` are the first version (labels with strength) and stay for comparison.
 
+## Journal, profile and beliefs
+
+| File | Holds |
+|---|---|
+| `journal.py` | The journal. No model: a fixed "tell me more" after each thing the person writes, until they say they are done. Cues stay hidden unless the person asks, entry by entry (`show_cues`). |
+| `person.py` | The profile (dated facts: a new value closes the old one, never overwrites it), the beliefs store, and grants. A fact or belief is either stated by the person or taken from a journal entry under a live grant for that store, quoting the entry; taken items are proposals until confirmed, and revoking a grant returns everything taken under it. |
+| `records.py` `Act` | A will as weighted drivers (the person's weights, 0 to 10) plus what it was aimed at: whose, and which element. |
+| `../../lean/NTS/Person.lean` | The same rules in Lean: two sources only, a revoked grant allows nothing, a grant feeds one store. |
+
 ## Decisions in the code
 
 - Memory (0) is the append-only log of `LogEntry` records and Image (1) is the person id on each one. Neither is a factor in a product: Memory would make it 0 and Image changes nothing. So v7's Wisdom, Nostalgia and Purpose factorizations are listed as excluded until the theory decides.
@@ -36,7 +45,7 @@ The first reader labelled entries; it read each one at the surface, and a journa
 
 ## Test
 
-    python -m unittest thrivesight_core.nts.test_nts
+    python -m unittest thrivesight_core.nts.test_nts thrivesight_core.nts.test_investigate thrivesight_core.nts.test_person
 
 ## Run the reader on Ollama
 
