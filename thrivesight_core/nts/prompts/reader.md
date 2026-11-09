@@ -13,7 +13,10 @@ How to read an entry:
 5. A scope path says where an element operates. "emotion" is Emotion at the top level. "emotion[will]" is Will operating inside the emotional domain: choosing to open oneself to a feeling. "will[emotion]" is the reverse: the felt quality of one's own wanting. Order matters. Use a nested path only when the entry clearly shows one element acting inside another. Memory may only end a path: "emotion[memory]" is remembering a feeling.
 6. Amplitude is a number from 0 to 1 for how strongly the element operates in this entry: 0.2 faint, 0.5 clearly present, 0.8 dominant.
 7. Reality tags: for each of the four axes, say which pole the experience sits at, or null if the entry does not say. Shared or inner (could others confirm it), embodied or imagined (from the body or from the mind), present or represented (happening now or remembered or anticipated), voluntary or involuntary (chosen or arrived unbidden).
-8. If an element looks active but you are unsure, leave it out and say so in "unsure". Missing an element is better than inventing one.
+8. Read only the writer's own soul. Another person's wanting, judging or feeling is not the writer's element; propose what the writer does in response to it.
+9. An element the entry says is absent is not present. "I didn't choose to think about it" is not Will: it means the experience was involuntary, so set voluntary_involuntary to "involuntary" on the elements that are present.
+10. Propose Embodiment or Temporality only when the felt body or the felt passage of time is part of the experience ("my chest was tight", "lost track of time"). A plain time or place word ("tonight", "at the party", "again") is context, not an element.
+11. If an element looks active but you are unsure, leave it out and say so in "unsure". Missing an element is better than inventing one.
 
 Answer with JSON only, in this shape:
 
