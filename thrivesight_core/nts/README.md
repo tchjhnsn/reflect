@@ -14,6 +14,20 @@ The periodic table of the soul from the Number Theory of the Soul v7, as data, r
 | `run_reader.py` | Reads a file of entries with a model and prints readings and agreement. `--ollama <name>` uses a local Ollama server; `--model <id>` uses the Anthropic API and needs `ANTHROPIC_API_KEY`. |
 | `fixtures/sample_entries.json` | Eight synthetic entries, unlabelled. Not anyone's journal. |
 
+## Guided investigation (cues, then questions)
+
+The first reader labelled entries; it read each one at the surface, and a journal entry is only a fragment. The investigation replaces labelling with asking:
+
+| File | Holds |
+|---|---|
+| `../../lean/` | The Lean model: elements, scopes (ordered paths, rules built in, depth capped), the only two things a model may output (a cue or an open question), descriptive and normative records, and frames. `lake build` checks the proofs; `lake exe nts-export` writes `structure.json`. |
+| `structure.json` | The Lean export the harness follows: primes, frames, the Will facet order, coercion sources, and each facet's stance. Regenerate it after changing the Lean model. |
+| `prompts/cues.md` | The cue prompt: quote words worth asking about and say what they leave open. Never a feeling, motive or advice. |
+| `questions/will.json` | Open questions for the decision frame, one per Will facet and one per coercion source. |
+| `investigate.py` | Parses cues (fail closed), builds the question tree in the Lean order, and refuses leading or prescriptive questions. |
+
+`reader.py` and `prompts/reader.md` are the first version (labels with strength) and stay for comparison.
+
 ## Decisions in the code
 
 - Memory (0) is the append-only log of `LogEntry` records and Image (1) is the person id on each one. Neither is a factor in a product: Memory would make it 0 and Image changes nothing. So v7's Wisdom, Nostalgia and Purpose factorizations are listed as excluded until the theory decides.

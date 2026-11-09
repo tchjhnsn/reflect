@@ -18,4 +18,4 @@ where = ["."]
 include = ["thrivesight_core*"]
 
 [tool.setuptools.package-data]
-"thrivesight_core.nts" = ["*.json", "prompts/*.md", "fixtures/*.json"]
+"thrivesight_core.nts" = ["*.json", "prompts/*.md", "fixtures/*.json", "questions/*.json"]
