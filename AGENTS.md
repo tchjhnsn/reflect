@@ -13,6 +13,7 @@ Reflect, an open-source reference project. Vault: `projects/reflect/`.
 | Path | Holds |
 |---|---|
 | `thrivesight_core/` | the reasoning engine; `thrivesight_core/nts/` is the element model of the Number Theory of the Soul (see its README) |
+| `web/` | the Reflect web app (Next.js); see `web/README.md` |
 | `lean/` | Lean model of the soul's scopes, model outputs, frames, the person's stores and onboarding |
 | `README.md` | overview |
 | `pyproject.toml` | dependencies and scripts |
