@@ -14,6 +14,16 @@ async function shot(page: Page, name: string) {
   if (shots) await page.screenshot({ path: `${shots}/${test.info().project.name}-${name}.png`, fullPage: true });
 }
 
+async function signUp(page: Page) {
+  const email = `t${Date.now()}${Math.floor(Math.random() * 1e6)}@example.test`;
+  await page.goto("/sign-in");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill("a long test password");
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page).toHaveURL(/\/welcome$/);
+  return email;
+}
+
 async function answer(page: Page, prompt: string, text: string) {
   await expect(page.getByLabel(prompt)).toBeVisible();
   await page.getByLabel(prompt).fill(text);
@@ -35,7 +45,7 @@ async function seriousAxe(page: Page) {
 test("a full run reaches the review with four cards and keeps them", async ({ page }) => {
   const requests: string[] = [];
   page.on("request", (r) => requests.push(`${r.url()} ${r.postData() ?? ""}`));
-  await page.goto("/welcome");
+  await signUp(page);
   await shot(page, "1-name");
   await seriousAxe(page);
   await answer(page, "What should we call you?", "Ada");
@@ -51,24 +61,33 @@ test("a full run reaches the review with four cards and keeps them", async ({ pa
   await expect(page.getByTestId("card-closest_friend")).toContainText("Sam");
   await shot(page, "6-review");
   await seriousAxe(page);
+  const before = requests.length;
   await page.getByRole("button", { name: "Keep these" }).click();
-  await expect(page.getByTestId("saved-count")).toHaveText("Kept 4 of your answers.");
-  await shot(page, "7-done");
+  await expect(page.getByTestId("journal-hello")).toHaveText("Your journal starts here, Ada.");
+  await shot(page, "7-journal");
   for (const secret of ["Ada", "Sam", "Engineer"]) {
-    expect(requests.some((r) => r.includes(secret))).toBe(false);
+    expect(requests.slice(0, before).some((r) => r.includes(secret))).toBe(false);
   }
+  await page.goto("/welcome");
+  await expect(page).toHaveURL(/\/journal$/);
+});
+
+test("a signed-out visitor is sent to sign in", async ({ page }) => {
+  await page.goto("/welcome");
+  await expect(page).toHaveURL(/\/sign-in$/);
+  await shot(page, "0-sign-in");
 });
 
 test("skipping everything keeps nothing", async ({ page }) => {
-  await page.goto("/welcome");
+  await signUp(page);
   for (let i = 0; i < 4; i++) await page.getByRole("button", { name: "Skip" }).click();
   await expect(page.getByTestId("nothing")).toBeVisible();
   await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page.getByTestId("saved-count")).toHaveText("Nothing was kept. You can add any of it later.");
+  await expect(page.getByTestId("journal-hello")).toHaveText("Your journal starts here.");
 });
 
 test("edit and remove on the review", async ({ page }) => {
-  await page.goto("/welcome");
+  await signUp(page);
   await answer(page, "What should we call you?", "Ada");
   await answer(page, "When were you born?", "1990-04-01");
   await answer(page, "What do you do?", "Engineer");
@@ -82,11 +101,11 @@ test("edit and remove on the review", async ({ page }) => {
   await page.getByRole("button", { name: "Remove Closest friend" }).click();
   await expect(page.getByTestId("card-closest_friend")).toHaveCount(0);
   await page.getByRole("button", { name: "Keep these" }).click();
-  await expect(page.getByTestId("saved-count")).toHaveText("Kept 3 of your answers.");
+  await expect(page.getByTestId("journal-hello")).toHaveText("Your journal starts here, Ada.");
 });
 
 test("a future date of birth is refused in place", async ({ page }) => {
-  await page.goto("/welcome");
+  await signUp(page);
   await answer(page, "What should we call you?", "Ada");
   await page.getByLabel("When were you born?").fill("2099-01-01");
   await page.getByRole("button", { name: "Next" }).click();
@@ -96,7 +115,7 @@ test("a future date of birth is refused in place", async ({ page }) => {
 });
 
 test("the whole flow works from the keyboard", async ({ page }) => {
-  await page.goto("/welcome");
+  await signUp(page);
   await page.keyboard.type("Ada");
   await page.keyboard.press("Enter");
   await page.keyboard.type("1990-04-01".replaceAll("-", ""));
