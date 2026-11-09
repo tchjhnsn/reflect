@@ -33,6 +33,13 @@ def main : IO Unit := do
     let f := match h.facet with | some x => facetJson x | none => "null"
     let st := match h.stance with | .descriptive => "\"descriptive\"" | .normative => "\"normative\""
     "{\"id\":\"" ++ h.id ++ "\",\"facet\":" ++ f ++ ",\"stance\":" ++ st ++ "}")
+  let cats : List Prime.Category := [.drives, .generators, .sensors, .regulators, .illuminators, .binders, .matrices, .apprehensions]
+  let catName : Prime.Category → String
+    | .drives => "drives" | .generators => "generators" | .sensors => "sensors" | .regulators => "regulators"
+    | .illuminators => "illuminators" | .binders => "binders" | .matrices => "matrices" | .apprehensions => "apprehensions"
+  let categories := list (cats.map fun c => "{\"id\":\"" ++ catName c ++ "\",\"pair\":[\"" ++ c.pair.1.id ++ "\",\"" ++ c.pair.2.id ++ "\"]}")
+  let domains := list (Domain.all.map fun d => "{\"id\":\"" ++ d.id ++ "\",\"governor\":\"" ++ d.governor.id ++ "\",\"proper\":" ++ list (d.proper.map fun p => "\"" ++ p.id ++ "\"") ++ "}")
+  let state := "{\"arrangements\":[\"first_leads\",\"second_leads\",\"joined\",\"opposed\"],\"amplitudes\":[\"low\",\"raised\",\"dominant\",\"absorbed\"],\"absorbs\":{\"category\":\"apprehensions\",\"leader\":\"" ++ Prime.Category.apprehensions.pair.2.id ++ "\"},\"categories\":" ++ categories ++ ",\"domains\":" ++ domains ++ "}"
   IO.println ("{\"max_depth\":" ++ toString maxDepth ++ ",\"primes\":" ++ primes ++ ",\"frames\":" ++ frames
     ++ ",\"will_order\":" ++ facets willOrder ++ ",\"coercion_sources\":" ++ facets coercionSources
-    ++ ",\"introduction_order\":" ++ list (introductionOrder.map fun p => "\"" ++ p.id ++ "\"") ++ ",\"onboarding\":" ++ onboarding ++ ",\"holds\":" ++ holds ++ "}")
+    ++ ",\"introduction_order\":" ++ list (introductionOrder.map fun p => "\"" ++ p.id ++ "\"") ++ ",\"onboarding\":" ++ onboarding ++ ",\"holds\":" ++ holds ++ ",\"state\":" ++ state ++ "}")
