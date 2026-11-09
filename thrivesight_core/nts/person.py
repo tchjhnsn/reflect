@@ -55,12 +55,34 @@ class Belief:
     status: Literal["proposed", "confirmed"]
 
 
+@dataclass(frozen=True)
+class Relationship:
+    """Another person in the person's life, named as the person writes it. Dated like a fact."""
+    name: str
+    kind: Literal["closest_friend"]
+    valid_from: str
+    recorded_at: str
+    source: Source
+    valid_to: str | None = None
+
+
+@dataclass(frozen=True)
+class Puzzle:
+    """The puzzle of the person's life, in their words. A question they live with, not a belief."""
+    text: str
+    stated_at: str
+    source: Source
+    kind: Literal["perennial", "generational", "tractable"] | None = None
+
+
 @dataclass
 class Person:
     id: str
     grants: dict[str, Grant] = field(default_factory=dict)
     facts: list[Fact] = field(default_factory=list)
     beliefs: list[Belief] = field(default_factory=list)
+    relationships: list[Relationship] = field(default_factory=list)
+    puzzles: list[Puzzle] = field(default_factory=list)
     journal: dict[str, str] = field(default_factory=dict)  # entry id -> text, for quote checks
 
     # grants
@@ -129,3 +151,27 @@ class Person:
         i = self.beliefs.index(belief)
         self.beliefs[i] = replace(belief, status="confirmed")
         return self.beliefs[i]
+
+    # relationships and puzzles: stated by the person only
+    def state_relationship(self, name: str, kind: str, valid_from: str, at: str, source: Source = Stated()) -> Relationship:
+        if not isinstance(source, Stated):
+            raise PermissionError("relationships are stated by the person")
+        for i, r in enumerate(self.relationships):
+            if r.kind == kind and r.valid_to is None:
+                self.relationships[i] = replace(r, valid_to=valid_from)
+        rel = Relationship(name, kind, valid_from, at, source)
+        self.relationships.append(rel)
+        return rel
+
+    def current_relationship(self, kind: str) -> str | None:
+        live = [r for r in self.relationships if r.kind == kind and r.valid_to is None]
+        return live[-1].name if live else None
+
+    def state_puzzle(self, text: str, at: str, kind: str | None = None, source: Source = Stated()) -> Puzzle:
+        if not isinstance(source, Stated):
+            raise PermissionError("the puzzle is stated by the person")
+        if kind not in (None, "perennial", "generational", "tractable"):
+            raise ValueError(f"unknown puzzle kind: {kind}")
+        p = Puzzle(text, at, source, kind)
+        self.puzzles.append(p)
+        return p
