@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { expect, test, type Page } from "@playwright/test";
+import { signUp } from "./helpers";
 
 const shots = process.env.SHOTS_DIR;
 const axeSource = readFileSync(createRequire(import.meta.url).resolve("axe-core/axe.min.js"), "utf8");
@@ -12,16 +13,6 @@ async function settle(page: Page) {
 async function shot(page: Page, name: string) {
   await settle(page);
   if (shots) await page.screenshot({ path: `${shots}/${test.info().project.name}-${name}.png`, fullPage: true });
-}
-
-async function signUp(page: Page) {
-  const email = `t${Date.now()}${Math.floor(Math.random() * 1e6)}@example.test`;
-  await page.goto("/sign-in");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill("a long test password");
-  await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL(/\/welcome$/);
-  return email;
 }
 
 async function answer(page: Page, prompt: string, text: string) {
@@ -63,7 +54,7 @@ test("a full run reaches the review with four cards and keeps them", async ({ pa
   await seriousAxe(page);
   const before = requests.length;
   await page.getByRole("button", { name: "Keep these" }).click();
-  await expect(page.getByTestId("journal-hello")).toHaveText("Your journal starts here, Ada.");
+  await expect(page.getByTestId("empty")).toHaveText("Nothing here yet, Ada. Whatever you write stays private to you.");
   await shot(page, "7-journal");
   for (const secret of ["Ada", "Sam", "Engineer"]) {
     expect(requests.slice(0, before).some((r) => r.includes(secret))).toBe(false);
@@ -83,7 +74,7 @@ test("skipping everything keeps nothing", async ({ page }) => {
   for (let i = 0; i < 4; i++) await page.getByRole("button", { name: "Skip" }).click();
   await expect(page.getByTestId("nothing")).toBeVisible();
   await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page.getByTestId("journal-hello")).toHaveText("Your journal starts here.");
+  await expect(page.getByTestId("empty")).toHaveText("Nothing here yet. Whatever you write stays private to you.");
 });
 
 test("edit and remove on the review", async ({ page }) => {
@@ -101,7 +92,7 @@ test("edit and remove on the review", async ({ page }) => {
   await page.getByRole("button", { name: "Remove Closest friend" }).click();
   await expect(page.getByTestId("card-closest_friend")).toHaveCount(0);
   await page.getByRole("button", { name: "Keep these" }).click();
-  await expect(page.getByTestId("journal-hello")).toHaveText("Your journal starts here, Ada.");
+  await expect(page.getByTestId("empty")).toHaveText("Nothing here yet, Ada. Whatever you write stays private to you.");
 });
 
 test("a future date of birth is refused in place", async ({ page }) => {
