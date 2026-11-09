@@ -14,7 +14,7 @@ export async function onboardAs(page: Page, name: string) {
   await signUp(page);
   await page.getByLabel("What should we call you?").fill(name);
   await page.getByRole("button", { name: "Next" }).click();
-  for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "Skip" }).click();
+  while (!(await page.getByRole("button", { name: "Keep these" }).isVisible())) await page.getByRole("button", { name: "Skip" }).click();
   await page.getByRole("button", { name: "Keep these" }).click();
   await expect(page).toHaveURL(/\/journal$/);
 }

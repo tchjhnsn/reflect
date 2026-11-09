@@ -1,7 +1,7 @@
 "use client";
 
 import { ONBOARDING } from "@/core/structure";
-import { LABELS } from "./copy";
+import { LABELS, showAnswer } from "./copy";
 
 type Props = {
   answers: Readonly<Record<string, string>>;
@@ -28,7 +28,7 @@ export function Review({ answers, onEdit, onRemove, onBack, onConfirm, pending =
           {given.map(({ q, step, value }) => (
             <li key={q.id} className="card" data-testid={`card-${q.id}`}>
               <span className="label">{LABELS[q.id] ?? q.id}</span>
-              <span className="value">{value}</span>
+              <span className="value">{showAnswer(q.id, value!)}</span>
               <span className="card-actions">
                 <button type="button" className="quiet" onClick={() => onEdit(step)}>
                   Edit

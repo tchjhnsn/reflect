@@ -7,27 +7,47 @@ import { longDate, shortDate, useToday } from "@/lib/today";
 import { Nav, initialOf } from "../nav";
 import { SignOut } from "../sign-out";
 import { THEMES, type ThemeId } from "@/core/theme";
+import { CHOICES, parseHold } from "@/core/onboarding";
+import { HOLDS } from "@/core/structure";
+import { CHOICE_LABELS, HOLD_LABELS, showAnswer } from "../welcome/copy";
 import { changeFact, letGoBelief, setPack, setTheme, stateBelief } from "./actions";
 
 type Result = { error: string } | { ok: true };
-type FieldId = "name" | "date_of_birth" | "occupation" | "closest_friend";
+type FieldId = "name" | "date_of_birth" | "occupation" | "closest_friend" | "marital_status" | "seeing_someone" | "children" | "hold_partnership" | "hold_children";
 
 const FIELDS: { id: FieldId; label: string; blank: string; hint?: string }[] = [
   { id: "date_of_birth", label: "Born", blank: "when?", hint: "YYYY-MM-DD" },
   { id: "occupation", label: "Work", blank: "in your words" },
   { id: "closest_friend", label: "Closest friend", blank: "someone you can name" },
+  { id: "marital_status", label: "Marital status", blank: "not stated" },
+  { id: "seeing_someone", label: "Seeing someone", blank: "not stated" },
+  { id: "children", label: "Children", blank: "not stated", hint: "0" },
+];
+
+const HOLD_FIELDS: { id: FieldId; label: string; blank: string }[] = [
+  { id: "hold_partnership", label: "Partnership", blank: "how you hold it" },
+  { id: "hold_children", label: "Having children", blank: "how you hold it" },
 ];
 
 function show(id: FieldId, value: string): string {
-  return id === "date_of_birth" ? longDate(value) : value;
+  return id === "date_of_birth" ? longDate(value) : showAnswer(id, value);
 }
+
+const ALONE = ["not_for_me", "unsure"];
 
 function Editor({ id, label, history, today, hint, onClose }: { id: FieldId; label: string; history: Dated[]; today: string | null; hint?: string; onClose: () => void }) {
   const current = history.find((h) => h.validTo === null) ?? null;
   const earlier = history.filter((h) => h !== current);
-  const [text, setText] = useState(current?.value ?? "");
+  const isHold = id.startsWith("hold_");
+  const choices = CHOICES[id];
+  const startHold = isHold && current ? parseHold(current.value) : { ids: [] as string[], words: "" };
+  const [text, setText] = useState(isHold ? startHold.words : (current?.value ?? ""));
+  const [picks, setPicks] = useState<string[]>(startHold.ids);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const toggle = (h: string) =>
+    setPicks((p) => (p.includes(h) ? p.filter((x) => x !== h) : ALONE.includes(h) ? [h] : [...p.filter((x) => !ALONE.includes(x)), h]));
+  const composed = () => (isHold ? (picks.length ? picks.join(",") + (text.trim() ? `; ${text}` : "") : "") : text);
   const save = (value: string) =>
     start(async () => {
       if (!today) return;
@@ -42,21 +62,56 @@ function Editor({ id, label, history, today, hint, onClose }: { id: FieldId; lab
       data-testid={`edit-${id}`}
       onSubmit={(e) => {
         e.preventDefault();
-        save(text);
+        save(composed());
       }}
     >
-      <label htmlFor={`edit-${id}`} className="lbl">
-        {label}
-      </label>
-      <input
-        id={`edit-${id}`}
-        value={text}
-        placeholder={hint}
-        onChange={(e) => setText(e.target.value)}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? `edit-${id}-error` : undefined}
-        autoFocus
-      />
+      {choices ? (
+        <>
+          <p id={`edit-${id}-label`} className="lbl">
+            {label}
+          </p>
+          <div className="choices" role="radiogroup" aria-labelledby={`edit-${id}-label`}>
+            {choices.map((c) => (
+              <button key={c} type="button" role="radio" aria-checked={text === c} className="chip" onClick={() => setText(c)}>
+                {CHOICE_LABELS[c] ?? c}
+              </button>
+            ))}
+          </div>
+        </>
+      ) : isHold ? (
+        <>
+          <p id={`edit-${id}-label`} className="lbl">
+            {label}
+          </p>
+          <div className="choices" role="group" aria-labelledby={`edit-${id}-label`}>
+            {HOLDS.map((h) => (
+              <button key={h.id} type="button" aria-pressed={picks.includes(h.id)} className="chip" onClick={() => toggle(h.id)}>
+                {HOLD_LABELS[h.id] ?? h.id}
+              </button>
+            ))}
+          </div>
+          <label htmlFor={`edit-${id}`} className="sr-only">
+            In your own words
+          </label>
+          <input id={`edit-${id}`} value={text} placeholder="In your own words, if you like" onChange={(e) => setText(e.target.value)} />
+        </>
+      ) : (
+        <>
+          <label htmlFor={`edit-${id}`} className="lbl">
+            {label}
+          </label>
+          <input
+            id={`edit-${id}`}
+            value={text}
+            placeholder={hint}
+            inputMode={id === "children" ? "numeric" : undefined}
+            onChange={(e) => setText(e.target.value)}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? `edit-${id}-error` : undefined}
+            autoFocus
+          />
+        </>
+      )}
       {error ? (
         <p className="error" id={`edit-${id}-error`}>
           {error}
@@ -224,7 +279,24 @@ export function MePage({ me, theme }: { me: Me; theme: ThemeId }) {
   const today = useToday();
   const [editing, setEditing] = useState<FieldId | null>(null);
   const name = me.facts.name.find((h) => h.validTo === null)?.value ?? null;
-  const history = (id: FieldId): Dated[] => (id === "closest_friend" ? me.closestFriend : me.facts[id]);
+  const history = (id: FieldId): Dated[] =>
+    id === "closest_friend" ? me.closestFriend : id === "hold_partnership" ? me.holds.partnership : id === "hold_children" ? me.holds.children : me.facts[id];
+  const rows = (fields: typeof FIELDS) =>
+    fields.map((f) => {
+      const current = history(f.id).find((h) => h.validTo === null) ?? null;
+      return editing === f.id ? (
+        <Editor key={f.id} id={f.id} label={f.label} history={history(f.id)} today={today} hint={f.hint} onClose={() => setEditing(null)} />
+      ) : (
+        <div key={f.id} className="fact" data-testid={`field-${f.id}`}>
+          <dt>{f.label}</dt>
+          <dd>
+            <button type="button" className={`fact-value${current ? "" : " blank"}`} onClick={() => setEditing(f.id)} aria-label={`Change ${f.label}`}>
+              {current ? show(f.id, current.value) : f.blank}
+            </button>
+          </dd>
+        </div>
+      );
+    });
 
   return (
     <main className="page">
@@ -236,24 +308,20 @@ export function MePage({ me, theme }: { me: Me; theme: ThemeId }) {
       </h1>
       {editing === "name" ? <Editor id="name" label="Name" history={me.facts.name} today={today} onClose={() => setEditing(null)} /> : null}
 
-      <dl className="facts">
-        {FIELDS.map((f) => {
-          const current = history(f.id).find((h) => h.validTo === null) ?? null;
-          return editing === f.id ? (
-            <Editor key={f.id} id={f.id} label={f.label} history={history(f.id)} today={today} hint={f.hint} onClose={() => setEditing(null)} />
-          ) : (
-            <div key={f.id} className="fact" data-testid={`field-${f.id}`}>
-              <dt>{f.label}</dt>
-              <dd>
-                <button type="button" className={`fact-value${current ? "" : " blank"}`} onClick={() => setEditing(f.id)} aria-label={`Change ${f.label}`}>
-                  {current ? show(f.id, current.value) : f.blank}
-                </button>
-              </dd>
-            </div>
-          );
-        })}
-      </dl>
+      <dl className="facts">{rows(FIELDS)}</dl>
       <p className="sec-note">Only what you state is kept here. Nothing is guessed from your journal.</p>
+
+      <section className="sec" aria-labelledby="h-holds">
+        <div className="sec-head">
+          <h2 id="h-holds" className="lbl">
+            How I hold family
+          </h2>
+        </div>
+        <p className="sec-note">Wanting, working toward, feeling you ought to, and holding sacred are kept apart.</p>
+        <dl className="facts" style={{ borderTop: 0 }}>
+          {rows(HOLD_FIELDS)}
+        </dl>
+      </section>
 
       <Beliefs kind="belief" all={me.beliefs} today={today} />
       <Beliefs kind="value" all={me.beliefs} today={today} />

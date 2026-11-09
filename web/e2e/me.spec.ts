@@ -135,3 +135,27 @@ test("the theme is a setting that sticks, and Paper is the default", async ({ pa
     await shot(page, `6-me-${t.toLowerCase()}`);
   }
 });
+
+test("family facts and how you hold them can be changed on Me, each kept dated", async ({ page }) => {
+  await onboardAs(page, "Fay");
+  await page.goto("/me");
+  await page.getByRole("button", { name: "Change Marital status" }).click();
+  await page.getByRole("radio", { name: "Dating" }).click();
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByTestId("field-marital_status")).toContainText("Dating");
+  await page.getByRole("button", { name: "Change Children" }).first().click();
+  await page.getByLabel("Children", { exact: true }).fill("lots");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Write a number.")).toBeVisible();
+  await page.getByLabel("Children", { exact: true }).fill("1");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByTestId("field-children")).toContainText("1");
+  await page.getByRole("button", { name: "Change Partnership" }).click();
+  await page.getByRole("button", { name: "I’m working toward it" }).click();
+  await page.getByLabel("In your own words").fill("Slowly.");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByTestId("field-hold_partnership")).toContainText("I’m working toward it. “Slowly.”");
+  await page.reload();
+  await expect(page.getByTestId("field-hold_partnership")).toContainText("I’m working toward it");
+  await shot(page, "7-family");
+});

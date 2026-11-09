@@ -1,4 +1,4 @@
-"""Onboarding: four questions, each answered or skipped by the person. No model runs.
+"""Onboarding: a few questions, each answered or skipped by the person. No model runs.
 
 Mirrors lean/NTS/Onboarding.lean. The order and where each answer goes come from
 structure.json, which Lean exports. Nothing is written until the person finishes.
@@ -14,6 +14,13 @@ from .person import Person, Stated
 
 STRUCTURE = json.loads((Path(__file__).parent / "structure.json").read_text())
 ORDER: list[dict] = STRUCTURE["onboarding"]
+HOLDS: dict[str, dict] = {h["id"]: h for h in STRUCTURE["holds"]}
+
+# Fixed choices. The person picks one; the ids are what is stored.
+CHOICES: dict[str, tuple[str, ...]] = {
+    "marital_status": ("single", "dating", "partnered", "married", "separated", "divorced", "widowed", "rather_not_say"),
+    "seeing_someone": ("yes", "no", "complicated"),
+}
 
 
 class AnswerError(ValueError):
@@ -26,6 +33,16 @@ def _clean(question: str, text: str, today: date) -> str | None:
     text = " ".join(text.split())
     if not text:
         return None
+    if question in CHOICES:
+        if text not in CHOICES[question]:
+            raise AnswerError(question, "pick one of the choices")
+        return text
+    if question == "children":
+        if not text.isdigit() or int(text) > 30:
+            raise AnswerError(question, "write a number")
+        return str(int(text))
+    if question.startswith("hold_"):
+        return clean_hold(question, text)
     if question == "date_of_birth":
         try:
             born = date.fromisoformat(text)
@@ -34,6 +51,24 @@ def _clean(question: str, text: str, today: date) -> str | None:
         if born > today:
             raise AnswerError(question, "a date of birth cannot be in the future")
     return text
+
+
+def clean_hold(question: str, text: str) -> str:
+    """A hold is 'id,id' or 'id,id; own words'. 'Not for me' and 'unsure' stand alone."""
+    picks, _, words = text.partition(";")
+    ids = [p.strip() for p in picks.split(",") if p.strip()]
+    if not ids or any(i not in HOLDS for i in ids) or len(set(ids)) != len(ids):
+        raise AnswerError(question, "pick at least one of the choices")
+    alone = {"not_for_me", "unsure"}
+    if len(ids) > 1 and alone & set(ids):
+        raise AnswerError(question, "'not for me' and 'unsure' stand alone")
+    words = " ".join(words.split())
+    return ",".join(ids) + (f"; {words}" if words else "")
+
+
+def hold_stances(answer: str) -> dict[str, str]:
+    """The stance of each hold in an answer, from Lean: duty is normative."""
+    return {i: HOLDS[i]["stance"] for i in answer.split(";")[0].split(",")}
 
 
 @dataclass
@@ -75,6 +110,8 @@ class Onboarding:
                 written.append(person.state_fact(dest["key"], value, at, at, Stated()))
             elif dest["store"] == "relationships":
                 written.append(person.state_relationship(value, dest["kind"], at, at))
+            elif dest["store"] == "holds":
+                written.append(("hold", dest["subject"], person.state_belief(value, at, Stated())))
             else:
                 raise ValueError(f"unknown store {dest['store']}")
         return written

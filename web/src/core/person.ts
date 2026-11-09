@@ -28,12 +28,21 @@ export type Relationship = {
   source: { kind: "stated" };
 };
 
+/** How the person holds something (partnership, children): their picks and own words. Kept with beliefs and values. */
+export type Hold = { subject: string; value: string; validFrom: IsoDate; validTo: IsoDate | null; source: { kind: "stated" } };
+
 export type PersonState = {
   facts: readonly Fact[];
   relationships: readonly Relationship[];
+  holds: readonly Hold[];
 };
 
-export const EMPTY_PERSON: PersonState = { facts: [], relationships: [] };
+export const EMPTY_PERSON: PersonState = { facts: [], relationships: [], holds: [] };
+
+export function stateHold(p: PersonState, subject: string, value: string, at: IsoDate): PersonState {
+  const holds = p.holds.map((h) => (h.subject === subject && h.validTo === null ? { ...h, validTo: at } : h));
+  return { ...p, holds: [...holds, { subject, value, validFrom: at, validTo: null, source: { kind: "stated" } }] };
+}
 
 export function isoDate(text: string): IsoDate | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return null;

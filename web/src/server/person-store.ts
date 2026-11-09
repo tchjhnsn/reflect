@@ -27,6 +27,13 @@ export async function saveOnboarding(userId: string, person: PersonState, at: Is
         [userId, r.kind, seal(userId, r.name), r.validFrom],
       );
     }
+    for (const h of person.holds.filter((x) => x.validTo === null)) {
+      await client.query("UPDATE person_hold SET valid_to = $3 WHERE user_id = $1 AND subject = $2 AND valid_to IS NULL", [userId, h.subject, at]);
+      await client.query(
+        "INSERT INTO person_hold (user_id, subject, value_ct, valid_from, source) VALUES ($1, $2, $3, $4, 'stated')",
+        [userId, h.subject, seal(userId, h.value), h.validFrom],
+      );
+    }
     await client.query("COMMIT");
     return true;
   } catch (e) {

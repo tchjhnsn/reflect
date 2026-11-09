@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { ONBOARDING, parseOnboarding } from "./structure";
+import { HOLDS, ONBOARDING, parseOnboarding } from "./structure";
 import { EMPTY_PERSON, currentFact, currentRelationship, isoDate, stateRelationship, type IsoDate } from "./person";
-import { START, finish, reduce, type OnboardingState } from "./onboarding";
+import { START, cleanHold, finish, reduce, type OnboardingState } from "./onboarding";
 
 const TODAY = "2026-11-09" as IsoDate;
 
@@ -11,7 +11,37 @@ function run(answers: string[]): OnboardingState {
 
 describe("onboarding", () => {
   it("follows the order Lean exports", () => {
-    expect(ONBOARDING.map((q) => q.id)).toEqual(["name", "date_of_birth", "occupation", "closest_friend"]);
+    expect(ONBOARDING.map((q) => q.id)).toEqual([
+      "name", "date_of_birth", "occupation", "closest_friend",
+      "marital_status", "seeing_someone", "children", "hold_partnership", "hold_children",
+    ]);
+  });
+
+  it("files family facts in the profile and holds apart from it", () => {
+    let s = START;
+    for (const text of ["Ada", "", "", "", "married", "no", "02", "duty,desire; my family", "sacred"]) {
+      s = reduce(s, { type: "answer", text, today: TODAY });
+      expect(s.error).toBeNull();
+    }
+    const p = finish(s, EMPTY_PERSON, TODAY);
+    expect(currentFact(p, "marital_status")).toBe("married");
+    expect(currentFact(p, "children")).toBe("2");
+    expect(p.holds.map((h) => [h.subject, h.value])).toEqual([["partnership", "duty,desire; my family"], ["children", "sacred"]]);
+    expect(p.facts.some((f) => f.key.startsWith("hold"))).toBe(false);
+    expect(HOLDS.find((h) => h.id === "duty")?.stance).toBe("normative");
+    expect(HOLDS.find((h) => h.id === "sacred")?.prime).toBe("numinous-sense");
+  });
+
+  it("refuses answers outside the choices", () => {
+    const at = (n: number) => {
+      let s = START;
+      for (let i = 0; i < n; i++) s = reduce(s, { type: "skip" });
+      return s;
+    };
+    expect(reduce(at(4), { type: "answer", text: "engaged", today: TODAY }).error?.message).toBe("Pick one.");
+    expect(reduce(at(6), { type: "answer", text: "two", today: TODAY }).error?.message).toBe("Write a number.");
+    expect(reduce(at(7), { type: "answer", text: "unsure,desire", today: TODAY }).error).not.toBeNull();
+    expect(cleanHold("desire, will ;  ok ")).toEqual({ value: "desire,will; ok" });
   });
 
   it("files each answer where it belongs", () => {

@@ -262,3 +262,7 @@ button:disabled { opacity: 0.5; cursor: default; }
 .swatch.paper { background: #f6f1e7; } .swatch.paper i { background: #24211c; } .swatch.paper i:nth-child(1) { background: #9a4b2b; }
 .swatch.stream { background: #0f1115; } .swatch.stream i { background: #f1f2f4; } .swatch.stream i:nth-child(1) { background: #7cc4a4; }
 .swatch.calm { background: linear-gradient(180deg, #e9e4ff, #f7f5f1); } .swatch.calm i { background: #fff; height: 7px; } .swatch.calm i:nth-child(1) { background: #4f4fc9; height: 5px; }
+.choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip[aria-checked="true"] { background: var(--ink); color: var(--paper); }
+[data-theme="stream"] .chip[aria-checked="true"] { background: #1d2a25; border-color: #2e4a3e; color: var(--accent); }
+[data-theme="calm"] .chip[aria-checked="true"] { background: var(--ink); color: #fff; }

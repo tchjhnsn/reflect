@@ -4,7 +4,7 @@ import type { IsoDate } from "@/core/person";
 import { isPackId } from "@/core/packs";
 import { open, seal } from "./crypto";
 
-export const FACT_KEYS = ["name", "date_of_birth", "occupation"] as const;
+export const FACT_KEYS = ["name", "date_of_birth", "occupation", "marital_status", "seeing_someone", "children"] as const;
 export type FactKey = (typeof FACT_KEYS)[number];
 export const isFactKey = (k: string): k is FactKey => (FACT_KEYS as readonly string[]).includes(k);
 
@@ -12,8 +12,13 @@ export const isFactKey = (k: string): k is FactKey => (FACT_KEYS as readonly str
 export type Dated = { value: string; validFrom: IsoDate; validTo: IsoDate | null };
 export type Belief = { id: string; kind: "belief" | "value"; text: string; validFrom: IsoDate; validTo: IsoDate | null };
 
+export const HOLD_SUBJECTS = ["partnership", "children"] as const;
+export type HoldSubject = (typeof HOLD_SUBJECTS)[number];
+export const isHoldSubject = (k: string): k is HoldSubject => (HOLD_SUBJECTS as readonly string[]).includes(k);
+
 export type Me = {
   facts: Record<FactKey, Dated[]>;
+  holds: Record<HoldSubject, Dated[]>;
   closestFriend: Dated[];
   beliefs: Belief[];
   packs: string[];
@@ -51,13 +56,23 @@ export async function usedPrompts(userId: string): Promise<string[]> {
 }
 
 export async function loadMe(userId: string): Promise<Me> {
-  const [facts, rels, beliefs, packs] = await Promise.all([
+  const [facts, rels, beliefs, packs, holds] = await Promise.all([
     db().query("SELECT key, value_ct, valid_from::text AS f, valid_to::text AS t FROM person_fact WHERE user_id = $1 ORDER BY valid_from DESC, id DESC", [userId]),
     db().query("SELECT name_ct, valid_from::text AS f, valid_to::text AS t FROM person_relationship WHERE user_id = $1 AND kind = 'closest_friend' ORDER BY valid_from DESC, id DESC", [userId]),
     db().query("SELECT id::text, kind, text_ct, valid_from::text AS f, valid_to::text AS t FROM person_belief WHERE user_id = $1 ORDER BY id DESC", [userId]),
     chosenPacks(userId),
+    db().query("SELECT subject, value_ct, valid_from::text AS f, valid_to::text AS t FROM person_hold WHERE user_id = $1 ORDER BY valid_from DESC, id DESC", [userId]),
   ]);
-  const out: Me = { facts: { name: [], date_of_birth: [], occupation: [] }, closestFriend: [], beliefs: [], packs };
+  const out: Me = {
+    facts: { name: [], date_of_birth: [], occupation: [], marital_status: [], seeing_someone: [], children: [] },
+    holds: { partnership: [], children: [] },
+    closestFriend: [],
+    beliefs: [],
+    packs,
+  };
+  for (const r of holds.rows as { subject: string; value_ct: string; f: string; t: string | null }[]) {
+    if (isHoldSubject(r.subject)) out.holds[r.subject].push({ value: open(userId, r.value_ct), validFrom: day(r.f)!, validTo: day(r.t) });
+  }
   for (const r of facts.rows as { key: string; value_ct: string; f: string; t: string | null }[]) {
     if (isFactKey(r.key)) out.facts[r.key].push({ value: open(userId, r.value_ct), validFrom: day(r.f)!, validTo: day(r.t) });
   }
@@ -101,4 +116,13 @@ export async function letGo(userId: string, beliefId: string, at: IsoDate): Prom
 export async function choosePack(userId: string, packId: string, chosen: boolean): Promise<void> {
   if (!isPackId(packId)) throw new Error("no such pack");
   await db().query("INSERT INTO pack_choice (user_id, pack_id, chosen) VALUES ($1, $2, $3)", [userId, packId, chosen]);
+}
+
+export async function stateHoldNow(userId: string, subject: HoldSubject, value: string | null, at: IsoDate): Promise<void> {
+  await tx(async (c) => {
+    await c.query("UPDATE person_hold SET valid_to = $3 WHERE user_id = $1 AND subject = $2 AND valid_to IS NULL", [userId, subject, at]);
+    if (value !== null) {
+      await c.query("INSERT INTO person_hold (user_id, subject, value_ct, valid_from, source) VALUES ($1, $2, $3, $4, 'stated')", [userId, subject, seal(userId, value), at]);
+    }
+  });
 }

@@ -1,7 +1,7 @@
 import unittest
 from datetime import date
 
-from thrivesight_core.nts.onboarding import ORDER, AnswerError, Onboarding
+from thrivesight_core.nts.onboarding import ORDER, AnswerError, Onboarding, hold_stances
 from thrivesight_core.nts.person import FromJournal, Person
 
 TODAY = date(2026, 11, 9)
@@ -20,7 +20,24 @@ def run(answers):
 class OnboardingTest(unittest.TestCase):
     def test_order_comes_from_lean(self):
         self.assertEqual([q["id"] for q in ORDER],
-                         ["name", "date_of_birth", "occupation", "closest_friend"])
+                         ["name", "date_of_birth", "occupation", "closest_friend", "marital_status",
+                          "seeing_someone", "children", "hold_partnership", "hold_children"])
+
+    def test_family_and_holds(self):
+        p = run(["Ada", "", "", "", "married", "no", "2", "desire,duty; it matters to my family", "sacred"])
+        self.assertEqual(p.current("marital_status"), "married")
+        self.assertEqual(p.current("children"), "2")
+        self.assertEqual([b.text for b in p.beliefs], ["desire,duty; it matters to my family", "sacred"])
+        self.assertNotIn("hold_partnership", [f.key for f in p.facts])
+        self.assertEqual(hold_stances("desire,duty; x"), {"desire": "descriptive", "duty": "normative"})
+
+    def test_bad_choices_refused(self):
+        for skip, bad in [(4, "engaged"), (5, "maybe"), (6, "two"), (7, "love"), (7, "unsure,desire")]:
+            ob = Onboarding(TODAY)
+            for _ in range(skip):
+                ob.skip()
+            with self.assertRaises(AnswerError):
+                ob.answer(bad)
 
     def test_full_run_files_each_answer(self):
         p = run(["Ada", "1990-04-01", "Engineer", "Sam"])
@@ -42,7 +59,7 @@ class OnboardingTest(unittest.TestCase):
         p = Person("p1")
         ob.finish(p, AT)
         self.assertEqual((len(p.facts), len(p.relationships)), (0, 1))
-        self.assertIsNone(ob.question)
+        self.assertEqual(ob.question, "marital_status")
 
     def test_back_keeps_and_replaces_answers(self):
         ob = Onboarding(TODAY)

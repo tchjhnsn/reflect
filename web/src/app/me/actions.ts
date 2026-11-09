@@ -6,7 +6,8 @@ import { THEMES, THEME_COOKIE } from "@/core/theme";
 import { acceptLocalDate, clean } from "@/core/journal";
 import { isoDate, type IsoDate } from "@/core/person";
 import { requireUser } from "@/server/session";
-import { addBelief, choosePack, isFactKey, letGo, stateFactNow, stateFriendNow } from "@/server/me-store";
+import { addBelief, choosePack, isFactKey, isHoldSubject, letGo, stateFactNow, stateFriendNow, stateHoldNow } from "@/server/me-store";
+import { CHOICES, cleanHold } from "@/core/onboarding";
 
 type Result = { error: string } | { ok: true };
 
@@ -27,12 +28,26 @@ export async function changeFact(key: string, text: string, localDate: string): 
   const at = today(localDate);
   if (!at) return { error: "Your device's date looks off." };
   const value = clean(text) || null;
+  if (key.startsWith("hold_")) {
+    const subject = key.slice(5);
+    if (!isHoldSubject(subject)) return { error: "Unknown field." };
+    if (value === null) {
+      await stateHoldNow(user.id, subject, null, at);
+      return done();
+    }
+    const r = cleanHold(value);
+    if ("error" in r) return { error: r.error };
+    await stateHoldNow(user.id, subject, r.value, at);
+    return done();
+  }
   if (key === "closest_friend") {
     await stateFriendNow(user.id, value, at);
     return done();
   }
   if (!isFactKey(key)) return { error: "Unknown field." };
   if (key === "name" && value === null) return { error: "Keep a name, even a nickname." };
+  if (value !== null && CHOICES[key] && !CHOICES[key]!.includes(value)) return { error: "Pick one." };
+  if (key === "children" && value !== null && !(/^\d+$/.test(value) && Number(value) <= 30)) return { error: "Write a number." };
   if (key === "date_of_birth" && value !== null) {
     const d = isoDate(value);
     if (!d) return { error: "Write the date as YYYY-MM-DD." };

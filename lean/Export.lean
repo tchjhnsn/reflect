@@ -18,6 +18,7 @@ def list (xs : List String) : String := "[" ++ ",".intercalate xs ++ "]"
 def destJson : Destination → String
   | .profile k => "{\"store\":\"profile\",\"key\":\"" ++ k ++ "\"}"
   | .relationship .closestFriend => "{\"store\":\"relationships\",\"kind\":\"closest_friend\"}"
+  | .hold s => "{\"store\":\"holds\",\"subject\":\"" ++ s ++ "\"}"
 
 def main : IO Unit := do
   let primes := list (Prime.all.map fun p => "{\"id\":\"" ++ p.id ++ "\",\"number\":" ++ toString p.number ++ "}")
@@ -28,6 +29,10 @@ def main : IO Unit := do
     "{\"id\":\"" ++ name ++ "\",\"root\":\"" ++ f.root.id ++ "\"}")
   let facets (xs : List Facet) := list (xs.map fun f => "{\"facet\":" ++ facetJson f ++ ",\"stance\":" ++ stanceJson f ++ "}")
   let onboarding := list (onboardingOrder.map fun q => "{\"id\":\"" ++ q.id ++ "\",\"destination\":" ++ destJson q.destination ++ "}")
+  let holds := list ([Hold.desire, .will, .duty, .sacred, .notForMe, .unsure].map fun h =>
+    let f := match h.facet with | some x => facetJson x | none => "null"
+    let st := match h.stance with | .descriptive => "\"descriptive\"" | .normative => "\"normative\""
+    "{\"id\":\"" ++ h.id ++ "\",\"facet\":" ++ f ++ ",\"stance\":" ++ st ++ "}")
   IO.println ("{\"max_depth\":" ++ toString maxDepth ++ ",\"primes\":" ++ primes ++ ",\"frames\":" ++ frames
     ++ ",\"will_order\":" ++ facets willOrder ++ ",\"coercion_sources\":" ++ facets coercionSources
-    ++ ",\"introduction_order\":" ++ list (introductionOrder.map fun p => "\"" ++ p.id ++ "\"") ++ ",\"onboarding\":" ++ onboarding ++ "}")
+    ++ ",\"introduction_order\":" ++ list (introductionOrder.map fun p => "\"" ++ p.id ++ "\"") ++ ",\"onboarding\":" ++ onboarding ++ ",\"holds\":" ++ holds ++ "}")

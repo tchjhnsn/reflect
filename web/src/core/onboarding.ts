@@ -1,6 +1,6 @@
 // Mirrors lean/NTS/Onboarding.lean and thrivesight_core/nts/onboarding.py. No model runs.
-import { ONBOARDING, type OnboardingQuestion } from "./structure";
-import { isoDate, stateFact, stateRelationship, type IsoDate, type PersonState } from "./person";
+import { HOLDS, ONBOARDING, type OnboardingQuestion } from "./structure";
+import { isoDate, stateFact, stateHold, stateRelationship, type IsoDate, type PersonState } from "./person";
 
 export type OnboardingState = {
   step: number;
@@ -26,7 +26,38 @@ export function isDone(s: OnboardingState, order: readonly OnboardingQuestion[] 
   return s.step >= order.length;
 }
 
+/** Fixed choices; the ids are what is stored. Mirrors thrivesight_core/nts/onboarding.py. */
+export const CHOICES: Readonly<Record<string, readonly string[]>> = {
+  marital_status: ["single", "dating", "partnered", "married", "separated", "divorced", "widowed", "rather_not_say"],
+  seeing_someone: ["yes", "no", "complicated"],
+};
+
+const ALONE = ["not_for_me", "unsure"];
+
+/** A hold answer is "id,id" or "id,id; own words". Returns the cleaned answer or an error message. */
+export function cleanHold(text: string): { value: string } | { error: string } {
+  const [picks = "", ...rest] = text.split(";");
+  const ids = picks.split(",").map((x) => x.trim()).filter(Boolean);
+  if (ids.length === 0 || ids.some((i) => !HOLDS.some((h) => h.id === i)) || new Set(ids).size !== ids.length)
+    return { error: "Pick at least one." };
+  if (ids.length > 1 && ids.some((i) => ALONE.includes(i))) return { error: "“Not for me” and “Unsure” stand alone." };
+  const words = rest.join(";").split(/\s+/).filter(Boolean).join(" ");
+  return { value: ids.join(",") + (words ? `; ${words}` : "") };
+}
+
+export function parseHold(value: string): { ids: string[]; words: string } {
+  const [picks = "", ...rest] = value.split(";");
+  return { ids: picks.split(",").map((x) => x.trim()).filter(Boolean), words: rest.join(";").trim() };
+}
+
 function check(question: string, text: string, today: IsoDate): string | null {
+  const choices = CHOICES[question];
+  if (choices) return choices.includes(text) ? null : "Pick one.";
+  if (question === "children") return /^\d+$/.test(text) && Number(text) <= 30 ? null : "Write a number.";
+  if (question.startsWith("hold_")) {
+    const r = cleanHold(text);
+    return "error" in r ? r.error : null;
+  }
   if (question !== "date_of_birth") return null;
   const d = isoDate(text);
   if (d === null) return "Write the date as YYYY-MM-DD.";
@@ -45,7 +76,8 @@ export function reduce(s: OnboardingState, e: OnboardingEvent, order: readonly O
       if (!text) return { step: next, answers: rest, error: null, editing: false };
       const message = check(q.id, text, e.today);
       if (message) return { ...s, error: { question: q.id, message } };
-      return { step: next, answers: { ...rest, [q.id]: text }, error: null, editing: false };
+      const value = q.id.startsWith("hold_") ? (cleanHold(text) as { value: string }).value : q.id === "children" ? String(Number(text)) : text;
+      return { step: next, answers: { ...rest, [q.id]: value }, error: null, editing: false };
     }
     case "skip": {
       if (!q) return s;
@@ -77,6 +109,8 @@ export function finish(
         return stateFact(p, d.key, value, at);
       case "relationships":
         return stateRelationship(p, value, d.kind, at);
+      case "holds":
+        return stateHold(p, d.subject, value, at);
     }
   }, person);
 }
