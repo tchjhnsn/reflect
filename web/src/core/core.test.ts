@@ -42,6 +42,17 @@ describe("onboarding", () => {
     expect(s.answers).toMatchObject({ name: "Ada", occupation: "Teacher" });
   });
 
+  it("returns to the review after editing or removing one answer", () => {
+    let s = run(["Ada", "1990-04-01", "Engineer", "Sam", ""]);
+    s = reduce(s, { type: "edit", step: 2 });
+    expect(s.answers.occupation).toBe("Engineer");
+    s = reduce(s, { type: "answer", text: "Teacher", today: TODAY });
+    expect(s.step).toBe(ONBOARDING.length);
+    s = reduce(reduce(s, { type: "edit", step: 3 }), { type: "skip" });
+    expect(s.step).toBe(ONBOARDING.length);
+    expect(s.answers).toEqual({ name: "Ada", date_of_birth: "1990-04-01", occupation: "Teacher" });
+  });
+
   it("refuses a future date of birth and stays on the question", () => {
     const s = run(["Ada", "2030-01-01"]);
     expect(s.step).toBe(1);
