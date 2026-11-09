@@ -78,3 +78,29 @@ test("the journal has no serious accessibility issues", async ({ page }) => {
   });
   expect(ids).toEqual([]);
 });
+
+test("reflect on a closed entry: pick a frame, answer or skip, and what you ought stays apart", async ({ page }) => {
+  await onboardAs(page, "Ada");
+  await postShort(page, "I said yes to the move.");
+  const entry = page.getByTestId("entry").first();
+  await entry.getByRole("button", { name: "I’m done" }).click();
+  await entry.getByRole("button", { name: "Reflect on it" }).click();
+  await shot(page, "3-frames");
+  await entry.getByRole("button", { name: /^A decision/ }).click();
+  await expect(entry.getByText("A decision · 1 of 17")).toBeVisible();
+  await entry.getByLabel("Was this something you chose").fill("I chose it.");
+  await entry.getByRole("button", { name: "Next" }).click();
+  for (let i = 0; i < 4; i++) await entry.getByRole("button", { name: "Skip" }).click();
+  await entry.getByLabel("Did you feel you ought to? Why or why not?").fill("My mother expects it.");
+  await shot(page, "4-question");
+  await entry.getByRole("button", { name: "Next" }).click();
+  await expect(entry.getByText("A decision · 7 of 17")).toBeVisible();
+  await entry.getByRole("button", { name: "Stop here" }).click();
+  const r = entry.getByTestId("reflection");
+  await expect(r.getByTestId("reflection-is")).toContainText("I chose it.");
+  await expect(r.getByTestId("reflection-is")).not.toContainText("mother");
+  await expect(r.getByTestId("reflection-ought")).toContainText("My mother expects it.");
+  await page.reload();
+  await expect(page.getByTestId("reflection-ought")).toContainText("My mother expects it.");
+  await shot(page, "5-reflection");
+});

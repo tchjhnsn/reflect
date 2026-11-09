@@ -2,7 +2,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { db } from "@/db/pool";
 import type { IsoDate } from "@/core/person";
-import { addPart, closeEntry, createEntry, listEntries } from "./journal-store";
+import { addPart, closeEntry, createEntry, keepAnswer, listEntries, startReflection } from "./journal-store";
 
 const live = Boolean(process.env.DATABASE_URL && process.env.REFLECT_DATA_KEY);
 const DAY = "2026-11-09" as IsoDate;
@@ -38,5 +38,30 @@ describe.skipIf(!live)("journal store on Neon", () => {
     await expect(db().query("DELETE FROM journal_entry WHERE id = $1", [id])).rejects.toThrow(/append-only/);
     await expect(addPart(other, id, "not mine")).rejects.toThrow(/no such entry/);
     expect(await listEntries(other)).toEqual([]);
+  });
+
+  it("keeps reflection answers once, with the question from the frame, for the owner only", async () => {
+    const user = await newUser();
+    const other = await newUser();
+    const id = await createEntry(user, "I said yes to the move.", DAY, null);
+    await closeEntry(user, id);
+    await expect(startReflection(other, id, "decision")).rejects.toThrow(/no such entry/);
+    await expect(startReflection(user, id, "astrology")).rejects.toThrow(/no such frame/);
+    const r = await startReflection(user, id, "decision");
+    await keepAnswer(user, r, 0, "I chose it.");
+    await keepAnswer(user, r, 5, "My mother expects it.");
+    await expect(keepAnswer(other, r, 1, "not mine")).rejects.toThrow(/no such question/);
+    await expect(keepAnswer(user, r, 99, "past the end")).rejects.toThrow(/no such question/);
+    await expect(keepAnswer(user, r, 0, "again")).rejects.toThrow();
+    const [entry] = await listEntries(user);
+    const [refl] = entry?.reflections ?? [];
+    expect(refl?.frame).toBe("decision");
+    expect(refl?.answers.map((a) => [a.facet, a.stance, a.text])).toEqual([
+      ["voluntary_involuntary", "descriptive", "I chose it."],
+      ["conscience", "normative", "My mother expects it."],
+    ]);
+    const raw = await db().query("SELECT text_ct FROM reflection_answer WHERE reflection_id = $1", [r]);
+    expect(raw.rows.every((x: { text_ct: string }) => !x.text_ct.includes("mother"))).toBe(true);
+    await expect(db().query("DELETE FROM reflection_answer WHERE reflection_id = $1", [r])).rejects.toThrow(/written once/);
   });
 });

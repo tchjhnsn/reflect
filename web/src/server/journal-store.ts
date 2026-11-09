@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { db } from "@/db/pool";
-import type { Entry } from "@/core/journal";
+import type { Entry, Reflection } from "@/core/journal";
+import { frameById } from "@/core/reflect";
 import type { IsoDate } from "@/core/person";
 import { open, seal } from "./crypto";
 
@@ -56,6 +57,7 @@ export async function listEntries(userId: string, limit = 200): Promise<Entry[]>
     list.push({ seq: p.seq, text: open(userId, p.text_ct), createdAt: p.created_at.toISOString() });
     byEntry.set(p.entry_id, list);
   }
+  const refl = await reflectionsFor(userId, entries.map((e) => e.id));
   return entries.map((e) => ({
     id: e.id,
     localDate: iso(e.local_date),
@@ -63,5 +65,57 @@ export async function listEntries(userId: string, limit = 200): Promise<Entry[]>
     promptId: e.prompt_id,
     closedAt: e.closed_at ? e.closed_at.toISOString() : null,
     parts: byEntry.get(e.id) ?? [],
+    reflections: refl.get(e.id) ?? [],
   }));
+}
+
+type ReflRow = { id: string; entry_id: string; frame: string; created_at: Date };
+type AnswerRow = { reflection_id: string; seq: number; facet: string; stance: "descriptive" | "normative"; question: string; text_ct: string };
+
+async function reflectionsFor(userId: string, entryIds: string[]): Promise<Map<string, Reflection[]>> {
+  const out = new Map<string, Reflection[]>();
+  const rows = (await db().query(
+    "SELECT id, entry_id, frame, created_at FROM entry_reflection WHERE user_id = $1 AND entry_id = ANY($2::uuid[]) ORDER BY created_at",
+    [userId, entryIds],
+  )).rows as ReflRow[];
+  if (rows.length === 0) return out;
+  const answers = (await db().query(
+    "SELECT reflection_id, seq, facet, stance, question, text_ct FROM reflection_answer WHERE reflection_id = ANY($1::uuid[]) ORDER BY reflection_id, seq",
+    [rows.map((r) => r.id)],
+  )).rows as AnswerRow[];
+  const byRefl = new Map<string, Reflection["answers"][number][]>();
+  for (const a of answers) {
+    const list = byRefl.get(a.reflection_id) ?? [];
+    list.push({ seq: a.seq, facet: a.facet, stance: a.stance, question: a.question, text: open(userId, a.text_ct) });
+    byRefl.set(a.reflection_id, list);
+  }
+  for (const r of rows) {
+    const list = out.get(r.entry_id) ?? [];
+    list.push({ id: r.id, frame: r.frame, createdAt: r.created_at.toISOString(), answers: byRefl.get(r.id) ?? [] });
+    out.set(r.entry_id, list);
+  }
+  return out;
+}
+
+/** Start reflecting on one of the person's own entries. */
+export async function startReflection(userId: string, entryId: string, frame: string): Promise<string> {
+  if (!frameById(frame)) throw new Error("no such frame");
+  const id = randomUUID();
+  const r = await db().query(
+    "INSERT INTO entry_reflection (id, entry_id, user_id, frame) SELECT $1, e.id, $3, $4 FROM journal_entry e WHERE e.id = $2 AND e.user_id = $3",
+    [id, entryId, userId, frame],
+  );
+  if (r.rowCount === 0) throw new Error("no such entry");
+  return id;
+}
+
+/** Keep one answer. The question comes from the frame by its position, never from the client. */
+export async function keepAnswer(userId: string, reflectionId: string, seq: number, text: string): Promise<void> {
+  const row = (await db().query("SELECT frame FROM entry_reflection WHERE id = $1 AND user_id = $2", [reflectionId, userId])).rows[0] as { frame: string } | undefined;
+  const q = row ? frameById(row.frame)?.questions[seq] : undefined;
+  if (!q) throw new Error("no such question");
+  await db().query(
+    "INSERT INTO reflection_answer (reflection_id, seq, facet, stance, question, text_ct) VALUES ($1, $2, $3, $4, $5, $6)",
+    [reflectionId, seq, q.facet, q.stance, q.text, seal(userId, text)],
+  );
 }

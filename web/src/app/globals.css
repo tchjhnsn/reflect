@@ -124,7 +124,7 @@ button:disabled { opacity: 0.5; cursor: default; }
 .entry-meta button { color: var(--accent); font: 500 13px var(--sans); padding: 4px 0; }
 .more { margin-top: 10px; padding-left: 12px; border-left: 2px solid var(--accent); }
 .more-prompt { display: block; font: italic 400 16px var(--write); color: var(--soft); }
-.more textarea {
+.more textarea, .reflect textarea {
   width: 100%; border: 0; border-bottom: 1px solid var(--rule); outline: none; resize: none; background: transparent; color: var(--ink);
   font: 400 18px/1.45 var(--write); padding: 6px 0;
 }
@@ -266,3 +266,16 @@ button:disabled { opacity: 0.5; cursor: default; }
 .chip[aria-checked="true"] { background: var(--ink); color: var(--paper); }
 [data-theme="stream"] .chip[aria-checked="true"] { background: #1d2a25; border-color: #2e4a3e; color: var(--accent); }
 [data-theme="calm"] .chip[aria-checked="true"] { background: var(--ink); color: #fff; }
+
+/* Reflecting on an entry */
+.reflect { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--rule); display: grid; gap: 10px; }
+.reflect-title { font: italic 400 17px var(--write); color: var(--ink); }
+.reflect-step { font: 600 11px var(--sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--soft); }
+.reflect .choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.reflect .chip { border-radius: 10px; text-align: left; display: grid; gap: 2px; }
+.chip-note { font: 400 12px var(--sans); color: var(--soft); }
+.reflections { margin-top: 12px; display: grid; gap: 12px; }
+.reflection { border-left: 2px solid var(--rule); padding-left: 12px; display: grid; gap: 6px; }
+.reflection dl { display: grid; gap: 8px; margin: 0; }
+.reflection dt { font: 500 13px var(--sans); color: var(--soft); }
+.reflection dd { margin: 2px 0 0; font: 400 16px/1.5 var(--write); color: var(--ink); }

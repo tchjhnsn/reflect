@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { TELL_ME_MORE, type Entry } from "@/core/journal";
 import { promptById } from "@/core/packs";
 import { done, more } from "./actions";
+import { Reflect, Reflections } from "./reflect";
 
 function time(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
@@ -12,6 +13,8 @@ function time(iso: string): string {
 export function EntryCard({ entry, label }: { entry: Entry; label?: string }) {
   const [text, setText] = useState("");
   const [open, setOpen] = useState(false);
+  const [reflecting, setReflecting] = useState(false);
+  const [active, setActive] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const closed = entry.closedAt !== null;
@@ -34,6 +37,17 @@ export function EntryCard({ entry, label }: { entry: Entry; label?: string }) {
           {p.text}
         </p>
       ))}
+      <Reflections items={(entry.reflections ?? []).filter((r) => r.id !== active)} />
+      {reflecting ? (
+        <Reflect
+          entryId={entry.id}
+          onStart={setActive}
+          onClose={() => {
+            setReflecting(false);
+            setActive(null);
+          }}
+        />
+      ) : null}
       {open && !closed ? (
         <form
           className="more"
@@ -65,7 +79,14 @@ export function EntryCard({ entry, label }: { entry: Entry; label?: string }) {
         <div className="entry-meta">
           <span>{time(entry.createdAt)}</span>
           {closed ? (
-            <span>Done</span>
+            <>
+              <span>Done</span>
+              {reflecting ? null : (
+                <button type="button" onClick={() => setReflecting(true)}>
+                  Reflect on it
+                </button>
+              )}
+            </>
           ) : open ? null : (
             <>
               <button type="button" onClick={() => setOpen(true)}>
