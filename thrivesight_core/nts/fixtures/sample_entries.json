@@ -1,0 +1,13 @@
+{
+  "note": "Synthetic entries written for testing the reader prompt. They are not anyone's real journal. person_labels is empty on purpose: only a person can label an entry.",
+  "entries": [
+    {"id": "s1", "at": "2026-11-01T07:10:00Z", "text": "Woke up at five again with my chest tight. I kept going over the conversation with my brother and what I should have said. I didn't choose to think about it, it just kept coming back.", "person_labels": null},
+    {"id": "s2", "at": "2026-11-02T21:30:00Z", "text": "I really wanted the second glass of wine tonight, but I told myself no and went for a walk instead. Proud of that, honestly.", "person_labels": null},
+    {"id": "s3", "at": "2026-11-03T12:00:00Z", "text": "Spent the whole afternoon on the design and lost track of time. Every piece clicked. I could see the finished thing in my head before I drew it.", "person_labels": null},
+    {"id": "s4", "at": "2026-11-04T18:45:00Z", "text": "It's been a year since Grandma died. I made her soup recipe tonight and cried while it simmered. I miss her calling on Sundays.", "person_labels": null},
+    {"id": "s5", "at": "2026-11-05T06:20:00Z", "text": "Stood on the ridge as the sun came up over the valley. It was so beautiful it felt holy, like I was being shown something I didn't earn.", "person_labels": null},
+    {"id": "s6", "at": "2026-11-06T15:00:00Z", "text": "My manager asked me to sign off on numbers I know are padded. I laid out the logic three times and it doesn't add up, and it isn't right either. I'm not signing.", "person_labels": null},
+    {"id": "s7", "at": "2026-11-07T22:10:00Z", "text": "Noticed I was scrolling for an hour without really being there. Put the phone down and just sat and watched my own thoughts for a while.", "person_labels": null},
+    {"id": "s8", "at": "2026-11-08T09:00:00Z", "text": "Everyone at the party seemed to want me to be the funny one again. I'm not that person anymore and I said so, which felt strange but true.", "person_labels": null}
+  ]
+}

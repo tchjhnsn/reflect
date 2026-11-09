@@ -1,0 +1,34 @@
+{
+  "source": "Number Theory of the Soul v7.0, Parts XI and XX. Factorizations are hypotheses (Axiom 3): a phenomenon may be reached by more than one path, so each composite lists paths, not one product.",
+  "composites": [
+    {"id": "courage", "name": "Courage", "paths": [["will", "emotion"]]},
+    {"id": "longing", "name": "Longing", "paths": [["desire", "imagination"]]},
+    {"id": "conviction", "name": "Conviction", "paths": [["will", "intuition"]]},
+    {"id": "deliberation", "name": "Deliberation", "paths": [["will", "reason"]]},
+    {"id": "focus", "name": "Focus", "paths": [["will", "attention"]]},
+    {"id": "wonder", "name": "Wonder", "paths": [["imagination", "emotion"]]},
+    {"id": "empathy", "name": "Empathy", "paths": [["emotion", "attachment"], ["emotion", "attachment", "imagination"]]},
+    {"id": "moral-imagination", "name": "Moral Imagination", "paths": [["imagination", "conscience"]]},
+    {"id": "testimony", "name": "Testimony", "paths": [["conscience", "logos"]]},
+    {"id": "worship", "name": "Worship", "paths": [["will", "numinous-sense"]]},
+    {"id": "eloquence", "name": "Eloquence", "paths": [["desire", "logos", "emotion"]]},
+    {"id": "prophetic-speech", "name": "Prophetic Speech", "paths": [["conscience", "logos", "intuition"]]},
+    {"id": "grief", "name": "Grief", "paths": [["attachment", "emotion", "temporality"]]},
+    {"id": "prayer", "name": "Prayer", "paths": [["will", "logos", "numinous-sense"]]},
+    {"id": "creative-flow", "name": "Creative Flow", "paths": [["will", "imagination", "attention"]]},
+    {"id": "love", "name": "Love (full)", "paths": [["will", "desire", "emotion", "attachment", "self-differentiation"]]},
+    {"id": "sacramental-worship", "name": "Sacramental Worship", "paths": [["will", "logos", "embodiment", "temporality", "numinous-sense", "aesthetic-sense"]]},
+    {"id": "hope", "name": "Hope", "paths": [["desire", "imagination", "temporality"]]},
+    {"id": "creativity", "name": "Creativity", "paths": [["imagination", "logos", "will"]]},
+    {"id": "trust", "name": "Trust", "paths": [["attachment", "will"]]},
+    {"id": "curiosity", "name": "Curiosity", "paths": [["desire", "attention"]]},
+    {"id": "pride", "name": "Pride", "paths": [["self-differentiation", "self-differentiation", "emotion"]]},
+    {"id": "shame", "name": "Shame", "paths": [["self-differentiation", "conscience", "emotion"]]},
+    {"id": "belonging", "name": "Belonging", "paths": [["attachment", "self-differentiation", "emotion"]]}
+  ],
+  "excluded": [
+    {"id": "wisdom", "reason": "v7 writes Memory × Reason × Intuition × Conscience, but Memory is the additive identity (0), so as a product it would be 0. Memory is the register the composite is read from, not a factor. Left out until the theory decides."},
+    {"id": "nostalgia", "reason": "Same issue: v7 includes Memory as a factor."},
+    {"id": "purpose", "reason": "v7 includes Image as a factor; Image is the multiplicative identity and changes no product. Also an open gap (Teleological Category)."}
+  ]
+}

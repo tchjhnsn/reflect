@@ -1,0 +1,28 @@
+{
+  "note": "Open questions for the decision frame, rooted at Will. One per facet in the Lean will_order, and one per coercion source. Questions describe and ask; they never assume an answer, prescribe or predict.",
+  "root": {
+    "voluntary_involuntary": "Was going something you chose, something that happened without your choosing, or something you felt forced into?",
+    "desire": "How much did you want to go, if at all?",
+    "attachment": "Who, if anyone, were you going for or with?",
+    "imagination": "What else could you have done instead?",
+    "reason": "What made you pick this over the other options?",
+    "conscience": "Did you feel you ought to go? Why or why not?",
+    "temporality": "When did you decide, and how long did it take?",
+    "emotion": "What did you feel as you decided?",
+    "embodiment": "How was your body when you decided: rested, tired, restless, in pain?",
+    "intuition": "Did you have a sense, before thinking it through, of what to do?",
+    "self-differentiation": "Does going feel like you, or like someone else's idea of you?",
+    "attention": "What were you focused on when you decided?",
+    "awareness": "Were you aware of deciding at the time, or did you notice only afterwards?",
+    "logos": "How would you put the decision into words?",
+    "aesthetic-sense": "Was there anything about it you found beautiful or appealing in itself?",
+    "numinous-sense": "Did it touch anything you hold sacred?",
+    "will": "How firmly did you hold to the decision once you made it?"
+  },
+  "coercion_sources": {
+    "attachment": "Did the pressure come from someone? Who?",
+    "embodiment": "Did it come from your body, such as a need, a pain or exhaustion?",
+    "conscience": "Did it come from a sense of duty or obligation?",
+    "shared_inner": "Did it come from circumstances outside you that others would recognize?"
+  }
+}

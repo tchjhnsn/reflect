@@ -12,13 +12,16 @@ Reflect, an open-source reference project. Vault: `projects/reflect/`.
 
 | Path | Holds |
 |---|---|
-| `thrivesight_core/` |  |
+| `thrivesight_core/` | the reasoning engine; `thrivesight_core/nts/` is the element model of the Number Theory of the Soul (see its README) |
+| `lean/` | Lean model of the soul's scopes, model outputs and frames |
 | `README.md` | overview |
 | `pyproject.toml` | dependencies and scripts |
 
 ## Build and test
 
 - Python project: see `pyproject.toml` / `requirements.txt` for dependencies.
+- `python -m unittest thrivesight_core.nts.test_nts thrivesight_core.nts.test_investigate thrivesight_core.nts.test_person` tests the element model.
+- `cd lean && lake build` checks the Lean model (toolchain in `lean/lean-toolchain`, no Mathlib); `lake exe nts-export > ../thrivesight_core/nts/structure.json` refreshes the export.
 
 ## Rules
 
