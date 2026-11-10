@@ -16,13 +16,17 @@
     "bundle": "tsx scripts/person-bundle.ts"
   },
   "dependencies": {
+    "@better-auth/mcp": "1.7.18",
+    "@better-auth/oauth-provider": "1.7.18",
+    "@modelcontextprotocol/server": "2.4.0",
     "@neondatabase/serverless": "1.2.0",
     "@vercel/oidc": "4.0.4",
     "better-auth": "1.7.18",
     "next": "16.4.5",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "ws": "8.22.2"
+    "ws": "8.22.2",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

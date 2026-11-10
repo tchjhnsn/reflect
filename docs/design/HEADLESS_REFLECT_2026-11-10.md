@@ -76,6 +76,7 @@ flowchart LR
 - **Action** (`action/`): a composite GitHub Action an instance repo uses. On a push that adds or changes an entry, it runs `reflect read` and opens a pull request with the draft reflection. **The pull request is the hold gate:** merging it keeps the guesses, editing it first corrects them, and closing it drops them. The correction is the diff, which is the labeling data, used for training only when the person opts in.
 - **web**: unchanged for users. It imports core, and `REFLECT_STORE=postgres` (the default) keeps it on Neon.
 - **lean**: unchanged. Its export still feeds core.
+- **MCP** (`web/src/app/api/mcp/`): the person's own AI (Claude, ChatGPT or any MCP client) as an interface, decided by Torian on 2026-11-10 ("keep building our own app, or simply using the person's AI provider"; no Notion or Google Docs connectors). The person signs in to Reflect and allows the app; the app writes entries in the person's words and keeps only the readings the person says yes to. It runs on the Postgres host only.
 
 `thrivesight_core/` and `api/` (the Python engine and the hackathon backend) stay as they are. Neither is part of this design.
 
