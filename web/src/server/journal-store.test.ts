@@ -3,7 +3,11 @@ import { randomUUID } from "node:crypto";
 import { db } from "@/db/pool";
 import type { IsoDate } from "@reflect/core/person";
 import { journalContract } from "@reflect/core/journal-contract";
-import { addPart, closeEntry, postgresJournal, createEntry, entryText, keepAnswer, keepLabels, listEntries, researchAllowed, setResearchAllowed, startReflection } from "./journal-store";
+import { filesJournal } from "@reflect/core/files-journal";
+import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { addPart, closeEntry, exportJournal, importJournal, postgresJournal, createEntry, entryText, keepAnswer, keepLabels, listEntries, researchAllowed, setResearchAllowed, startReflection } from "./journal-store";
 import { decide } from "@reflect/core/state";
 
 const live = Boolean(process.env.DATABASE_URL && process.env.REFLECT_DATA_KEY);
@@ -19,6 +23,44 @@ describe.skipIf(!live)("journal store on Neon", () => {
   afterAll(() => db().end());
 
   journalContract(async () => postgresJournal(await newUser()));
+
+  it("moves a journal from a folder to Postgres and back, keeping times and decisions", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "reflect-move-"));
+    try {
+      let t = 0;
+      const files = filesJournal(dir, "p-move", { now: () => new Date(Date.UTC(2026, 10, 1, 9, 0, t++)) });
+      await mkdir(join(dir, "people/p-move/entries"), { recursive: true });
+      await writeFile(join(dir, "people/p-move/entries/2026-10-30-walk.md"), "Walked by the river.\n");
+      const id = await files.createEntry("Called Dad.", "2026-11-01" as IsoDate, null);
+      await files.addPart(id, "We talked about fishing.");
+      await files.closeEntry(id);
+      const r = await files.startReflection(id, "feeling");
+      await files.keepAnswer(r, 0, "Close to him.");
+      await files.keepLabels(id, decide({ emotion: 0.95 }, new Set(["emotion", "attachment"]), 0.9), [
+        { quote: "Dad", term: "Dad", whose: "other", modelBasis: "logos", basis: "attachment", decision: "corrected" },
+      ]);
+      const before = await files.exportBundle();
+
+      const user = await newUser();
+      await importJournal(user, before);
+      await expect(importJournal(user, before)).rejects.toThrow(/already has entries/);
+      const middle = await exportJournal(user);
+      const hand = middle.entries.find((e) => e.parts[0]?.text === "Walked by the river.");
+      expect(hand?.id).toMatch(/^[0-9a-f-]{36}$/);
+      const norm = (b: typeof before) => ({
+        entries: b.entries.map(({ id: _id, reflections, ...e }) => ({ ...e, reflections: (reflections ?? []).map(({ id: _r, ...x }) => x) })),
+        labelings: b.labelings.map(({ entry: _e, ...l }) => l),
+      });
+      expect(norm(middle)).toEqual(norm(before));
+      expect((await listEntries(user)).find((e) => e.id === id)?.labels).toEqual(["emotion", "attachment"]);
+
+      const back = filesJournal(join(dir, "back"), "p-move");
+      await back.importBundle(middle);
+      expect(norm(await back.exportBundle())).toEqual(norm(before));
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
 
   it("keeps an entry's parts in order, encrypted, until it closes", async () => {
     const user = await newUser();

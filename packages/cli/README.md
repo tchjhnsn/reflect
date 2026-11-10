@@ -10,11 +10,13 @@ The command line over one person's instance in a folder, usually a private git r
 | `list` | The entries, newest first. |
 | `read [entry] [--pending]` | Asks the reader (Jev, with gpt-oss for self-terms) for its guesses and writes `people/<id>/reflections/<entry>.draft.json`. A draft is never a record and is not in memory. `--pending` reads every entry with no labeling and no draft. Needs `TYPESAFEAI_API_KEY` or `AI_GATEWAY_API_KEY` (and `OLLAMA_API_KEY` to find self-terms without a gateway key). |
 | `keep [entry] [--all]` | Keeps a draft as the person left it: `chosen` is the elements they say were part of the entry, and each self-term's `basis` and `keep` are theirs. Each decision is recorded against the reader's guess (confirmed, added, rejected, corrected), then the draft is removed. |
+| `export [--out <file>] [--moving-to <where>]` | The whole journal as a bundle (`packages/core/src/bundle.ts`), with times and decisions. `--moving-to` then sets `moved_to` in `reflect.json`, so writes here are refused. |
+| `import <bundle>` | Imports a bundle into this instance's empty journal. |
 | `check [--adopt]` | Fails on a broken `memory.jsonl` chain, a `reflect.json` that is not an instance config, or a grant that names `entries`, `reflections` or `_private`. Lists records written outside reflect (by hand, say in the GitHub app); `--adopt` records them in memory as they are. |
 
 Every command takes `--dir <instance>` (default `.`). Writes are refused once `reflect.json` has `moved_to`.
 
-`reflect.test.ts` tests it; `pnpm test` in `web/` runs it. Not built yet: `export` and `import`, and `encrypt: "age"`.
+`reflect.test.ts` tests it; `pnpm test` in `web/` runs it. Not built yet: `encrypt: "age"`. A bundle holds the journal only; Me's facts and holds are not in it yet.
 
 ## In a GitHub repository
 

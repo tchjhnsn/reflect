@@ -3,6 +3,7 @@
 import { readFileSync } from "node:fs";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { parseBundle } from "../core/src/bundle.ts";
 import { keepDraft, makeDraft, type Draft } from "../core/src/draft.ts";
 import { parseArgs } from "node:util";
 import { filesJournal } from "../core/src/files-journal.ts";
@@ -20,6 +21,10 @@ const USAGE = `reflect <command> [--dir <instance>]
   read [entry] [--pending]        ask the reader for its guesses; writes reflections/<entry>.draft.json
   keep [entry] [--all]            keep a draft as you left it (edit chosen, basis, keep first)
   check [--adopt]                 check the instance; --adopt records hand-written changes in memory
+  export [--out <file>] [--moving-to <where>]
+                                  the whole journal as a bundle (stdout or a file); --moving-to then
+                                  records that the instance moved and refuses writes here
+  import <bundle>                 import a bundle into this instance's empty journal
 
 The reader needs AI_GATEWAY_API_KEY or TYPESAFEAI_API_KEY.`;
 
@@ -42,6 +47,8 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
       adopt: { type: "boolean", default: false },
       pending: { type: "boolean", default: false },
       all: { type: "boolean", default: false },
+      out: { type: "string" },
+      "moving-to": { type: "string" },
       help: { type: "boolean", short: "h" },
     },
   });
@@ -73,7 +80,22 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
     for (const e of await journal.listEntries()) out(`${e.id}  ${e.localDate}  ${e.closedAt ? "closed" : "open  "}  ${(e.parts[0]?.text ?? "").split("\n")[0]!.slice(0, 60)}`);
     return 0;
   }
+  if (cmd === "export") {
+    const text = `${JSON.stringify(await journal.exportBundle(), null, 2)}\n`;
+    if (values.out) await writeFile(values.out, text);
+    else out(text.trimEnd());
+    if (values["moving-to"]) {
+      await writeFile(join(root, "reflect.json"), `${JSON.stringify({ ...config, moved_to: values["moving-to"] }, null, 2)}\n`);
+      await adopt(root, ["reflect.json"]);
+    }
+    return 0;
+  }
   if (config.moved_to) throw new Error(`this instance moved to ${config.moved_to}; write there`);
+  if (cmd === "import" && rest[0]) {
+    await journal.importBundle(parseBundle(await readFile(rest[0], "utf8")));
+    out(`imported ${rest[0]}`);
+    return 0;
+  }
   if (cmd === "write") {
     const date = values.date ?? today();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("--date is YYYY-MM-DD");

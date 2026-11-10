@@ -17,6 +17,7 @@ The headless core of Reflect, in plain TypeScript with no database and no Next.j
 | `src/instance.ts` | An instance in a folder: `initInstance` (writes `template/reflect.yml` as the instance's workflow), `readConfig`, `checkInstance`, `adopt`. |
 | `src/reader.ts` | The reader: Jev's element odds and the basis of each self-term, gpt-oss to find self-terms. The web app adds the Vercel OIDC token. |
 | `src/draft.ts` | A draft reflection (`makeDraft`) and what keeping it records (`keepDraft`). |
+| `src/bundle.ts` | A bundle: one person's journal as one JSON document, the same from either host. Moving hosts is an export from one and an import into the other's empty journal. |
 | `src/theme.ts` | The app's themes. |
 | `src/salience-prompt.ts` | Generated from `../../thrivesight_core/nts/prompts/salience.md`. Do not edit. |
 
@@ -24,4 +25,4 @@ Modules import each other by their `.ts` names and import JSON with `with { type
 
 ## Tests
 
-`pnpm test` in `web/` runs `src/*.test.ts` with vitest. Export and import between hosts are not built yet. The app still calls the Postgres store's functions directly.
+`pnpm test` in `web/` runs `src/*.test.ts` with vitest. The app still calls the Postgres store's functions directly.
