@@ -2,7 +2,8 @@ import { afterAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { db } from "@/db/pool";
 import type { IsoDate } from "@reflect/core/person";
-import { addPart, closeEntry, createEntry, entryText, keepAnswer, keepLabels, listEntries, researchAllowed, setResearchAllowed, startReflection } from "./journal-store";
+import { journalContract } from "@reflect/core/journal-contract";
+import { addPart, closeEntry, postgresJournal, createEntry, entryText, keepAnswer, keepLabels, listEntries, researchAllowed, setResearchAllowed, startReflection } from "./journal-store";
 import { decide } from "@reflect/core/state";
 
 const live = Boolean(process.env.DATABASE_URL && process.env.REFLECT_DATA_KEY);
@@ -16,6 +17,8 @@ async function newUser(): Promise<string> {
 
 describe.skipIf(!live)("journal store on Neon", () => {
   afterAll(() => db().end());
+
+  journalContract(async () => postgresJournal(await newUser()));
 
   it("keeps an entry's parts in order, encrypted, until it closes", async () => {
     const user = await newUser();

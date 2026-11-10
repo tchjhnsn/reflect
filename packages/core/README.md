@@ -10,6 +10,10 @@ The headless core of Reflect, in plain TypeScript with no database and no Next.j
 | `src/state.ts` | The 16 elements, their categories, salience readings and `decide`. |
 | `src/person.ts`, `src/onboarding.ts` | The person's stores as pure functions over `PersonState`, and the onboarding reducer Me still uses. Mirror `../../lean/NTS/Person.lean` and `Onboarding.lean`. |
 | `src/journal.ts`, `src/packs.ts`, `src/reflect.ts` | Entries and prompts, prompt packs, and reflecting with frames. |
+| `src/store.ts` | The store interface, `Journal`: one person's journal, append-only, whichever host keeps it. |
+| `src/files-journal.ts` | The folder host: entries as `people/<id>/entries/<date>-<id>.md` (front matter optional, so a hand-written file is an entry), reflections and labelings as `people/<id>/reflections/<entry>.json`. |
+| `src/memory.ts` | Memory: `memory.jsonl`, one hash-chained line per write (`verifyMemory` finds a changed or removed line). |
+| `src/journal-contract.ts` | The behaviour every host must have. The folder host runs it in `files-journal.test.ts`, and the Postgres host (`postgresJournal` in `../../web/src/server/journal-store.ts`) in its own tests against Neon. |
 | `src/theme.ts` | The app's themes. |
 | `src/salience-prompt.ts` | Generated from `../../thrivesight_core/nts/prompts/salience.md`. Do not edit. |
 
@@ -17,4 +21,4 @@ Modules import each other by their `.ts` names and import JSON with `with { type
 
 ## Tests
 
-`pnpm test` in `web/` runs `src/*.test.ts` with vitest. The store interface, the files connector and the CLI are not built yet.
+`pnpm test` in `web/` runs `src/*.test.ts` with vitest. The CLI, the GitHub Action, and export and import between hosts are not built yet. The app still calls the Postgres store's functions directly.

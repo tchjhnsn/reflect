@@ -3,6 +3,7 @@ import { db } from "@/db/pool";
 import type { Entry, Reflection } from "@reflect/core/journal";
 import { frameById } from "@reflect/core/reflect";
 import type { IsoDate } from "@reflect/core/person";
+import type { Journal, LabelRow, SelfTermRow } from "@reflect/core/store";
 import { open, seal } from "./crypto";
 
 type EntryRow = { id: string; local_date: Date | string; prompt_id: string | null; created_at: Date; closed_at: Date | null };
@@ -131,8 +132,7 @@ export async function entryText(userId: string, entryId: string): Promise<string
   return (r.rows as { text_ct: string }[]).map((x) => open(userId, x.text_ct)).join("\n\n");
 }
 
-export type LabelRow = { element: string; weight: number | null; decision: "confirmed" | "rejected" | "added" | "absent" };
-export type SelfTermRow = { quote: string; term: string; whose: "self" | "other"; modelBasis: string | null; basis: string | null; decision: "confirmed" | "corrected" | "rejected" };
+export type { LabelRow, SelfTermRow };
 
 /** Keep one labeling of an entry: every element's decision beside the model's weight, and each self-term. */
 export async function keepLabels(userId: string, entryId: string, labels: LabelRow[], terms: SelfTermRow[]): Promise<void> {
@@ -185,4 +185,18 @@ export async function researchAllowed(userId: string): Promise<boolean> {
 
 export async function setResearchAllowed(userId: string, allowed: boolean): Promise<void> {
   await db().query("INSERT INTO research_consent (user_id, allowed) VALUES ($1, $2)", [userId, allowed]);
+}
+
+/** The Postgres host: one person's journal on Neon, as the store interface the folder host also implements. */
+export function postgresJournal(userId: string): Journal {
+  return {
+    createEntry: (text, localDate, promptId) => createEntry(userId, text, localDate, promptId),
+    addPart: (entryId, text) => addPart(userId, entryId, text),
+    closeEntry: (entryId) => closeEntry(userId, entryId),
+    listEntries: (limit) => listEntries(userId, limit),
+    entryText: (entryId) => entryText(userId, entryId),
+    startReflection: (entryId, frame) => startReflection(userId, entryId, frame),
+    keepAnswer: (reflectionId, seq, text) => keepAnswer(userId, reflectionId, seq, text),
+    keepLabels: (entryId, labels, terms) => keepLabels(userId, entryId, labels, terms),
+  };
 }
