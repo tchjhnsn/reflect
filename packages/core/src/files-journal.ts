@@ -5,6 +5,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { makeBundle, type Bundle } from "./bundle.ts";
 import type { Entry, Part, Reflection } from "./journal.ts";
 import { nextLine, parseMemory, type MemoryLine } from "./memory.ts";
 import type { IsoDate } from "./person.ts";
@@ -71,7 +72,10 @@ export type ReflectionFile = {
 
 export type FilesOptions = { now?: () => Date; id?: () => string };
 
-export function filesJournal(root: string, personId: string, opts: FilesOptions = {}): Journal {
+/** The folder host's journal, with export and import of a whole bundle. */
+export type FilesJournal = Journal & { exportBundle(): Promise<Bundle>; importBundle(b: Bundle): Promise<void> };
+
+export function filesJournal(root: string, personId: string, opts: FilesOptions = {}): FilesJournal {
   const now = () => (opts.now ?? (() => new Date()))().toISOString();
   const newId = opts.id ?? randomUUID;
   const person = join("people", personId);
@@ -137,6 +141,26 @@ export function filesJournal(root: string, personId: string, opts: FilesOptions 
   }
 
   return {
+    async exportBundle() {
+      const entries = (await entryFiles()).map((f) => f.entry);
+      const labelings = [];
+      const out: Entry[] = [];
+      for (const e of entries) {
+        const f = await reflFile(e.id);
+        out.push({ ...e, reflections: f.reflections });
+        labelings.push(...f.labelings.map((l) => ({ entry: e.id, ...l })));
+      }
+      return makeBundle(out, labelings, now());
+    },
+    async importBundle(b) {
+      if ((await entryFiles()).length) throw new Error("this journal already has entries; import goes only into an empty one");
+      for (const e of b.entries) {
+        const { reflections, labels: _labels, ...entry } = e;
+        await write(join(entriesDir, `${e.id.startsWith(e.localDate) ? e.id : `${e.localDate}-${e.id}`}.md`), entryFileText(entry), "create");
+        const labelings = b.labelings.filter((l) => l.entry === e.id).map(({ entry: _e, ...l }) => l);
+        if (reflections?.length || labelings.length) await saveRefl({ entry: e.id, reflections: [...(reflections ?? [])], labelings }, "create");
+      }
+    },
     async createEntry(text, localDate, promptId) {
       const id = newId();
       const at = now();

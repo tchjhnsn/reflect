@@ -1,6 +1,6 @@
 # Headless Reflect: one core, two hosts
 
-Status: draft design, nothing built. Asked for by Torian on 2026-11-10 ("Let's actually design the Reflect repo this way. We can keep the app together with the headless aspect. Using our Postgres db should remain an option for where to host an instance.")
+Status: built through step 6 on 2026-11-10 (reflect#18 to #22). Not built: `encrypt: "age"`, writing grants and edges (check already refuses a grant that names entries), intents and projects as records, and the app choosing a host by `REFLECT_STORE`. Asked for by Torian on 2026-11-10 ("Let's actually design the Reflect repo this way. We can keep the app together with the headless aspect. Using our Postgres db should remain an option for where to host an instance.")
 
 ## The idea
 

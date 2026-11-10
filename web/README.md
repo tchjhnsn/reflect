@@ -20,7 +20,8 @@ Set by name only, never committed: `DATABASE_URL` (the Neon project `reflect`, p
 
 - `pnpm install`
 - `pnpm migrate` creates the Better Auth tables and the person's tables.
-- `pnpm test` checks the structure copy and runs the core tests.
+- `pnpm test` checks the structure copy and runs the app's, the core's and the CLI's tests.
+- `pnpm bundle export --user <id> --out <file>` and `pnpm bundle import <file> --user <id>` move one person's journal between Postgres and a bundle file (see `../packages/core/src/bundle.ts`), against whichever branch `DATABASE_URL` names. Import goes only into an empty journal.
 - `pnpm typecheck`
 - `pnpm dev`, then open http://localhost:3000.
 - `pnpm build`

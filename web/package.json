@@ -12,7 +12,8 @@
     "test": "node scripts/sync-structure.mjs --check && vitest run",
     "typecheck": "tsc --noEmit",
     "e2e": "playwright test",
-    "migrate": "tsx scripts/migrate.ts"
+    "migrate": "tsx scripts/migrate.ts",
+    "bundle": "tsx scripts/person-bundle.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.2.0",

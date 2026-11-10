@@ -1,0 +1,7 @@
+{
+  "name": "@reflect/core",
+  "private": true,
+  "type": "module",
+  "exports": { "./*": "./src/*.ts" },
+  "engines": { "node": ">=22.18" }
+}

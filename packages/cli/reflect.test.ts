@@ -79,6 +79,25 @@ describe("reflect CLI", () => {
     }
   });
 
+  it("exports a bundle, imports it into another instance, and refuses writes after moving", async () => {
+    const a = await mkdtemp(join(tmpdir(), "reflect-cli-"));
+    const b = await mkdtemp(join(tmpdir(), "reflect-cli-"));
+    dirs.push(a, b);
+    await run("init", "--name", "Tester", "--dir", a);
+    const id = (await run("write", "Rain.", "--date", "2026-11-01", "--dir", a)).out[0]!;
+    await run("add", id, "We went anyway.", "--dir", a);
+    const file = join(a, "..", `${id}.bundle.json`);
+    dirs.push(file);
+    await run("export", "--out", file, "--moving-to", "reflect-app", "--dir", a);
+    await expect(run("write", "more", "--dir", a)).rejects.toThrow(/moved to reflect-app/);
+    expect((await run("check", "--dir", a)).out).toEqual(["ok"]);
+    await run("init", "--name", "Tester", "--dir", b);
+    expect((await run("import", file, "--dir", b)).code).toBe(0);
+    await expect(run("import", file, "--dir", b)).rejects.toThrow(/already has entries/);
+    expect((await run("list", "--dir", b)).out[0]).toContain("Rain.");
+    expect((await run("check", "--dir", b)).out).toEqual(["ok"]);
+  });
+
   it("refuses to run outside an instance", async () => {
     const dir = await mkdtemp(join(tmpdir(), "reflect-cli-"));
     dirs.push(dir);
