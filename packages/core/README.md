@@ -14,6 +14,9 @@ The headless core of Reflect, in plain TypeScript with no database and no Next.j
 | `src/files-journal.ts` | The folder host: entries as `people/<id>/entries/<date>-<id>.md` (front matter optional, so a hand-written file is an entry), reflections and labelings as `people/<id>/reflections/<entry>.json`. |
 | `src/memory.ts` | Memory: `memory.jsonl`, one hash-chained line per write (`verifyMemory` finds a changed or removed line). |
 | `src/journal-contract.ts` | The behaviour every host must have. The folder host runs it in `files-journal.test.ts`, and the Postgres host (`postgresJournal` in `../../web/src/server/journal-store.ts`) in its own tests against Neon. |
+| `src/instance.ts` | An instance in a folder: `initInstance` (writes `template/reflect.yml` as the instance's workflow), `readConfig`, `checkInstance`, `adopt`. |
+| `src/reader.ts` | The reader: Jev's element odds and the basis of each self-term, gpt-oss to find self-terms. The web app adds the Vercel OIDC token. |
+| `src/draft.ts` | A draft reflection (`makeDraft`) and what keeping it records (`keepDraft`). |
 | `src/theme.ts` | The app's themes. |
 | `src/salience-prompt.ts` | Generated from `../../thrivesight_core/nts/prompts/salience.md`. Do not edit. |
 
@@ -21,4 +24,4 @@ Modules import each other by their `.ts` names and import JSON with `with { type
 
 ## Tests
 
-`pnpm test` in `web/` runs `src/*.test.ts` with vitest. The CLI, the GitHub Action, and export and import between hosts are not built yet. The app still calls the Postgres store's functions directly.
+`pnpm test` in `web/` runs `src/*.test.ts` with vitest. Export and import between hosts are not built yet. The app still calls the Postgres store's functions directly.

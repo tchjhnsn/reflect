@@ -14,6 +14,7 @@ Reflect, an open-source reference project. Vault: `projects/reflect/`.
 |---|---|
 | `thrivesight_core/` | the reasoning engine; `thrivesight_core/nts/` is the element model of the Number Theory of the Soul (see its README) |
 | `packages/cli/` | the `reflect` command over an instance in a folder (`init`, `write`, `add`, `close`, `list`, `check`); see `packages/cli/README.md` |
+| `action/` | the GitHub Action an instance repository runs: check, keep merged drafts, open a pull request with the reader's guesses |
 | `packages/core/` | the headless core: element model, the person's stores, journal and packs, in plain TypeScript that runs in Node with no database; see `packages/core/README.md` |
 | `web/` | the Reflect web app (Next.js), one interface over the core; see `web/README.md` |
 | `docs/design/` | designs; `HEADLESS_REFLECT_2026-11-10.md` is the plan for one core with two hosts |
