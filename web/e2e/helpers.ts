@@ -6,17 +6,19 @@ export async function signUp(page: Page) {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill("a long test password");
   await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL(/\/welcome$/);
+  await expect(page).toHaveURL(/\/journal$/);
   return email;
 }
 
-export async function onboardAs(page: Page, name: string) {
+/** Sign up, then state a name on the Me page, the only place a name is set now. */
+export async function signUpAs(page: Page, name: string) {
   await signUp(page);
-  await page.getByLabel("What should we call you?").fill(name);
-  await page.getByRole("button", { name: "Next" }).click();
-  while (!(await page.getByRole("button", { name: "Keep these" }).isVisible())) await page.getByRole("button", { name: "Skip" }).click();
-  await page.getByRole("button", { name: "Keep these" }).click();
-  await expect(page).toHaveURL(/\/journal$/);
+  await page.goto("/me");
+  await page.getByRole("button", { name: "Change Name" }).click();
+  await page.getByLabel("Name", { exact: true }).fill(name);
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(name);
+  await page.goto("/journal");
 }
 
 export async function settle(page: Page) {

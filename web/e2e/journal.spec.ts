@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { expect, test, type Page } from "@playwright/test";
-import { onboardAs, settle } from "./helpers";
+import { signUpAs, settle } from "./helpers";
 
 const shots = process.env.SHOTS_DIR;
 const axeSource = readFileSync(createRequire(import.meta.url).resolve("axe-core/axe.min.js"), "utf8");
@@ -18,7 +18,7 @@ async function postShort(page: Page, text: string) {
 }
 
 test("post, tell me more, and close an entry; it all survives a reload", async ({ page }) => {
-  await onboardAs(page, "Ada");
+  await signUpAs(page, "Ada");
   await shot(page, "1-empty");
   await postShort(page, "Rain at the park. We went anyway.");
   await expect(page.getByLabel("What would you like to remember?")).toHaveValue("");
@@ -39,7 +39,7 @@ test("post, tell me more, and close an entry; it all survives a reload", async (
 });
 
 test("keep writing opens a long page and posts it whole", async ({ page }) => {
-  await onboardAs(page, "Ada");
+  await signUpAs(page, "Ada");
   await page.getByRole("button", { name: "Keep writing" }).click();
   const long = "First line.\n\nA second paragraph, much longer, about the whole afternoon.";
   await page.getByLabel("What would you like to remember?").fill(long);
@@ -49,7 +49,7 @@ test("keep writing opens a long page and posts it whole", async ({ page }) => {
 });
 
 test("newest posts come first and blank posts are refused", async ({ page }) => {
-  await onboardAs(page, "Ada");
+  await signUpAs(page, "Ada");
   await expect(page.getByRole("button", { name: "Post" })).toBeDisabled();
   await postShort(page, "First.");
   await postShort(page, "Second.");
@@ -59,10 +59,10 @@ test("newest posts come first and blank posts are refused", async ({ page }) => 
 
 test("one person never sees another's journal", async ({ browser }) => {
   const a = await browser.newPage();
-  await onboardAs(a, "Ada");
+  await signUpAs(a, "Ada");
   await postShort(a, "Only Ada should see this.");
   const b = await browser.newPage();
-  await onboardAs(b, "Kai");
+  await signUpAs(b, "Kai");
   await expect(b.getByTestId("empty")).toBeVisible();
   await expect(b.getByText("Only Ada should see this.")).toHaveCount(0);
 });
@@ -78,7 +78,7 @@ async function seriousAxe(page: Page) {
 }
 
 test("the journal has no serious accessibility issues", async ({ page }) => {
-  await onboardAs(page, "Ada");
+  await signUpAs(page, "Ada");
   await postShort(page, "Checking.");
   await settle(page);
   await page.addScriptTag({ content: axeSource });
@@ -90,7 +90,7 @@ test("the journal has no serious accessibility issues", async ({ page }) => {
 });
 
 test("reflect on a closed entry: pick a frame, answer or skip, and what you ought stays apart", async ({ page }) => {
-  await onboardAs(page, "Ada");
+  await signUpAs(page, "Ada");
   await postShort(page, "I said yes to the move.");
   const entry = page.getByTestId("entry").first();
   await entry.getByRole("button", { name: "I’m done" }).click();
@@ -124,7 +124,7 @@ test("reflect on a closed entry: pick a frame, answer or skip, and what you ough
 });
 
 test("a self-term's basis is the person's to correct", async ({ page }) => {
-  await onboardAs(page, "Ada");
+  await signUpAs(page, "Ada");
   await postShort(page, "I keep telling myself I'm the independent one.");
   const entry = page.getByTestId("entry").first();
   await entry.getByRole("button", { name: "I’m done" }).click();
