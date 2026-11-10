@@ -4,6 +4,12 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 
+/** Where to go next when this sign-in was for a person's AI app, else null. */
+function oauthNext(data: unknown): string | null {
+  if (typeof data !== "object" || data === null || !("redirect" in data) || !("url" in data)) return null;
+  return typeof data.url === "string" ? data.url : null;
+}
+
 export function SignIn() {
   const router = useRouter();
   const [mode, setMode] = useState<"sign-up" | "sign-in">("sign-up");
@@ -22,7 +28,12 @@ export function SignIn() {
         : await authClient.signIn.email({ email, password });
     setPending(false);
     if (result.error) setError(result.error.message ?? "That didn't work. Try again.");
-    else router.replace("/journal");
+    // Signing in for a person's AI app: the server sends the browser on to /consent or back to the app.
+    else {
+      const next = oauthNext(result.data);
+      if (next) window.location.href = next;
+      else router.replace("/journal");
+    }
   };
 
   return (
