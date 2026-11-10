@@ -56,6 +56,9 @@ export async function initInstance(root: string, name: string, now = new Date())
     await writeFile(join(root, person, dir, ".gitkeep"), "");
   }
   await writeFile(join(root, "memory.jsonl"), `${lines.map((l) => JSON.stringify(l)).join("\n")}\n`);
+  // The workflow that runs the reader in a GitHub repository. Not a record, so not in memory.
+  await mkdir(join(root, ".github", "workflows"), { recursive: true });
+  await writeFile(join(root, ".github", "workflows", "reflect.yml"), await readFile(new URL("../template/reflect.yml", import.meta.url), "utf8"));
   return config;
 }
 
@@ -80,7 +83,8 @@ export type CheckResult = { problems: string[]; outside: string[] };
 /**
  * Check an instance. Problems fail: a config that is not one, a broken memory chain, a grant that names
  * entries or reflections. `outside` lists records written or changed without reflect (by hand, say in
- * the GitHub app). That is allowed; `adopt` records them in memory.
+ * the GitHub app). That is allowed; `adopt` records them in memory. Drafts (`*.draft.json`) are the
+ * reader's guesses, not records, so they are never in memory.
  */
 export async function checkInstance(root: string): Promise<CheckResult> {
   const problems: string[] = [];
@@ -105,7 +109,7 @@ export async function checkInstance(root: string): Promise<CheckResult> {
   }
   const shas = lastShas(lines);
   const outside: string[] = [];
-  for (const rel of [...(await walk(root, person)), "reflect.json"]) {
+  for (const rel of [...(await walk(root, person)).filter((r) => !r.endsWith(".draft.json")), "reflect.json"]) {
     const bytes = await readFile(join(root, rel), "utf8");
     if (shas.get(rel) !== sha256(bytes)) outside.push(rel);
   }
