@@ -70,7 +70,7 @@ flowchart LR
   pg --> neon[(Neon: Reflect project)]
 ```
 
-- **core** (`packages/core/`): the pure TypeScript that is in `web/src/core/` today (elements, state, `decide`, journal, packs, the structure export), plus record schemas, the reader (now `web/src/server/reader.ts`; only its Vercel OIDC token lookup stays in web) and the instance checks. No database and no Next.js.
+- **core** (`packages/core/`): the pure TypeScript that is in `web/src/core/` today (elements, state, `decide`, journal, packs, the structure export), later record schemas, the reader (now `web/src/server/reader.ts`; only its Vercel OIDC token lookup stays in web) and the instance checks. No database and no Next.js.
 - **store**: one interface, `read`, `list`, `append`, `write with base`, the same contract as Naive's connectors. The **files** connector reads and writes an instance folder and appends to `memory.jsonl`. The **postgres** connector is today's `journal-store`, `me-store` and `person-store`, with the migrations, per-person AES-GCM and write-once triggers unchanged.
 - **CLI** (`packages/cli/`, command `reflect`): `init` (writes an instance from `template/`), `write` (a new entry), `read <entry>` (asks the reader, writes a draft reflection), `keep <draft>`, `check` (schemas, the memory chain, "no grant names entries or reflections"), and `export` / `import` to move an instance between hosts.
 - **Action** (`action/`): a composite GitHub Action an instance repo uses. On a push that adds or changes an entry, it runs `reflect read` and opens a pull request with the draft reflection. **The pull request is the hold gate:** merging it keeps the guesses, editing it first corrects them, and closing it drops them. The correction is the diff, which is the labeling data, used for training only when the person opts in.
@@ -92,7 +92,7 @@ flowchart LR
 
 ## Privacy
 
-Entries are never published, on either host. In a private repository GitHub still stores the text. `reflect.json` can set `encrypt: "age"`: entries and reflections are then sealed with an age key, and the Action needs that key as a secret to run the reader, or the person runs `reflect read` on their own machine and the Action only runs `check`. Whether encryption is on by default is an open question below.
+Entries are never published, on either host. In a private repository GitHub still stores the text. `reflect.json` can set `encrypt: "age"`: entries and reflections are then sealed with an age key, and the Action needs that key as a secret to run the reader, or the person runs `reflect read` on their own machine and the Action only runs `check`.
 
 ## Build plan
 
@@ -103,8 +103,8 @@ Entries are never published, on either host. In a private repository GitHub stil
 5. `reflect export` / `import` between hosts.
 6. READMEs and AGENTS.md updated with each step.
 
-## Open questions
+## Defaults (Torian can override any of these)
 
-1. Is entry encryption on or off by default in a repo instance? Off means you can read and write in the GitHub app. On means GitHub never sees the text.
-2. Does a repo instance get a GitHub Pages view of anything (a published biography section), or is nothing ever served from it? This design assumes nothing.
-3. When a person moves from a repo to Neon, does the repo stay as a read-only mirror or get archived?
+1. **Encryption is off by default** in a repo instance, so entries can be read and written in the GitHub app. The Action fails closed in a public repository: it refuses to run the reader and fails `check` when the repository is not private. `encrypt: "age"` turns encryption on.
+2. **Nothing is ever served from a repo instance.** No GitHub Pages. Publishing anything (a biography section, say) is a separate, explicit copy made by the person, as in the app.
+3. **Moving hosts copies, it does not sync.** After `reflect import` into Neon, the repo is left as it was, and `reflect.json` records `moved_to` so the CLI and the Action refuse new writes there. The person can archive or delete it. There is no two-way mirror.
