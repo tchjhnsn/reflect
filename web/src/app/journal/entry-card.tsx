@@ -2,7 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { TELL_ME_MORE, type Entry } from "@/core/journal";
+import { promptById } from "@/core/packs";
 import { done, more } from "./actions";
+import { Reflect, Reflections } from "./reflect";
+import { elementName } from "@/core/state";
 
 function time(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
@@ -11,9 +14,13 @@ function time(iso: string): string {
 export function EntryCard({ entry, label }: { entry: Entry; label?: string }) {
   const [text, setText] = useState("");
   const [open, setOpen] = useState(false);
+  const [reflecting, setReflecting] = useState(false);
+  const [active, setActive] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const closed = entry.closedAt !== null;
+  const prompt = promptById(entry.promptId);
+  const finish = () => start(async () => void (await done(entry.id)));
 
   const add = () =>
     start(async () => {
@@ -25,16 +32,29 @@ export function EntryCard({ entry, label }: { entry: Entry; label?: string }) {
 
   return (
     <article className="entry" data-testid="entry">
-      <header className="entry-meta">
-        <span>{label ?? time(entry.createdAt)}</span>
-        {closed ? <span className="badge">Done</span> : null}
-      </header>
-      {entry.parts.map((p) => (
-        <p key={p.seq} className="entry-text">
+      {prompt ? <p className="entry-prompt">{prompt.text}</p> : null}
+      {entry.parts.map((p, i) => (
+        <p key={p.seq} className={`entry-text${i > 0 ? " more-part" : ""}`}>
           {p.text}
         </p>
       ))}
-      {closed || label ? null : open ? (
+      {entry.labels && entry.labels.length > 0 ? (
+        <p className="entry-labels" data-testid="labels">
+          {entry.labels.map(elementName).join(" · ")}
+        </p>
+      ) : null}
+      <Reflections items={(entry.reflections ?? []).filter((r) => r.id !== active)} />
+      {reflecting ? (
+        <Reflect
+          entryId={entry.id}
+          onStart={setActive}
+          onClose={() => {
+            setReflecting(false);
+            setActive(null);
+          }}
+        />
+      ) : null}
+      {open && !closed ? (
         <form
           className="more"
           onSubmit={(e) => {
@@ -52,7 +72,7 @@ export function EntryCard({ entry, label }: { entry: Entry; label?: string }) {
             </p>
           ) : null}
           <div className="actions">
-            <button type="button" className="quiet" onClick={() => start(async () => void (await done(entry.id)))} disabled={pending}>
+            <button type="button" className="quiet" onClick={finish} disabled={pending}>
               I&rsquo;m done
             </button>
             <button type="submit" className="primary" disabled={pending || text.trim() === ""}>
@@ -60,14 +80,29 @@ export function EntryCard({ entry, label }: { entry: Entry; label?: string }) {
             </button>
           </div>
         </form>
-      ) : (
-        <div className="entry-actions">
-          <button type="button" className="quiet" onClick={() => setOpen(true)}>
-            {TELL_ME_MORE}
-          </button>
-          <button type="button" className="quiet" onClick={() => start(async () => void (await done(entry.id)))} disabled={pending}>
-            I&rsquo;m done
-          </button>
+      ) : null}
+      {label ? null : (
+        <div className="entry-meta">
+          <span>{time(entry.createdAt)}</span>
+          {closed ? (
+            <>
+              <span>Done</span>
+              {reflecting ? null : (
+                <button type="button" onClick={() => setReflecting(true)}>
+                  Reflect on it
+                </button>
+              )}
+            </>
+          ) : open ? null : (
+            <>
+              <button type="button" onClick={() => setOpen(true)}>
+                {TELL_ME_MORE}
+              </button>
+              <button type="button" onClick={finish} disabled={pending}>
+                I&rsquo;m done
+              </button>
+            </>
+          )}
         </div>
       )}
     </article>

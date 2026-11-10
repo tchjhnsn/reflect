@@ -14,6 +14,17 @@ export type Entry = {
   promptId: string | null;
   closedAt: string | null;
   parts: readonly Part[];
+  reflections?: readonly Reflection[];
+  /** Elements the person labeled for this entry. */
+  labels?: readonly string[];
+};
+
+/** One run of reflecting on an entry: the frame picked and the answers given, in order. */
+export type Reflection = {
+  id: string;
+  frame: string;
+  createdAt: string;
+  answers: readonly { seq: number; facet: string; stance: "descriptive" | "normative"; question: string; text: string }[];
 };
 
 /** What the journal shows next for an entry. Deterministic. */
