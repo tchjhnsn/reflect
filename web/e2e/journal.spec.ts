@@ -67,6 +67,16 @@ test("one person never sees another's journal", async ({ browser }) => {
   await expect(b.getByText("Only Ada should see this.")).toHaveCount(0);
 });
 
+async function seriousAxe(page: Page) {
+  await settle(page);
+  await page.addScriptTag({ content: axeSource });
+  const ids = await page.evaluate(async () => {
+    const r = await (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; impact: string }[] }> } }).axe.run();
+    return r.violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => v.id);
+  });
+  expect(ids).toEqual([]);
+}
+
 test("the journal has no serious accessibility issues", async ({ page }) => {
   await onboardAs(page, "Ada");
   await postShort(page, "Checking.");
@@ -85,6 +95,14 @@ test("reflect on a closed entry: pick a frame, answer or skip, and what you ough
   const entry = page.getByTestId("entry").first();
   await entry.getByRole("button", { name: "I’m done" }).click();
   await entry.getByRole("button", { name: "Reflect on it" }).click();
+  await expect(entry.getByText("I noticed Emotion and Attachment. Is that right? Change anything that isn’t.")).toBeVisible();
+  await expect(entry.getByRole("button", { name: "Emotion", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await entry.getByRole("button", { name: "Attachment", exact: true }).click();
+  await entry.getByRole("button", { name: "Embodiment", exact: true }).click();
+  await shot(page, "3-labels");
+  await seriousAxe(page);
+  await entry.getByRole("button", { name: "Keep labels" }).click();
+  await expect(entry.getByTestId("labels")).toHaveText("Emotion · Embodiment");
   await shot(page, "3-frames");
   await entry.getByRole("button", { name: /^A decision/ }).click();
   await expect(entry.getByText("A decision · 1 of 17")).toBeVisible();
@@ -103,4 +121,18 @@ test("reflect on a closed entry: pick a frame, answer or skip, and what you ough
   await page.reload();
   await expect(page.getByTestId("reflection-ought")).toContainText("My mother expects it.");
   await shot(page, "5-reflection");
+});
+
+test("a self-term's basis is the person's to correct", async ({ page }) => {
+  await onboardAs(page, "Ada");
+  await postShort(page, "I keep telling myself I'm the independent one.");
+  const entry = page.getByTestId("entry").first();
+  await entry.getByRole("button", { name: "I’m done" }).click();
+  await entry.getByRole("button", { name: "Reflect on it" }).click();
+  const basis = entry.getByLabel("You called yourself “the independent one”. What is that comparison made through?");
+  await expect(basis).toHaveValue("will");
+  await basis.selectOption("imagination");
+  await shot(page, "6-self-term");
+  await entry.getByRole("button", { name: "Keep labels" }).click();
+  await expect(entry.getByText("What would you like to look at?")).toBeVisible();
 });

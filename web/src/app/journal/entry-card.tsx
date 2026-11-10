@@ -5,6 +5,7 @@ import { TELL_ME_MORE, type Entry } from "@/core/journal";
 import { promptById } from "@/core/packs";
 import { done, more } from "./actions";
 import { Reflect, Reflections } from "./reflect";
+import { elementName } from "@/core/state";
 
 function time(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
@@ -37,6 +38,11 @@ export function EntryCard({ entry, label }: { entry: Entry; label?: string }) {
           {p.text}
         </p>
       ))}
+      {entry.labels && entry.labels.length > 0 ? (
+        <p className="entry-labels" data-testid="labels">
+          {entry.labels.map(elementName).join(" · ")}
+        </p>
+      ) : null}
       <Reflections items={(entry.reflections ?? []).filter((r) => r.id !== active)} />
       {reflecting ? (
         <Reflect

@@ -6,6 +6,7 @@ import { THEMES, THEME_COOKIE } from "@/core/theme";
 import { acceptLocalDate, clean } from "@/core/journal";
 import { isoDate, type IsoDate } from "@/core/person";
 import { requireUser } from "@/server/session";
+import { setResearchAllowed } from "@/server/journal-store";
 import { addBelief, choosePack, isFactKey, isHoldSubject, letGo, stateFactNow, stateFriendNow, stateHoldNow } from "@/server/me-store";
 import { CHOICES, cleanHold } from "@/core/onboarding";
 
@@ -92,5 +93,14 @@ export async function setTheme(theme: string): Promise<Result> {
   if (!THEMES.some((t) => t.id === theme)) return { error: "Unknown theme." };
   (await cookies()).set(THEME_COOKIE, theme, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax", secure: process.env.NODE_ENV === "production" });
   revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/** Whether the person's label corrections may be used to improve the reader. Their words never are. */
+export async function setResearch(allowed: boolean): Promise<Result> {
+  const user = await requireUser();
+  if (typeof allowed !== "boolean") return { error: "Pick on or off." };
+  await setResearchAllowed(user.id, allowed);
+  revalidatePath("/me");
   return { ok: true };
 }

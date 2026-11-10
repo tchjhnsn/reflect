@@ -279,3 +279,14 @@ button:disabled { opacity: 0.5; cursor: default; }
 .reflection dl { display: grid; gap: 8px; margin: 0; }
 .reflection dt { font: 500 13px var(--sans); color: var(--soft); }
 .reflection dd { margin: 2px 0 0; font: 400 16px/1.5 var(--write); color: var(--ink); }
+
+/* Labels: the elements as tools for reflecting */
+.label-guess { font: 400 15px/1.45 var(--sans); color: var(--ink); }
+.element-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; }
+.element-pair { display: flex; gap: 6px; flex-wrap: wrap; }
+.element-pair .chip { flex: 1 1 0; min-width: 0; padding: 7px 10px; font-size: 13px; }
+.chip.guessed { border-style: dashed; }
+.chip.guessed[aria-pressed="true"] { border-style: solid; }
+.self-term { display: grid; gap: 6px; font: 400 15px/1.4 var(--write); }
+.self-term select { font: 500 14px var(--sans); padding: 6px 8px; border: 1px solid var(--rule); border-radius: 8px; background: var(--paper); color: var(--ink); max-width: 100%; }
+.entry-labels { margin: 8px 0 0; font: 500 12px var(--sans); letter-spacing: 0.04em; color: var(--soft); }

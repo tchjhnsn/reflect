@@ -1,12 +1,125 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { FRAMES, frameById, type FrameId } from "@/core/reflect";
 import type { Reflection } from "@/core/journal";
-import { beginReflection, reflectAnswer } from "./actions";
+import { CATEGORIES, GUESS_AT, PRIMES, elementName, type Salience } from "@/core/state";
+import { beginReflection, guessLabels, reflectAnswer, saveLabels } from "./actions";
+
+type Term = Omit<Salience["selfTerms"][number], "basis"> & { basis: string | null; modelBasis: string };
+
+/**
+ * The first step of reflecting: the person labels what was part of the entry, using the elements as
+ * tools. The model's guesses arrive as a question and pre-mark chips; the person confirms, removes or
+ * adds. Nothing the model guessed is kept unless the person leaves it marked.
+ */
+export function Labels({ entryId, onDone }: { entryId: string; onDone: () => void }) {
+  const [loading, setLoading] = useState(true);
+  const [weights, setWeights] = useState<Record<string, number> | null>(null);
+  const [chosen, setChosen] = useState<Set<string>>(new Set());
+  const [terms, setTerms] = useState<Term[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+
+  useEffect(() => {
+    let live = true;
+    guessLabels(entryId).then(({ salience }) => {
+      if (!live) return;
+      if (salience) {
+        setWeights(salience.weights);
+        setChosen(new Set(PRIMES.filter((p) => salience.weights[p]! >= GUESS_AT)));
+        setTerms(salience.selfTerms.map((t) => ({ ...t, modelBasis: t.basis, basis: t.basis })));
+      }
+      setLoading(false);
+    });
+    return () => {
+      live = false;
+    };
+  }, [entryId]);
+
+  const guessed = weights ? PRIMES.filter((p) => weights[p]! >= GUESS_AT).sort((a, b) => weights[b]! - weights[a]!) : [];
+  const toggle = (p: string) => setChosen((c) => { const n = new Set(c); if (n.has(p)) n.delete(p); else n.add(p); return n; });
+  const keep = () =>
+    start(async () => {
+      const r = await saveLabels(entryId, weights, [...chosen], terms);
+      if ("error" in r) return setError(r.error);
+      onDone();
+    });
+
+  return (
+    <div className="reflect labels" role="group" aria-labelledby={`labels-${entryId}`}>
+      <p id={`labels-${entryId}`} className="reflect-title">
+        What was part of this?
+      </p>
+      <p className="label-guess" aria-live="polite">
+        {loading
+          ? "Reading your entry…"
+          : guessed.length > 0
+            ? `I noticed ${list(guessed.map(elementName))}. Is that right? Change anything that isn’t.`
+            : "Mark anything that was part of it. Leave the rest."}
+      </p>
+      <div className="element-grid">
+        {CATEGORIES.map((c) => (
+          <div key={c.id} className="element-pair" role="group" aria-label={c.id}>
+            {c.pair.map((p) => (
+              <button
+                key={p}
+                type="button"
+                className={`chip${weights && weights[p]! >= GUESS_AT ? " guessed" : ""}`}
+                aria-pressed={chosen.has(p)}
+                onClick={() => toggle(p)}
+                disabled={loading}
+              >
+                {elementName(p)}
+              </button>
+            ))}
+          </div>
+        ))}
+      </div>
+      {terms.map((t, i) => (
+        <div key={t.quote} className="self-term">
+          <label htmlFor={`term-${entryId}-${i}`}>
+            {t.whose === "self" ? "You called yourself" : "You called someone"} &ldquo;{t.quote}&rdquo;. What is that comparison made through?
+          </label>
+          <select
+            id={`term-${entryId}-${i}`}
+            value={t.basis ?? ""}
+            onChange={(e) => setTerms((ts) => ts.map((x, j) => (j === i ? { ...x, basis: e.target.value || null } : x)))}
+          >
+            {PRIMES.filter((p) => p !== "self-differentiation").map((p) => (
+              <option key={p} value={p}>
+                {elementName(p)}
+                {p === t.modelBasis ? " (my guess)" : ""}
+              </option>
+            ))}
+            <option value="">It isn&rsquo;t a comparison</option>
+          </select>
+        </div>
+      ))}
+      {error ? (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <div className="actions">
+        <button type="button" className="quiet" onClick={onDone} disabled={pending}>
+          Skip
+        </button>
+        <button type="button" className="primary" onClick={keep} disabled={pending || loading}>
+          Keep labels
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function list(xs: string[]): string {
+  return xs.length <= 1 ? (xs[0] ?? "") : `${xs.slice(0, -1).join(", ")} and ${xs.at(-1)}`;
+}
 
 /** Pick a frame, then fixed open questions one at a time. Skipping writes nothing. No model is asked. */
 export function Reflect({ entryId, onClose, onStart }: { entryId: string; onClose: () => void; onStart: (id: string) => void }) {
+  const [labeled, setLabeled] = useState(false);
   const [frame, setFrame] = useState<FrameId | null>(null);
   const [id, setId] = useState<string | null>(null);
   const [step, setStep] = useState(0);
@@ -35,6 +148,8 @@ export function Reflect({ entryId, onClose, onStart }: { entryId: string; onClos
       setText("");
       setStep(step + 1);
     });
+
+  if (!labeled) return <Labels entryId={entryId} onDone={() => setLabeled(true)} />;
 
   if (!f || !id) {
     return (

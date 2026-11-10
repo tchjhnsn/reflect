@@ -10,7 +10,7 @@ import { THEMES, type ThemeId } from "@/core/theme";
 import { CHOICES, parseHold } from "@/core/onboarding";
 import { HOLDS } from "@/core/structure";
 import { CHOICE_LABELS, HOLD_LABELS, showAnswer } from "../welcome/copy";
-import { changeFact, letGoBelief, setPack, setTheme, stateBelief } from "./actions";
+import { changeFact, letGoBelief, setPack, setResearch, setTheme, stateBelief } from "./actions";
 
 type Result = { error: string } | { ok: true };
 type FieldId = "name" | "date_of_birth" | "occupation" | "closest_friend" | "marital_status" | "seeing_someone" | "children" | "hold_partnership" | "hold_children";
@@ -275,7 +275,27 @@ function Themes({ current }: { current: ThemeId }) {
   );
 }
 
-export function MePage({ me, theme }: { me: Me; theme: ThemeId }) {
+function Research({ allowed }: { allowed: boolean }) {
+  const [on, setOn] = useState(allowed);
+  const [, start] = useTransition();
+  const flip = () => {
+    const next = !on;
+    setOn(next);
+    start(async () => {
+      const r: Result = await setResearch(next);
+      if ("error" in r) setOn(!next);
+    });
+  };
+  return (
+    <div className="choices" role="group" aria-label="Improving the reader">
+      <button type="button" className="chip" aria-pressed={on} onClick={flip}>
+        Let my labels improve the reader
+      </button>
+    </div>
+  );
+}
+
+export function MePage({ me, theme, research }: { me: Me; theme: ThemeId; research: boolean }) {
   const today = useToday();
   const [editing, setEditing] = useState<FieldId | null>(null);
   const name = me.facts.name.find((h) => h.validTo === null)?.value ?? null;
@@ -344,6 +364,11 @@ export function MePage({ me, theme }: { me: Me; theme: ThemeId }) {
         </div>
         <p className="sec-note">Theme. Only the look changes; what you write stays the same.</p>
         <Themes current={theme} />
+        <p className="sec-note">
+          When you reflect, a model guesses which elements were part of your entry and you correct it. If you allow it, your corrections (never
+          your words) help that guess get better. Off unless you turn it on.
+        </p>
+        <Research allowed={research} />
       </section>
 
       <div className="foot">

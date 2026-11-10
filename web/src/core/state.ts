@@ -107,3 +107,22 @@ export function nextFocus(s: Salience, asked: ReadonlySet<string>): string | nul
   }
   return best;
 }
+
+const SPECIAL: Record<string, string> = { "self-differentiation": "Self-Differentiation", "aesthetic-sense": "Aesthetic Sense", "numinous-sense": "Numinous Sense" };
+/** The element's display name: "aesthetic-sense" is "Aesthetic Sense". */
+export const elementName = (id: string): string => SPECIAL[id] ?? id.charAt(0).toUpperCase() + id.slice(1);
+
+/** A model weight at or above this is shown to the person as a guess to confirm or remove. */
+export const GUESS_AT = 0.5;
+
+export type LabelDecision = "confirmed" | "rejected" | "added" | "absent";
+
+/** The person decides; the model's guess only sets what the question starts from. */
+export function decide(weights: Record<string, number> | null, chosen: ReadonlySet<string>): { element: string; weight: number | null; decision: LabelDecision }[] {
+  return PRIMES.map((p) => {
+    const w = weights?.[p] ?? null;
+    const guessed = w !== null && w >= GUESS_AT;
+    const decision: LabelDecision = chosen.has(p) ? (guessed ? "confirmed" : "added") : guessed ? "rejected" : "absent";
+    return { element: p, weight: w, decision };
+  });
+}

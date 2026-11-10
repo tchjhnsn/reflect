@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { acceptLocalDate, clean } from "@/core/journal";
 import { isoDate } from "@/core/person";
 import { requireUser } from "@/server/session";
-import { addPart, closeEntry, createEntry, keepAnswer, startReflection } from "@/server/journal-store";
+import { addPart, closeEntry, createEntry, entryText, keepAnswer, keepLabels, startReflection, type SelfTermRow } from "@/server/journal-store";
+import { readSalience } from "@/server/reader";
+import { PRIMES, decide, type Salience } from "@/core/state";
 
 type Result = { error: string } | { ok: true };
 
@@ -58,6 +60,38 @@ export async function reflectAnswer(reflectionId: string, seq: number, text: str
     await keepAnswer(user.id, reflectionId, seq, words);
   } catch {
     return { error: "That answer couldn't be kept." };
+  }
+  revalidatePath("/journal");
+  return { ok: true };
+}
+
+/** The model's guess at which elements are in an entry. Shown to the person as questions; nothing is kept. */
+export async function guessLabels(entryId: string): Promise<{ salience: Salience | null }> {
+  const user = await requireUser();
+  const text = await entryText(user.id, entryId);
+  if (!text) return { salience: null };
+  return { salience: await readSalience(text) };
+}
+
+type TermChoice = { quote: string; term: string; whose: "self" | "other"; modelBasis: string; basis: string | null };
+
+/** Keep the person's labels. The person's choice always wins over the model's guess. */
+export async function saveLabels(entryId: string, weights: Record<string, number> | null, chosen: string[], terms: TermChoice[]): Promise<Result> {
+  const user = await requireUser();
+  if (!chosen.every((c) => PRIMES.includes(c))) return { error: "Unknown element." };
+  if (weights && !Object.entries(weights).every(([k, v]) => PRIMES.includes(k) && typeof v === "number" && v >= 0 && v <= 1)) return { error: "Unknown element." };
+  const rows: SelfTermRow[] = [];
+  for (const t of terms) {
+    if (t.basis !== null && (!PRIMES.includes(t.basis) || t.basis === "self-differentiation")) return { error: "Unknown element." };
+    if (!PRIMES.includes(t.modelBasis) || (t.whose !== "self" && t.whose !== "other")) return { error: "Unknown element." };
+    const quote = clean(t.quote);
+    if (!quote) continue;
+    rows.push({ quote, term: clean(t.term) ?? quote, whose: t.whose, modelBasis: t.modelBasis, basis: t.basis, decision: t.basis === null ? "rejected" : t.basis === t.modelBasis ? "confirmed" : "corrected" });
+  }
+  try {
+    await keepLabels(user.id, entryId, decide(weights, new Set(chosen)), rows);
+  } catch {
+    return { error: "These labels couldn't be kept." };
   }
   revalidatePath("/journal");
   return { ok: true };
