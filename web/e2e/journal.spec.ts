@@ -130,8 +130,9 @@ test("a self-term's basis is the person's to correct", async ({ page }) => {
   await entry.getByRole("button", { name: "I’m done" }).click();
   await entry.getByRole("button", { name: "Reflect on it" }).click();
   const basis = entry.getByLabel("You called yourself “the independent one”. What is that comparison made through?");
-  await expect(basis).toHaveValue("will");
-  await basis.selectOption("imagination");
+  await expect(basis).toHaveValue("imagination");
+  await expect(entry.getByText("My guesses: Imagination 52%, Will 28%, Reason 11%.")).toBeVisible();
+  await basis.selectOption("will");
   await shot(page, "6-self-term");
   await entry.getByRole("button", { name: "Keep labels" }).click();
   await expect(entry.getByText("What would you like to look at?")).toBeVisible();

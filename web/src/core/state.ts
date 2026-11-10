@@ -70,7 +70,13 @@ export function onMismatch(asked: boolean, domain: string, basisPrime: string): 
 }
 
 /** A model's proposal: how prominent each element is in some words, and the bases of self-terms. */
-export type Salience = { weights: Record<string, number>; selfTerms: { quote: string; term: string; whose: "self" | "other"; basis: string }[] };
+export type Salience = {
+  weights: Record<string, number>;
+  /** The weight at or above which this reader's guess is shown; readers differ in how high they run. */
+  guessAt?: number;
+  /** `odds` are the reader's probabilities for each basis, when it gives them. */
+  selfTerms: { quote: string; term: string; whose: "self" | "other"; basis: string; odds?: Record<string, number> }[];
+};
 
 /** Check a model's answer against the text. Returns null when the weights are unusable. */
 export function parseSalience(text: string, answer: unknown): { salience: Salience | null; problems: string[] } {
@@ -118,10 +124,10 @@ export const GUESS_AT = 0.5;
 export type LabelDecision = "confirmed" | "rejected" | "added" | "absent";
 
 /** The person decides; the model's guess only sets what the question starts from. */
-export function decide(weights: Record<string, number> | null, chosen: ReadonlySet<string>): { element: string; weight: number | null; decision: LabelDecision }[] {
+export function decide(weights: Record<string, number> | null, chosen: ReadonlySet<string>, guessAt = GUESS_AT): { element: string; weight: number | null; decision: LabelDecision }[] {
   return PRIMES.map((p) => {
     const w = weights?.[p] ?? null;
-    const guessed = w !== null && w >= GUESS_AT;
+    const guessed = w !== null && w >= guessAt;
     const decision: LabelDecision = chosen.has(p) ? (guessed ? "confirmed" : "added") : guessed ? "rejected" : "absent";
     return { element: p, weight: w, decision };
   });

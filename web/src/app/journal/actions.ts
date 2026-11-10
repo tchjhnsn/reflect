@@ -76,8 +76,9 @@ export async function guessLabels(entryId: string): Promise<{ salience: Salience
 type TermChoice = { quote: string; term: string; whose: "self" | "other"; modelBasis: string; basis: string | null };
 
 /** Keep the person's labels. The person's choice always wins over the model's guess. */
-export async function saveLabels(entryId: string, weights: Record<string, number> | null, chosen: string[], terms: TermChoice[]): Promise<Result> {
+export async function saveLabels(entryId: string, weights: Record<string, number> | null, chosen: string[], terms: TermChoice[], guessAt?: number): Promise<Result> {
   const user = await requireUser();
+  if (guessAt !== undefined && !(typeof guessAt === "number" && guessAt > 0 && guessAt <= 1)) return { error: "Unknown element." };
   if (!chosen.every((c) => PRIMES.includes(c))) return { error: "Unknown element." };
   if (weights && !Object.entries(weights).every(([k, v]) => PRIMES.includes(k) && typeof v === "number" && v >= 0 && v <= 1)) return { error: "Unknown element." };
   const rows: SelfTermRow[] = [];
@@ -89,7 +90,7 @@ export async function saveLabels(entryId: string, weights: Record<string, number
     rows.push({ quote, term: clean(t.term) ?? quote, whose: t.whose, modelBasis: t.modelBasis, basis: t.basis, decision: t.basis === null ? "rejected" : t.basis === t.modelBasis ? "confirmed" : "corrected" });
   }
   try {
-    await keepLabels(user.id, entryId, decide(weights, new Set(chosen)), rows);
+    await keepLabels(user.id, entryId, decide(weights, new Set(chosen), guessAt), rows);
   } catch {
     return { error: "These labels couldn't be kept." };
   }

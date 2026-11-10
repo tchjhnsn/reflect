@@ -16,6 +16,7 @@ type Term = Omit<Salience["selfTerms"][number], "basis"> & { basis: string | nul
 export function Labels({ entryId, onDone }: { entryId: string; onDone: () => void }) {
   const [loading, setLoading] = useState(true);
   const [weights, setWeights] = useState<Record<string, number> | null>(null);
+  const [guessAt, setGuessAt] = useState(GUESS_AT);
   const [chosen, setChosen] = useState<Set<string>>(new Set());
   const [terms, setTerms] = useState<Term[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -26,8 +27,10 @@ export function Labels({ entryId, onDone }: { entryId: string; onDone: () => voi
     guessLabels(entryId).then(({ salience }) => {
       if (!live) return;
       if (salience) {
+        const at = salience.guessAt ?? GUESS_AT;
         setWeights(salience.weights);
-        setChosen(new Set(PRIMES.filter((p) => salience.weights[p]! >= GUESS_AT)));
+        setGuessAt(at);
+        setChosen(new Set(PRIMES.filter((p) => salience.weights[p]! >= at)));
         setTerms(salience.selfTerms.map((t) => ({ ...t, modelBasis: t.basis, basis: t.basis })));
       }
       setLoading(false);
@@ -37,11 +40,11 @@ export function Labels({ entryId, onDone }: { entryId: string; onDone: () => voi
     };
   }, [entryId]);
 
-  const guessed = weights ? PRIMES.filter((p) => weights[p]! >= GUESS_AT).sort((a, b) => weights[b]! - weights[a]!) : [];
+  const guessed = weights ? PRIMES.filter((p) => weights[p]! >= guessAt).sort((a, b) => weights[b]! - weights[a]!) : [];
   const toggle = (p: string) => setChosen((c) => { const n = new Set(c); if (n.has(p)) n.delete(p); else n.add(p); return n; });
   const keep = () =>
     start(async () => {
-      const r = await saveLabels(entryId, weights, [...chosen], terms);
+      const r = await saveLabels(entryId, weights, [...chosen], terms.map(({ odds: _odds, ...t }) => t), guessAt);
       if ("error" in r) return setError(r.error);
       onDone();
     });
@@ -65,7 +68,7 @@ export function Labels({ entryId, onDone }: { entryId: string; onDone: () => voi
               <button
                 key={p}
                 type="button"
-                className={`chip${weights && weights[p]! >= GUESS_AT ? " guessed" : ""}`}
+                className={`chip${weights && weights[p]! >= guessAt ? " guessed" : ""}`}
                 aria-pressed={chosen.has(p)}
                 onClick={() => toggle(p)}
                 disabled={loading}
@@ -94,6 +97,7 @@ export function Labels({ entryId, onDone }: { entryId: string; onDone: () => voi
             ))}
             <option value="">It isn&rsquo;t a comparison</option>
           </select>
+          {odds(t.odds) ? <p className="chip-note basis-odds">My guesses: {odds(t.odds)}.</p> : null}
         </div>
       ))}
       {error ? (
@@ -111,6 +115,12 @@ export function Labels({ entryId, onDone }: { entryId: string; onDone: () => voi
       </div>
     </div>
   );
+}
+
+/** The reader's top three bases as rounded percentages, or null when it gave none. */
+function odds(o: Record<string, number> | undefined): string | null {
+  const top = Object.entries(o ?? {}).sort((a, b) => b[1] - a[1]).slice(0, 3).filter(([, v]) => v >= 0.05);
+  return top.length ? top.map(([p, v]) => `${elementName(p)} ${Math.round(v * 100)}%`).join(", ") : null;
 }
 
 function list(xs: string[]): string {
