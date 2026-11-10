@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { HOLDS, ONBOARDING, parseOnboarding } from "./structure";
-import { EMPTY_PERSON, currentFact, currentRelationship, isoDate, stateRelationship, type IsoDate } from "./person";
-import { START, cleanHold, finish, reduce, type OnboardingState } from "./onboarding";
+import { HOLDS, ONBOARDING, parseOnboarding } from "./structure.ts";
+import { EMPTY_PERSON, currentFact, currentRelationship, isoDate, stateRelationship, type IsoDate } from "./person.ts";
+import { START, cleanHold, finish, reduce, type OnboardingState } from "./onboarding.ts";
 
 const TODAY = "2026-11-09" as IsoDate;
 

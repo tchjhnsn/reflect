@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { TELL_ME_MORE, type Entry } from "@/core/journal";
-import { promptById } from "@/core/packs";
+import { TELL_ME_MORE, type Entry } from "@reflect/core/journal";
+import { promptById } from "@reflect/core/packs";
 import { done, more } from "./actions";
 import { Reflect, Reflections } from "./reflect";
-import { elementName } from "@/core/state";
+import { elementName } from "@reflect/core/state";
 
 function time(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });

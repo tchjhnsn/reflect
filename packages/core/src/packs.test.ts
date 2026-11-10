@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PACKS, drawPrompt, pool, promptById } from "./packs";
+import { PACKS, drawPrompt, pool, promptById } from "./packs.ts";
 
 describe("prompt packs", () => {
   it("has unique prompt ids and no prescriptive wording", () => {

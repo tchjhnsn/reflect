@@ -1,8 +1,8 @@
 "use client";
 
 import { useRef, useState, useTransition, type KeyboardEvent } from "react";
-import { OPENING } from "@/core/journal";
-import { drawPrompt, type Prompt } from "@/core/packs";
+import { OPENING } from "@reflect/core/journal";
+import { drawPrompt, type Prompt } from "@reflect/core/packs";
 import { post } from "./actions";
 
 export function Composer({

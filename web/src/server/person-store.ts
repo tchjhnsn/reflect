@@ -1,6 +1,6 @@
 import type { PoolClient } from "@neondatabase/serverless";
 import { db } from "@/db/pool";
-import type { IsoDate, PersonState } from "@/core/person";
+import type { IsoDate, PersonState } from "@reflect/core/person";
 import { open, seal } from "./crypto";
 
 /** Write what onboarding produced in one transaction. Idempotent: a second call for a person who finished does nothing. */

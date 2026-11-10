@@ -1,9 +1,9 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { db } from "@/db/pool";
-import type { IsoDate } from "@/core/person";
+import type { IsoDate } from "@reflect/core/person";
 import { addPart, closeEntry, createEntry, entryText, keepAnswer, keepLabels, listEntries, researchAllowed, setResearchAllowed, startReflection } from "./journal-store";
-import { decide } from "@/core/state";
+import { decide } from "@reflect/core/state";
 
 const live = Boolean(process.env.DATABASE_URL && process.env.REFLECT_DATA_KEY);
 const DAY = "2026-11-09" as IsoDate;

@@ -1,4 +1,4 @@
-import raw from "./structure.json";
+import raw from "./structure.json" with { type: "json" };
 
 export type Destination =
   | { store: "profile"; key: string }

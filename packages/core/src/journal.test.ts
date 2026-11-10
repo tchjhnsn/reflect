@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { IsoDate } from "./person";
-import { CLOSED, OPENING, TELL_ME_MORE, acceptLocalDate, byDay, clean, nextPrompt, onThisDay, type Entry } from "./journal";
+import type { IsoDate } from "./person.ts";
+import { CLOSED, OPENING, TELL_ME_MORE, acceptLocalDate, byDay, clean, nextPrompt, onThisDay, type Entry } from "./journal.ts";
 
 const entry = (id: string, localDate: string, createdAt: string, parts = 1): Entry => ({
   id,

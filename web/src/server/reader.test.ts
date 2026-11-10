@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PRIMES, decide } from "@/core/state";
+import { PRIMES, decide } from "@reflect/core/state";
 import { JEV_GUESS_AT, foundTerms, fromJev } from "./reader";
 
 const k = (p: string) => p.replaceAll("-", "_");

@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { PACKS } from "@/core/packs";
+import { PACKS } from "@reflect/core/packs";
 import type { Belief, Dated, Me } from "@/server/me-store";
 import { longDate, shortDate, useToday } from "@/lib/today";
 import { Nav, initialOf } from "../nav";
 import { SignOut } from "../sign-out";
-import { THEMES, type ThemeId } from "@/core/theme";
-import { CHOICES, parseHold } from "@/core/onboarding";
-import { HOLDS } from "@/core/structure";
+import { THEMES, type ThemeId } from "@reflect/core/theme";
+import { CHOICES, parseHold } from "@reflect/core/onboarding";
+import { HOLDS } from "@reflect/core/structure";
 import { CHOICE_LABELS, HOLD_LABELS, showAnswer } from "./copy";
 import { changeFact, letGoBelief, setPack, setResearch, setTheme, stateBelief } from "./actions";
 

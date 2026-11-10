@@ -25,14 +25,22 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@reflect/core/*": [
+        "../packages/core/src/*"
+      ],
+      "vitest": [
+        "./node_modules/vitest"
       ]
     },
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "allowImportingTsExtensions": true
   },
   "include": [
     "next-env.d.ts",
     "src/**/*.ts",
     "src/**/*.tsx",
+    "../packages/core/src/**/*.ts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],

@@ -2,13 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
-import { THEMES, THEME_COOKIE } from "@/core/theme";
-import { acceptLocalDate, clean } from "@/core/journal";
-import { isoDate, type IsoDate } from "@/core/person";
+import { THEMES, THEME_COOKIE } from "@reflect/core/theme";
+import { acceptLocalDate, clean } from "@reflect/core/journal";
+import { isoDate, type IsoDate } from "@reflect/core/person";
 import { requireUser } from "@/server/session";
 import { setResearchAllowed } from "@/server/journal-store";
 import { addBelief, choosePack, isFactKey, isHoldSubject, letGo, stateFactNow, stateFriendNow, stateHoldNow } from "@/server/me-store";
-import { CHOICES, cleanHold } from "@/core/onboarding";
+import { CHOICES, cleanHold } from "@reflect/core/onboarding";
 
 type Result = { error: string } | { ok: true };
 

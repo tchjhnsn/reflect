@@ -1,12 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { acceptLocalDate, clean } from "@/core/journal";
-import { isoDate } from "@/core/person";
+import { acceptLocalDate, clean } from "@reflect/core/journal";
+import { isoDate } from "@reflect/core/person";
 import { requireUser } from "@/server/session";
 import { addPart, closeEntry, createEntry, entryText, keepAnswer, keepLabels, startReflection, type SelfTermRow } from "@/server/journal-store";
 import { readSalience } from "@/server/reader";
-import { PRIMES, decide, type Salience } from "@/core/state";
+import { PRIMES, decide, type Salience } from "@reflect/core/state";
 
 type Result = { error: string } | { ok: true };
 

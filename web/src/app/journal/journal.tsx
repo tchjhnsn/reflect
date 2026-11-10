@@ -1,7 +1,7 @@
 "use client";
 
-import { byDay, onThisDay, type Entry } from "@/core/journal";
-import type { IsoDate } from "@/core/person";
+import { byDay, onThisDay, type Entry } from "@reflect/core/journal";
+import type { IsoDate } from "@reflect/core/person";
 import { useToday } from "@/lib/today";
 import { Composer } from "./composer";
 import { EntryCard } from "./entry-card";

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { expect, test, type Page } from "@playwright/test";
-import { PACKS } from "../src/core/packs";
+import { PACKS } from "../../packages/core/src/packs.ts";
 import { signUpAs, settle } from "./helpers";
 
 const shots = process.env.SHOTS_DIR;
