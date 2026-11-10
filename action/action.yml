@@ -39,7 +39,7 @@ runs:
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
         reflect keep --all
         reflect check --adopt
-        git add -A people memory.jsonl
+        git add -A -- . ":!.github"
         if ! git diff --cached --quiet; then
           git commit -m "Keep reflections and record hand-written changes"
           git push origin HEAD:${{ github.ref_name }}
@@ -62,7 +62,7 @@ runs:
           git checkout -q -B reflect/drafts
         fi
         reflect read --pending
-        git add -A people
+        git add -A -- . ":!.github"
         if git diff --cached --quiet && git diff --quiet "$base" HEAD; then
           echo "No new entries to read."
           exit 0

@@ -11,10 +11,12 @@ The headless core of Reflect, in plain TypeScript with no database and no Next.j
 | `src/person.ts`, `src/onboarding.ts` | The person's stores as pure functions over `PersonState`, and the onboarding reducer Me still uses. Mirror `../../lean/NTS/Person.lean` and `Onboarding.lean`. |
 | `src/journal.ts`, `src/packs.ts`, `src/reflect.ts` | Entries and prompts, prompt packs, and reflecting with frames. |
 | `src/store.ts` | The store interface, `Journal`: one person's journal, append-only, whichever host keeps it. |
-| `src/files-journal.ts` | The folder host: entries as `people/<id>/entries/<date>-<id>.md` (front matter optional, so a hand-written file is an entry), reflections and labelings as `people/<id>/reflections/<entry>.json`. |
+| `src/layout.ts` | Where records sit in an instance folder: a vault (`journal/`, `reflections/`, `concepts/`, `library/`, `ventures/<venture of a lifetime>/`, `telos/`, `intents/` at the root) or the older `people/<id>/` layout. |
+| `src/files-journal.ts` | The folder host: entries as `journal/<date>-<id>.md` (front matter optional, so a hand-written file is an entry; front matter the person adds is kept on later writes), reflections and labelings as `reflections/<entry>.json`, sparks with their concept notes in `concepts/`. |
+| `src/spark.ts` | Object writing: the forms (1, 5, 10, 15 minutes or one sentence), concrete nouns to start from, the prompt, and a spark's front matter and concept note. |
 | `src/memory.ts` | Memory: `memory.jsonl`, one hash-chained line per write (`verifyMemory` finds a changed or removed line). |
 | `src/journal-contract.ts` | The behaviour every host must have. The folder host runs it in `files-journal.test.ts`, and the Postgres host (`postgresJournal` in `../../web/src/server/journal-store.ts`) in its own tests against Neon. |
-| `src/instance.ts` | An instance in a folder: `initInstance` (writes `template/reflect.yml` as the instance's workflow), `readConfig`, `checkInstance`, `adopt`. |
+| `src/instance.ts` | An instance in a folder: `initInstance` (writes the vault and `template/reflect.yml` as the instance's workflow), `readConfig`, `checkInstance`, `adopt`. |
 | `src/reader.ts` | The reader: Jev's element odds and the basis of each self-term, gpt-oss to find self-terms. The web app adds the Vercel OIDC token. |
 | `src/draft.ts` | A draft reflection (`makeDraft`) and what keeping it records (`keepDraft`). |
 | `src/bundle.ts` | A bundle: one person's journal as one JSON document, the same from either host. Moving hosts is an export from one and an import into the other's empty journal. |

@@ -7,14 +7,22 @@ import { parseBundle } from "../core/src/bundle.ts";
 import { keepDraft, makeDraft, type Draft } from "../core/src/draft.ts";
 import { parseArgs } from "node:util";
 import { filesJournal } from "../core/src/files-journal.ts";
-import { adopt, checkInstance, initInstance, readConfig } from "../core/src/instance.ts";
+import { adopt, checkInstance, initInstance, layoutOf, readConfig } from "../core/src/instance.ts";
+import { recordPaths } from "../core/src/layout.ts";
 import type { IsoDate } from "../core/src/person.ts";
 import { readSalience } from "../core/src/reader.ts";
+import { cleanNoun, isSparkForm, pickNoun, sparkPrompt, SPARK_FORMS, type SparkForm } from "../core/src/spark.ts";
 
 const USAGE = `reflect <command> [--dir <instance>]
 
-  init --name <name>              start an instance in the folder
+  init --name <name>              start a vault in the folder: journal, library, ventures of a
+                                  lifetime (household, work, community, friendship), telos, intents
   write [text] [--date YYYY-MM-DD] write an entry (text from the argument or stdin); prints its id
+  spark [--minutes 1|5|10|15 | --sentence]
+                                  a noun to write about, and how long
+  spark <noun> [text] [--minutes N | --sentence] [--date YYYY-MM-DD]
+                                  keep what you wrote on that noun (text from the argument or stdin);
+                                  the noun becomes a concept note in concepts/
   add <entry> [text]              add to an entry that is still open
   close <entry>                   close an entry
   list                            the entries, newest first
@@ -36,6 +44,14 @@ function textFrom(arg: string | undefined): string {
   return t;
 }
 
+function sparkForm(minutes: string | undefined, sentence: boolean): SparkForm {
+  if (sentence && minutes) throw new Error("a spark is --minutes or --sentence, not both");
+  if (sentence) return "sentence";
+  const form = `${minutes ?? "5"}m`;
+  if (!isSparkForm(form)) throw new Error(`--minutes is one of ${SPARK_FORMS.filter((f) => f !== "sentence").map((f) => f.replace("m", "")).join(", ")}`);
+  return form;
+}
+
 export async function main(argv: string[], out: (s: string) => void = console.log): Promise<number> {
   const { values, positionals } = parseArgs({
     args: argv,
@@ -47,6 +63,8 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
       adopt: { type: "boolean", default: false },
       pending: { type: "boolean", default: false },
       all: { type: "boolean", default: false },
+      minutes: { type: "string" },
+      sentence: { type: "boolean", default: false },
       out: { type: "string" },
       "moving-to": { type: "string" },
       help: { type: "boolean", short: "h" },
@@ -74,8 +92,15 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
     if (r.problems.length === 0) out("ok");
     return r.problems.length ? 1 : 0;
   }
+  if (cmd === "spark" && !rest[0]) {
+    const noun = pickNoun();
+    const form = sparkForm(values.minutes, values.sentence);
+    out(`${noun}\n${sparkPrompt(noun, form)}\nThen keep it: reflect spark "${noun}"${form === "sentence" ? " --sentence" : ` --minutes ${form.replace("m", "")}`} < what-you-wrote.txt`);
+    return 0;
+  }
   const config = await readConfig(root);
-  const journal = filesJournal(root, config.person);
+  const paths = recordPaths(layoutOf(config), config.person);
+  const journal = filesJournal(root, config.person, { layout: layoutOf(config) });
   if (cmd === "list") {
     for (const e of await journal.listEntries()) out(`${e.id}  ${e.localDate}  ${e.closedAt ? "closed" : "open  "}  ${(e.parts[0]?.text ?? "").split("\n")[0]!.slice(0, 60)}`);
     return 0;
@@ -96,13 +121,19 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
     out(`imported ${rest[0]}`);
     return 0;
   }
+  const date = values.date ?? today();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("--date is YYYY-MM-DD");
   if (cmd === "write") {
-    const date = values.date ?? today();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("--date is YYYY-MM-DD");
     out(await journal.createEntry(textFrom(rest[0]), date as IsoDate, null));
     return 0;
   }
-  const reflDir = join(root, "people", config.person, "reflections");
+  if (cmd === "spark") {
+    const form = sparkForm(values.minutes, values.sentence);
+    const text = textFrom(rest[1]);
+    out(await journal.writeSpark(cleanNoun(rest[0]!), form, text, date as IsoDate));
+    return 0;
+  }
+  const reflDir = join(root, paths.reflections);
   const draftPath = (entry: string) => join(reflDir, `${entry}.draft.json`);
   const exists = (p: string) => readFile(p).then(() => true, () => false);
   if (cmd === "read") {
@@ -121,7 +152,7 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
       const s = await readSalience(text);
       if (!s) throw new Error("the reader is not set up or did not answer; set AI_GATEWAY_API_KEY or TYPESAFEAI_API_KEY");
       await writeFile(draftPath(id), `${JSON.stringify(makeDraft(id, s, new Date().toISOString()), null, 2)}\n`);
-      out(`draft: people/${config.person}/reflections/${id}.draft.json`);
+      out(`draft: ${join(paths.reflections, `${id}.draft.json`)}`);
     }
     return 0;
   }
