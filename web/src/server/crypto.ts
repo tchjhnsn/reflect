@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHmac, hkdfSync, randomBytes } from "node:crypto";
 
 function key(userId: string): Buffer {
   const master = process.env.REFLECT_DATA_KEY;
@@ -19,4 +19,12 @@ export function open(userId: string, sealed: string): string {
   const decipher = createDecipheriv("aes-256-gcm", key(userId), raw.subarray(0, 12));
   decipher.setAuthTag(raw.subarray(12, 28));
   return Buffer.concat([decipher.update(raw.subarray(28)), decipher.final()]).toString("utf8");
+}
+
+/** A keyed hash per person, so the same cue is found again without storing it in the clear. */
+export function tag(userId: string, text: string): string {
+  const master = process.env.REFLECT_DATA_KEY;
+  if (!master) throw new Error("REFLECT_DATA_KEY is not set");
+  const k = Buffer.from(hkdfSync("sha256", Buffer.from(master, "base64"), Buffer.from(userId), "reflect/cue/v1", 32));
+  return createHmac("sha256", k).update(text).digest("hex");
 }
