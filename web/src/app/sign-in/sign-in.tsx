@@ -22,7 +22,7 @@ export function SignIn() {
         : await authClient.signIn.email({ email, password });
     setPending(false);
     if (result.error) setError(result.error.message ?? "That didn't work. Try again.");
-    else router.replace("/welcome");
+    else router.replace("/journal");
   };
 
   return (

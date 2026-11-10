@@ -290,3 +290,22 @@ button:disabled { opacity: 0.5; cursor: default; }
 .self-term { display: grid; gap: 6px; font: 400 15px/1.4 var(--write); }
 .self-term select { font: 500 14px var(--sans); padding: 6px 8px; border: 1px solid var(--rule); border-radius: 8px; background: var(--paper); color: var(--ink); max-width: 100%; }
 .entry-labels { margin: 8px 0 0; font: 500 12px var(--sans); letter-spacing: 0.04em; color: var(--soft); }
+
+/* What your AI knows about you */
+.add textarea { width: 100%; font: 400 16px/1.5 var(--write); color: var(--ink); background: transparent; border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; resize: vertical; }
+.add textarea:focus { outline: none; border-color: var(--accent); }
+.add textarea::placeholder { color: var(--soft); font-style: italic; }
+.prompt-text { white-space: pre-wrap; font: 400 13px/1.5 var(--sans); color: var(--ink); background: var(--paper-deep); border-radius: 8px; padding: 12px; max-height: 320px; overflow: auto; }
+.ai-report { margin-top: 18px; border-top: 1px solid var(--rule); padding-top: 14px; }
+.ai-block { margin-top: 16px; }
+.ai-list { list-style: none; padding: 0; margin: 6px 0 0; }
+.ai-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 8px 0; border-bottom: 1px solid var(--rule); font: 400 17px/1.45 var(--write); }
+.ai-list li > span:first-child { flex: 1 1 60%; }
+.ai-list .source { flex-basis: 100%; }
+.puzzle { font: italic 400 20px/1.4 var(--write); margin: 6px 0; }
+.source { font: 400 12px/1.4 var(--sans); color: var(--soft); margin: 2px 0 0; }
+.basis.inferred { font-style: italic; }
+.basis.i-said { color: var(--ink); }
+.keep { font-size: 13px; padding: 4px 10px; }
+.kept { font: 400 13px var(--sans); color: var(--accent); }
+.ai-note { font-style: italic; }

@@ -9,7 +9,8 @@ import { SignOut } from "../sign-out";
 import { THEMES, type ThemeId } from "@/core/theme";
 import { CHOICES, parseHold } from "@/core/onboarding";
 import { HOLDS } from "@/core/structure";
-import { CHOICE_LABELS, HOLD_LABELS, showAnswer } from "../welcome/copy";
+import { CHOICE_LABELS, HOLD_LABELS, showAnswer } from "./copy";
+import { AskYourAi } from "./ask-ai";
 import { changeFact, letGoBelief, setPack, setResearch, setTheme, stateBelief } from "./actions";
 
 type Result = { error: string } | { ok: true };
@@ -330,6 +331,8 @@ export function MePage({ me, theme, research }: { me: Me; theme: ThemeId; resear
 
       <dl className="facts">{rows(FIELDS)}</dl>
       <p className="sec-note">Only what you state is kept here. Nothing is guessed from your journal.</p>
+
+      <AskYourAi />
 
       <section className="sec" aria-labelledby="h-holds">
         <div className="sec-head">
