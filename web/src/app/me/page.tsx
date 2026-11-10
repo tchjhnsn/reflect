@@ -3,7 +3,7 @@ import { requireUser } from "@/server/session";
 import { loadMe } from "@/server/me-store";
 import { researchAllowed } from "@/server/journal-store";
 import { cookies } from "next/headers";
-import { THEME_COOKIE, asTheme } from "@/core/theme";
+import { THEME_COOKIE, asTheme } from "@reflect/core/theme";
 import { MePage } from "./me";
 
 export const metadata: Metadata = { title: "Me" };

@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { db } from "@/db/pool";
-import type { IsoDate } from "@/core/person";
+import type { IsoDate } from "@reflect/core/person";
 import { addBelief, choosePack, chosenPacks, letGo, loadMe, stateFactNow, stateFriendNow } from "./me-store";
 
 const live = Boolean(process.env.DATABASE_URL && process.env.REFLECT_DATA_KEY);

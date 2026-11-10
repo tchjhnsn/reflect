@@ -1,7 +1,7 @@
 // The state of the elements in a moment, mirrored from lean/NTS/State.lean via structure.json.
 // A model may only propose salience weights and self-term bases; code checks them here, and the
 // person confirms anything that is kept. Nothing in this module is a finding about the person.
-import raw from "./structure.json";
+import raw from "./structure.json" with { type: "json" };
 
 type Structure = {
   primes: { id: string }[];

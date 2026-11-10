@@ -1,5 +1,5 @@
 // The journal: the person's own words, with no model. Mirrors thrivesight_core/nts/journal.py.
-import type { IsoDate } from "./person";
+import type { IsoDate } from "./person.ts";
 
 export const OPENING = "What would you like to remember?";
 export const TELL_ME_MORE = "Tell me more.";

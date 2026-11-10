@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CATEGORIES, DOMAINS, PRIMES, basis, configOk, nextFocus, onMismatch, parseSalience, proper, scopesOk, selfTermOk, type Config } from "./state";
+import { CATEGORIES, DOMAINS, PRIMES, basis, configOk, nextFocus, onMismatch, parseSalience, proper, scopesOk, selfTermOk, type Config } from "./state.ts";
 
 const calm: Config = Object.fromEntries(CATEGORIES.map((c) => [c.id, { arrangement: "joined", amplitude: "low" }]));
 const flat = Object.fromEntries(PRIMES.map((p) => [p, 0.2]));

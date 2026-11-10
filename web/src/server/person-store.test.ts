@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { db } from "@/db/pool";
-import { EMPTY_PERSON, stateFact, stateRelationship, type IsoDate } from "@/core/person";
+import { EMPTY_PERSON, stateFact, stateRelationship, type IsoDate } from "@reflect/core/person";
 import { currentName, hasOnboarded, saveOnboarding } from "./person-store";
 import { open } from "./crypto";
 

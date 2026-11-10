@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { FRAMES, frameById, type FrameId } from "@/core/reflect";
-import type { Reflection } from "@/core/journal";
-import { CATEGORIES, GUESS_AT, PRIMES, elementName, type Salience } from "@/core/state";
+import { FRAMES, frameById, type FrameId } from "@reflect/core/reflect";
+import type { Reflection } from "@reflect/core/journal";
+import { CATEGORIES, GUESS_AT, PRIMES, elementName, type Salience } from "@reflect/core/state";
 import { beginReflection, guessLabels, reflectAnswer, saveLabels } from "./actions";
 
 type Term = Omit<Salience["selfTerms"][number], "basis"> & { basis: string | null; modelBasis: string };

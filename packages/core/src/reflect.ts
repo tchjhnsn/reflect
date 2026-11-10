@@ -1,7 +1,7 @@
 // Reflecting on an entry: the person picks a frame, then answers fixed, open questions one at a time.
 // The decision frame follows the Lean will_order (structure.json). Stance comes from the facet: conscience is
 // normative, everything else descriptive (lean/NTS/Frames.lean). No model chooses or writes these questions.
-import raw from "./structure.json";
+import raw from "./structure.json" with { type: "json" };
 
 export type Stance = "descriptive" | "normative";
 export type Question = { facet: string; stance: Stance; text: string };

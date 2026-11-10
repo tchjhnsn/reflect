@@ -1,6 +1,6 @@
 import { getVercelOidcToken } from "@vercel/oidc";
-import { SALIENCE_PROMPT } from "@/core/salience-prompt";
-import { PRIMES, parseSalience, type Salience } from "@/core/state";
+import { SALIENCE_PROMPT } from "@reflect/core/salience-prompt";
+import { PRIMES, parseSalience, type Salience } from "@reflect/core/state";
 
 // The reader proposes; the person decides. Jev (a TypeSafe System 1 model) answers a yes/no question
 // per element and picks the basis of each self-term, with probabilities. gpt-oss only finds the

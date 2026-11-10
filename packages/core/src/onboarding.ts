@@ -1,6 +1,6 @@
 // Mirrors lean/NTS/Onboarding.lean and thrivesight_core/nts/onboarding.py. No model runs.
-import { HOLDS, ONBOARDING, type OnboardingQuestion } from "./structure";
-import { isoDate, stateFact, stateHold, stateRelationship, type IsoDate, type PersonState } from "./person";
+import { HOLDS, ONBOARDING, type OnboardingQuestion } from "./structure.ts";
+import { isoDate, stateFact, stateHold, stateRelationship, type IsoDate, type PersonState } from "./person.ts";
 
 export type OnboardingState = {
   step: number;

@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { db } from "@/db/pool";
-import type { Entry, Reflection } from "@/core/journal";
-import { frameById } from "@/core/reflect";
-import type { IsoDate } from "@/core/person";
+import type { Entry, Reflection } from "@reflect/core/journal";
+import { frameById } from "@reflect/core/reflect";
+import type { IsoDate } from "@reflect/core/person";
 import { open, seal } from "./crypto";
 
 type EntryRow = { id: string; local_date: Date | string; prompt_id: string | null; created_at: Date; closed_at: Date | null };

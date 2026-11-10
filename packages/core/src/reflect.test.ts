@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { FRAMES, answer, current, frameById, isOpenQuestion, split, type ReflectState } from "./reflect";
-import raw from "./structure.json";
+import { FRAMES, answer, current, frameById, isOpenQuestion, split, type ReflectState } from "./reflect.ts";
+import raw from "./structure.json" with { type: "json" };
 
 describe("reflecting on an entry", () => {
   it("every frame starts at its root element and asks only open questions", () => {

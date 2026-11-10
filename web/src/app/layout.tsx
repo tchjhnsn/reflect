@@ -2,7 +2,7 @@ import "./globals.css";
 import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { Fraunces, Inter, Newsreader } from "next/font/google";
-import { THEME_COOKIE, asTheme } from "@/core/theme";
+import { THEME_COOKIE, asTheme } from "@reflect/core/theme";
 
 const serif = Newsreader({ subsets: ["latin"], style: ["normal", "italic"], variable: "--font-serif", display: "swap" });
 const sans = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });

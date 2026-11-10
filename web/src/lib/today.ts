@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { IsoDate } from "@/core/person";
+import type { IsoDate } from "@reflect/core/person";
 
 export function localToday(): IsoDate {
   const d = new Date();

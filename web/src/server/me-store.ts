@@ -1,7 +1,7 @@
 import type { PoolClient } from "@neondatabase/serverless";
 import { db } from "@/db/pool";
-import type { IsoDate } from "@/core/person";
-import { isPackId } from "@/core/packs";
+import type { IsoDate } from "@reflect/core/person";
+import { isPackId } from "@reflect/core/packs";
 import { open, seal } from "./crypto";
 
 export const FACT_KEYS = ["name", "date_of_birth", "occupation", "marital_status", "seeing_someone", "children"] as const;
