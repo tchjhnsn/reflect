@@ -18,6 +18,7 @@ The headless core of Reflect, in plain TypeScript with no database and no Next.j
 | `src/reader.ts` | The reader: Jev's element odds and the basis of each self-term, gpt-oss to find self-terms. The web app adds the Vercel OIDC token. |
 | `src/draft.ts` | A draft reflection (`makeDraft`) and what keeping it records (`keepDraft`). |
 | `src/bundle.ts` | A bundle: one person's journal as one JSON document, the same from either host. Moving hosts is an export from one and an import into the other's empty journal. |
+| `src/bindings.ts` | Cues and bindings: a binding ties one element, at a weight, to a set of cues (a time, a place, a person, a phrase in the entry). A reading is the bindings kept together at one time; the first is as felt then and later ones never replace it. `bindingProblems` checks a reading, `asFeltThen` and `asOf` pick a reading, and `presentMeaning` fades each cue's history by element (the half-lives are parameters, not findings). The Postgres store is `../../web/src/server/binding-store.ts`; the folder host does not keep bindings yet (not built). |
 | `src/theme.ts` | The app's themes. |
 | `src/salience-prompt.ts` | Generated from `../../thrivesight_core/nts/prompts/salience.md`. Do not edit. |
 
