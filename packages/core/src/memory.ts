@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 export type MemoryLine = {
   seq: number;
   at: string;
-  op: "create" | "append";
+  op: "create" | "append" | "adopt";
   /** The record's path, relative to the instance root. */
   path: string;
   /** sha256 of the record's bytes after the write. */

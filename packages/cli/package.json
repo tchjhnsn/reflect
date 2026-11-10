@@ -1,0 +1,7 @@
+{
+  "name": "@reflect/cli",
+  "private": true,
+  "type": "module",
+  "bin": { "reflect": "./reflect.ts" },
+  "engines": { "node": ">=22.18" }
+}

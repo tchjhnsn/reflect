@@ -41,6 +41,7 @@
     "src/**/*.ts",
     "src/**/*.tsx",
     "../packages/core/src/**/*.ts",
+    "../packages/cli/*.ts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
