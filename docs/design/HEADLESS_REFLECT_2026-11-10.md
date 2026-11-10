@@ -25,7 +25,23 @@ One difference matters. A Naive record belongs to exactly one function, so ventu
 
 ## Instance layout
 
-The person graph follows Naive#60 (`docs/design/PERSON_GRAPH_2026-11-10.md` in tchjhnsn/naive), with the names agreed there.
+Since 2026-11-10 (Torian chose "plain vault, any editor"), `reflect init` writes a **vault**: the records sit at the folder's root as markdown, so the person opens the folder as is in Obsidian, VS Code or any editor. Reflect is the entryway to the ventures of a lifetime, so the vault has a folder for each, and the journal serves executing on what the person writes rather than being the end.
+
+```
+reflect.json                 host, person id, "layout": "vault"
+memory.jsonl                 Memory: every write, hash-chained
+person.json                  Image: name and stated facts
+journal/<date>-<id>.md       the journal (a hand-written YYYY-MM-DD-*.md is an entry too)
+reflections/<entry>.json     labels and self-terms; drafts beside them
+concepts/<noun>.md           a concept note, made by `reflect spark`; backlinks gather every entry on it
+library/                     what the person reads, listens to and studies
+ventures/household|work|community|friendship/
+telos/  intents/  grants/
+```
+
+`reflect spark` is object writing (Pat Pattison): one concrete noun, written about for 1, 5, 10 or 15 minutes or in one sentence, through the senses. The entry is kept closed with `concept: "[[noun]]"` in its front matter. Front matter the person adds (tags, aliases) is kept on every later write. Not built yet: the reader proposing concepts from an entry, the library's listening, and turning a journal entry into a venture under `ventures/work/` with Naive.
+
+The older layout below, with everything under `people/<id>/`, is still read and written when `reflect.json` has no `layout`. The person graph follows Naive#60 (`docs/design/PERSON_GRAPH_2026-11-10.md` in tchjhnsn/naive), with the names agreed there.
 
 ```
 reflect.json                 host, person id, reader settings, encryption
@@ -72,7 +88,7 @@ flowchart LR
 
 - **core** (`packages/core/`): the pure TypeScript that is in `web/src/core/` today (elements, state, `decide`, journal, packs, the structure export), plus record schemas, the reader (now `web/src/server/reader.ts`; only its Vercel OIDC token lookup stays in web) and the instance checks. No database and no Next.js.
 - **store**: one interface, `read`, `list`, `append`, `write with base`, the same contract as Naive's connectors. The **files** connector reads and writes an instance folder and appends to `memory.jsonl`. The **postgres** connector is today's `journal-store`, `me-store` and `person-store`, with the migrations, per-person AES-GCM and write-once triggers unchanged.
-- **CLI** (`packages/cli/`, command `reflect`): `init` (writes an instance from `template/`), `write` (a new entry), `read <entry>` (asks the reader, writes a draft reflection), `keep <draft>`, `check` (schemas, the memory chain, "no grant names entries or reflections"), and `export` / `import` to move an instance between hosts.
+- **CLI** (`packages/cli/`, command `reflect`): `init` (writes a vault and the workflow from `template/`), `spark` (object writing on a noun), `write` (a new entry), `read <entry>` (asks the reader, writes a draft reflection), `keep <draft>`, `check` (schemas, the memory chain, "no grant names entries or reflections"), and `export` / `import` to move an instance between hosts.
 - **Action** (`action/`): a composite GitHub Action an instance repo uses. On a push that adds or changes an entry, it runs `reflect read` and opens a pull request with the draft reflection. **The pull request is the hold gate:** merging it keeps the guesses, editing it first corrects them, and closing it drops them. The correction is the diff, which is the labeling data, used for training only when the person opts in.
 - **web**: unchanged for users. It imports core, and `REFLECT_STORE=postgres` (the default) keeps it on Neon.
 - **lean**: unchanged. Its export still feeds core.

@@ -2,7 +2,7 @@ import { mkdtemp, readFile, readdir, rm, writeFile, mkdir } from "node:fs/promis
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { filesJournal, parseEntryFile } from "./files-journal.ts";
+import { filesJournal, headExtras, parseEntryFile } from "./files-journal.ts";
 import { journalContract } from "./journal-contract.ts";
 import { parseMemory, verifyMemory } from "./memory.ts";
 
@@ -47,5 +47,17 @@ describe("journal in a folder", () => {
       { seq: 0, text: "A", createdAt: "2026-11-10T01:00:00.000Z" },
       { seq: 1, text: "B", createdAt: "2026-11-10T02:00:00.000Z" },
     ]);
+  });
+
+  it("keeps front matter the person added (Obsidian tags, aliases) on later writes", async () => {
+    const root = await folder();
+    await mkdir(join(root, "journal"), { recursive: true });
+    await writeFile(join(root, "journal/2026-11-09-walk.md"), "---\ntags:\n  - river\nid: walk\naliases: [stroll]\n---\n\nWalked.\n");
+    expect(headExtras(await readFile(join(root, "journal/2026-11-09-walk.md"), "utf8"))).toEqual(["tags:", "  - river", "aliases: [stroll]"]);
+    const j = filesJournal(root, "p-test", { layout: "vault" });
+    await j.addPart("walk", "Then home.");
+    const text = await readFile(join(root, "journal/2026-11-09-walk.md"), "utf8");
+    expect(text).toContain("tags:\n  - river\naliases: [stroll]\n---");
+    expect(parseEntryFile("2026-11-09-walk.md", text).parts.map((p) => p.text)).toEqual(["Walked.", "Then home."]);
   });
 });

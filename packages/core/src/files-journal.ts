@@ -9,13 +9,35 @@ import { makeBundle, type Bundle } from "./bundle.ts";
 import type { Entry, Part, Reflection } from "./journal.ts";
 import { nextLine, parseMemory, type MemoryLine } from "./memory.ts";
 import type { IsoDate } from "./person.ts";
+import { recordPaths, type Layout } from "./layout.ts";
 import { frameById } from "./reflect.ts";
+import { conceptNote, sparkHead, type SparkForm } from "./spark.ts";
 import { kept, type Journal, type LabelRow, type SelfTermRow } from "./store.ts";
 
 const PART = /^<!-- part (\d+) at (\S+) -->$/;
 const DATE = /^(\d{4}-\d{2}-\d{2})/;
 
 type Head = { id: string; local_date: string; created_at: string; prompt_id?: string; closed_at?: string };
+const HEAD_KEYS = new Set(["id", "local_date", "created_at", "prompt_id", "closed_at"]);
+
+/**
+ * Front matter lines an entry carries that are not the entry's own fields: a spark's noun, or tags and
+ * aliases the person added in Obsidian. Kept as they are on every later write.
+ */
+export function headExtras(text: string): string[] {
+  const body = text.replace(/\r\n/g, "\n");
+  if (!body.startsWith("---\n")) return [];
+  const end = body.indexOf("\n---\n", 4);
+  if (end < 0) return [];
+  const out: string[] = [];
+  let mine = false;
+  for (const line of body.slice(4, end).split("\n")) {
+    const m = /^([a-z_]+):/.exec(line);
+    if (m) mine = HEAD_KEYS.has(m[1]!);
+    if (!mine) out.push(line);
+  }
+  return out;
+}
 
 /** An entry file: optional front matter, then the parts, each after the first marked with a comment. */
 export function parseEntryFile(name: string, text: string): Entry {
@@ -55,10 +77,11 @@ export function parseEntryFile(name: string, text: string): Entry {
   return { id: head.id ?? stem, localDate, createdAt, promptId: head.prompt_id ?? null, closedAt: head.closed_at ?? null, parts };
 }
 
-function entryFileText(e: Entry): string {
+function entryFileText(e: Entry, extras: readonly string[] = []): string {
   const head = [`id: ${e.id}`, `local_date: ${e.localDate}`, `created_at: ${e.createdAt}`];
   if (e.promptId) head.push(`prompt_id: ${e.promptId}`);
   if (e.closedAt) head.push(`closed_at: ${e.closedAt}`);
+  head.push(...extras);
   const parts = e.parts.map((p, i) => (i === 0 ? p.text : `<!-- part ${p.seq} at ${p.createdAt} -->\n\n${p.text}`));
   return `---\n${head.join("\n")}\n---\n\n${parts.join("\n\n")}\n`;
 }
@@ -70,17 +93,22 @@ export type ReflectionFile = {
   labelings: { at: string; labels: LabelRow[]; terms: SelfTermRow[] }[];
 };
 
-export type FilesOptions = { now?: () => Date; id?: () => string };
+export type FilesOptions = { now?: () => Date; id?: () => string; layout?: Layout };
 
-/** The folder host's journal, with export and import of a whole bundle. */
-export type FilesJournal = Journal & { exportBundle(): Promise<Bundle>; importBundle(b: Bundle): Promise<void> };
+/** The folder host's journal, with export and import of a whole bundle, and sparks. */
+export type FilesJournal = Journal & {
+  exportBundle(): Promise<Bundle>;
+  importBundle(b: Bundle): Promise<void>;
+  /** Write a spark: an entry on one noun, closed, naming the noun as a concept note (made the first time). Returns the entry id. */
+  writeSpark(noun: string, form: SparkForm, text: string, localDate: IsoDate): Promise<string>;
+};
 
 export function filesJournal(root: string, personId: string, opts: FilesOptions = {}): FilesJournal {
   const now = () => (opts.now ?? (() => new Date()))().toISOString();
   const newId = opts.id ?? randomUUID;
-  const person = join("people", personId);
-  const entriesDir = join(person, "entries");
-  const reflDir = join(person, "reflections");
+  const paths = recordPaths(opts.layout ?? "people", personId);
+  const entriesDir = paths.journal;
+  const reflDir = paths.reflections;
 
   async function read(rel: string): Promise<string | null> {
     try {
@@ -102,7 +130,7 @@ export function filesJournal(root: string, personId: string, opts: FilesOptions 
   async function entryFiles(): Promise<{ rel: string; entry: Entry }[]> {
     let names: string[];
     try {
-      names = (await readdir(join(root, entriesDir))).filter((n) => n.endsWith(".md"));
+      names = (await readdir(join(root, entriesDir))).filter((n) => n.endsWith(".md") && n.toLowerCase() !== "readme.md");
     } catch (e) {
       if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
       throw e;
@@ -110,10 +138,10 @@ export function filesJournal(root: string, personId: string, opts: FilesOptions 
     return Promise.all(names.map(async (n) => ({ rel: join(entriesDir, n), entry: parseEntryFile(n, (await read(join(entriesDir, n)))!) })));
   }
 
-  async function find(entryId: string): Promise<{ rel: string; entry: Entry }> {
+  async function find(entryId: string): Promise<{ rel: string; entry: Entry; extras: string[] }> {
     const hit = (await entryFiles()).find((f) => f.entry.id === entryId);
     if (!hit) throw new Error("no such entry");
-    return hit;
+    return { ...hit, extras: headExtras((await read(hit.rel)) ?? "") };
   }
 
   async function reflFile(entryId: string): Promise<ReflectionFile> {
@@ -161,6 +189,15 @@ export function filesJournal(root: string, personId: string, opts: FilesOptions 
         if (reflections?.length || labelings.length) await saveRefl({ entry: e.id, reflections: [...(reflections ?? [])], labelings }, "create");
       }
     },
+    async writeSpark(noun, form, text, localDate) {
+      const at = now();
+      const note = join(paths.concepts, `${noun}.md`);
+      if ((await read(note)) === null) await write(note, conceptNote(noun, at), "create");
+      const id = newId();
+      const e: Entry = { id, localDate, createdAt: at, promptId: `spark/${form}`, closedAt: at, parts: [{ seq: 0, text, createdAt: at }] };
+      await write(join(entriesDir, `${localDate}-${id}.md`), entryFileText(e, sparkHead(noun, form)), "create");
+      return id;
+    },
     async createEntry(text, localDate, promptId) {
       const id = newId();
       const at = now();
@@ -169,15 +206,15 @@ export function filesJournal(root: string, personId: string, opts: FilesOptions 
       return id;
     },
     async addPart(entryId, text) {
-      const { rel, entry } = await find(entryId);
+      const { rel, entry, extras } = await find(entryId);
       if (entry.closedAt) throw new Error("entry is closed");
       const seq = entry.parts.length ? entry.parts.at(-1)!.seq + 1 : 0;
-      await write(rel, entryFileText({ ...entry, parts: [...entry.parts, { seq, text, createdAt: now() }] }), "append");
+      await write(rel, entryFileText({ ...entry, parts: [...entry.parts, { seq, text, createdAt: now() }] }, extras), "append");
     },
     async closeEntry(entryId) {
-      const { rel, entry } = await find(entryId);
+      const { rel, entry, extras } = await find(entryId);
       if (entry.closedAt) return;
-      await write(rel, entryFileText({ ...entry, closedAt: now() }), "append");
+      await write(rel, entryFileText({ ...entry, closedAt: now() }, extras), "append");
     },
     async listEntries(limit = 200) {
       const all = (await entryFiles()).map((f) => f.entry).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit);

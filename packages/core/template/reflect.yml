@@ -4,7 +4,7 @@ name: reflect
 on:
   push:
     branches: [main]
-    paths: ["people/**", "memory.jsonl", "reflect.json"]
+    paths-ignore: [".github/**", ".obsidian/**"]
   workflow_dispatch:
 permissions:
   contents: write
