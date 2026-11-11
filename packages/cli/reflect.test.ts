@@ -223,6 +223,41 @@ describe("reflect CLI", () => {
     expect((await run("check", "--dir", dir)).out).toEqual(["ok"]);
   });
 
+  it("keeps a release plan that can only give the legacy folder and entries marked to survive you", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "reflect-cli-"));
+    dirs.push(dir);
+    await run("init", "--name", "Tester", "--dir", dir);
+    await writeFile(join(dir, "legacy", "letters", "sam.md"), "Dear Sam,\n");
+    const entry = (await run("legacy", "hopes", "That you stay brave.", "--date", "2026-11-10", "--dir", dir)).out[0]!;
+    await run("write", "A private worry.", "--date", "2026-11-10", "--dir", dir);
+    const empty = (await run("release", "--dir", dir)).out;
+    expect(empty).toContain("note: legacy/letters/sam.md is given to no one yet.");
+
+    await run("release", "give", "legacy/letters/sam.md", "--to", "Sam", "--contact", "sam@example.test", "--dir", dir);
+    await run("release", "give", "legacy-entries", "--to", "Sam", "--contact", "sam@example.test", "--dir", dir);
+    await expect(run("release", "give", "journal", "--to", "Sam", "--contact", "x", "--dir", dir)).rejects.toThrow(/can never be released/);
+    await expect(run("release", "give", "legacy/../journal", "--to", "Sam", "--contact", "x", "--dir", dir)).rejects.toThrow(/outside the vault/);
+    await expect(run("release", "give", "legacy/letters/ana.md", "--to", "Ana", "--contact", "x", "--dir", dir)).rejects.toThrow(/does not exist/);
+    await run("release", "trustee", "Ana", "--contact", "ana@example.test", "--dir", dir);
+    const one = (await run("release", "--dir", dir)).out;
+    expect(one).toContain("note: Nothing can be released yet: the plan asks 2 confirmations of 1 trustee(s); name another, or set fewer.");
+    await run("release", "trustee", "Ben", "--contact", "ben@example.test", "--dir", dir);
+    const r = await run("release", "terms", "--wait", "14", "--dir", dir);
+    expect(r.code).toBe(0);
+    expect(r.out).toContain("a release needs 2 trustee confirmation(s), then 14 day(s) of waiting in which you or any trustee can stop it");
+    // Sam gets the letter and the one entry marked to survive; the private entry is never in it.
+    expect(r.out).toContain(`to Sam: legacy/letters/sam.md, journal/2026-11-10-${entry}.md`);
+    expect(r.out.filter((l) => l.startsWith("note:"))).toEqual([]);
+    await expect(run("release", "terms", "--confirmations", "0", "--dir", dir)).rejects.toThrow(/confirmations is a whole number/);
+    await run("check", "--adopt", "--dir", dir);
+    expect((await run("check", "--dir", dir)).out).toEqual(["ok"]);
+    // A hand edit that gives away the journal fails check.
+    const plan = JSON.parse(await readFile(join(dir, "legacy", "release.json"), "utf8"));
+    plan.gifts.push({ what: "journal", to: "Sam", contact: "x" });
+    await writeFile(join(dir, "legacy", "release.json"), JSON.stringify(plan));
+    expect((await run("check", "--dir", dir)).out).toContain("problem: legacy/release.json: journal can never be released: only the legacy folder and entries marked to survive you can");
+  });
+
   it("upgrades a vault made before the lifetime folders", async () => {
     const dir = await mkdtemp(join(tmpdir(), "reflect-cli-"));
     dirs.push(dir);
