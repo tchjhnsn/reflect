@@ -13,6 +13,8 @@ The headless core of Reflect, in plain TypeScript with no database and no Next.j
 | `src/store.ts` | The store interface, `Journal`: one person's journal, append-only, whichever host keeps it. |
 | `src/layout.ts` | Where records sit in an instance folder: a vault (`journal/`, `reflections/`, `concepts/`, `library/`, `ventures/<venture of a lifetime>/`, `telos/`, `intents/` at the root) or the older `people/<id>/` layout. |
 | `src/files-journal.ts` | The folder host: entries as `journal/<date>-<id>.md` (front matter optional, so a hand-written file is an entry; front matter the person adds is kept on later writes), reflections and labelings as `reflections/<entry>.json`, sparks with their concept notes in `concepts/`. |
+| `src/documents.ts` | Official documents as a custody checklist: the catalog of document types (grouped after FEMA's Emergency Financial First Aid Kit), how each is normally kept as of 2026-11 in the United States and what we recommend, custody cards (`documents/<type>.md`), connections (`connections/<id>.json`, a service and the types it holds, never credentials) and their checks. |
+| `src/record-io.ts` | Writes one record and logs it in `memory.jsonl`. |
 | `src/spark.ts` | Object writing: the forms (1, 5, 10, 15 minutes or one sentence), concrete nouns to start from, the prompt, and a spark's front matter and concept note. |
 | `src/memory.ts` | Memory: `memory.jsonl`, one hash-chained line per write (`verifyMemory` finds a changed or removed line). |
 | `src/journal-contract.ts` | The behaviour every host must have. The folder host runs it in `files-journal.test.ts`, and the Postgres host (`postgresJournal` in `../../web/src/server/journal-store.ts`) in its own tests against Neon. |

@@ -35,11 +35,15 @@ journal/<date>-<id>.md       the journal (a hand-written YYYY-MM-DD-*.md is an e
 reflections/<entry>.json     labels and self-terms; drafts beside them
 concepts/<noun>.md           a concept note, made by `reflect spark`; backlinks gather every entry on it
 library/                     what the person reads, listens to and studies
+documents/<type>.md          custody card for an official document (the document itself need not be here)
+connections/<id>.json        a service that holds records for the person, and which types
 ventures/household|work|community|friendship/
 telos/  intents/  grants/
 ```
 
 `reflect spark` is object writing (Pat Pattison): one concrete noun, written about for 1, 5, 10 or 15 minutes or in one sentence, through the senses. The entry is kept closed with `concept: "[[noun]]"` in its front matter. Front matter the person adds (tags, aliases) is kept on every later write. Not built yet: the reader proposing concepts from an entry, the library's listening, and turning a journal entry into a venture under `ventures/work/` with Naive.
+
+Official documents (Torian, 2026-11-11) are a custody checklist, not files Reflect must hold. Each document type says how it is normally kept today (identity mostly paper, education mostly digital) and what to do: keep the paper safe, store it digitally, or connect the service that holds it. A connection works like a Naive connection for one of its 13 functions: it names the service and the types it holds, and Reflect records only that. Not built yet: documents of other household members, reminders before a document expires, and reading anything through a connection.
 
 The older layout below, with everything under `people/<id>/`, is still read and written when `reflect.json` has no `layout`. The person graph follows Naive#60 (`docs/design/PERSON_GRAPH_2026-11-10.md` in tchjhnsn/naive), with the names agreed there.
 

@@ -16,6 +16,10 @@ export type RecordPaths = {
   reflections: string;
   concepts: string;
   grants: string;
+  /** Custody cards for official documents, one per document type. */
+  documents: string;
+  /** Services that hold records for the person (a secure vault, a school's credential service). */
+  connections: string;
   /** Folders whose files are the person's records, checked against memory. */
   recordDirs: string[];
   /** Single files that are records. */
@@ -33,7 +37,9 @@ export function recordPaths(layout: Layout, personId: string): RecordPaths {
     reflections: at("reflections"),
     concepts: at("concepts"),
     grants: at("grants"),
-    recordDirs: layout === "vault" ? [journal, at("reflections"), at("concepts"), at("grants"), ...dirs.map(at)] : [person],
+    documents: at("documents"),
+    connections: at("connections"),
+    recordDirs: layout === "vault" ? [journal, at("reflections"), at("concepts"), at("grants"), at("documents"), at("connections"), ...dirs.map(at)] : [person],
     recordFiles: [at("person.json"), "reflect.json"],
   };
 }

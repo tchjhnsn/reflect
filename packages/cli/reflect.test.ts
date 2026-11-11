@@ -100,7 +100,7 @@ describe("reflect CLI", () => {
     dirs.push(dir);
     await run("init", "--name", "Tester", "--dir", dir);
     expect(JSON.parse(await readFile(join(dir, "reflect.json"), "utf8")).layout).toBe("vault");
-    expect((await readdir(dir)).sort()).toEqual([".github", ".gitignore", "concepts", "intents", "journal", "library", "memory.jsonl", "person.json", "reflect.json", "reflections", "telos", "ventures"]);
+    expect((await readdir(dir)).sort()).toEqual([".github", ".gitignore", "concepts", "documents", "intents", "journal", "library", "memory.jsonl", "person.json", "reflect.json", "reflections", "telos", "ventures"]);
     expect((await readdir(join(dir, "ventures"))).sort()).toEqual(["community", "friendship", "household", "work"]);
     expect(await readFile(join(dir, "ventures", "household", "README.md"), "utf8")).toContain("# Household");
     // A note the person adds anywhere in the vault's folders is a record written outside reflect.
@@ -137,6 +137,42 @@ describe("reflect CLI", () => {
     await expect(run("add", a, "more", "--dir", dir)).rejects.toThrow(/closed/);
     expect((await run("list", "--dir", dir)).out).toHaveLength(2);
     expect((await run("check", "--dir", dir)).out).toEqual(["ok"]);
+  });
+
+  it("keeps a custody checklist for official documents, with connections that hold some", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "reflect-cli-"));
+    dirs.push(dir);
+    await run("init", "--name", "Tester", "--dir", dir);
+    const before = (await run("documents", "--dir", dir)).out;
+    expect(before.at(-1)).toBe("0 of 22 checked");
+    expect(before.find((l) => l.includes("social-security-card"))).toMatch(/\[ \] social-security-card  keep the paper safe\. Paper only/);
+    expect(before.find((l) => l.includes("transcripts"))).toMatch(/connect the service that holds it, such as Parchment or National Student Clearinghouse/);
+
+    expect((await run("connect", "school", "--name", "Parchment", "--kind", "issuer", "--holds", "transcripts,diploma", "--dir", dir)).out).toEqual(["connected: Parchment holds diploma, transcripts"]);
+    await expect(run("connect", "x", "--name", "X", "--holds", "passport-photo", "--dir", dir)).rejects.toThrow(/unknown document type passport-photo/);
+    await run("documents", "social-security-card", "original", "--where", "fire safe at home", "--dir", dir);
+    await run("documents", "transcripts", "connection", "--connection", "school", "--dir", dir);
+    await expect(run("documents", "passport", "connection", "--connection", "school", "--dir", dir)).rejects.toThrow(/does not hold passport/);
+    await expect(run("documents", "passport", "lost", "--dir", dir)).rejects.toThrow(/custody is one of/);
+    await expect(run("documents", "pasport", "original", "--dir", dir)).rejects.toThrow(/no such document type/);
+    await run("documents", "military-discharge", "not-applicable", "--dir", dir);
+    // A later check-off adds a line; the earlier one stays.
+    await run("documents", "social-security-card", "original", "--where", "safe deposit box", "--dir", dir);
+    const card = await readFile(join(dir, "documents", "social-security-card.md"), "utf8");
+    expect(card).toContain('where: "safe deposit box"');
+    expect(card).toMatch(/- \d{4}-\d{2}-\d{2} original: fire safe at home\n- \d{4}-\d{2}-\d{2} original: safe deposit box\n/);
+
+    const after = (await run("documents", "--dir", dir)).out;
+    expect(after.at(-1)).toBe("3 of 22 checked");
+    expect(after).toContain("  [x] transcripts  connection Parchment");
+    expect(after.find((l) => l.includes("diploma"))).toContain("[ ] diploma (held by Parchment)");
+    expect((await run("check", "--dir", dir)).out).toEqual(["ok"]);
+
+    // check finds a hand-edited card that names a connection which does not hold the document.
+    await writeFile(join(dir, "documents", "passport.md"), "---\ntype: passport\ncustody: connection\nconnection: school\n---\n");
+    const bad = await run("check", "--dir", dir);
+    expect(bad.code).toBe(1);
+    expect(bad.out).toContain("problem: documents/passport.md: names a connection that does not hold it");
   });
 
   it("still works on an instance in the older people/<id> layout", async () => {

@@ -4,6 +4,7 @@
 import { randomBytes } from "node:crypto";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join, relative } from "node:path";
+import { documentProblems } from "./documents.ts";
 import { recordPaths, VENTURES_OF_A_LIFETIME, type Layout } from "./layout.ts";
 import { lastShas, nextLine, parseMemory, sha256, verifyMemory } from "./memory.ts";
 
@@ -39,6 +40,7 @@ const README: Record<string, string> = {
   journal: "# Journal\n\nWhere you arrange your thoughts. One file per entry; a file you write here by hand is an entry too (name it `YYYY-MM-DD-<anything>.md`). Run `reflect spark` for a noun to write about.\n",
   library: "# Library\n\nWhat you read, listen to and study, with your notes on it. A note per book, talk or course.\n",
   telos: "# Telos\n\nThe ends you are working toward, in your own words.\n",
+  documents: "# Documents\n\nA custody checklist for official documents: birth certificate, Social Security card, diplomas, deeds, will and the rest. The documents need not be here. Run `reflect documents` to see the list and check off which you have and where; a card per document lands in this folder.\n",
   intents: "# Intents\n\nWhat you mean to do, and which end each serves.\n",
   household: "# Household\n\nEntering and keeping a household: partnership, children, home.\n",
   work: "# Work\n\nThe ventures you build. When a journal entry turns into a venture, its folder goes here.\n",
@@ -61,7 +63,7 @@ export async function initInstance(root: string, name: string, now = new Date())
   const files: [string, string][] = [
     ["reflect.json", `${JSON.stringify(config, null, 2)}\n`],
     [p.recordFiles[0]!, `${JSON.stringify({ id: config.person, name }, null, 2)}\n`],
-    ...(["journal", "library", "telos", "intents"] as const).map((d): [string, string] => [join(d, "README.md"), README[d]!]),
+    ...(["journal", "library", "documents", "telos", "intents"] as const).map((d): [string, string] => [join(d, "README.md"), README[d]!]),
     ...VENTURES_OF_A_LIFETIME.map((v): [string, string] => [join("ventures", v, "README.md"), README[v]!]),
   ];
   let last = null;
@@ -129,6 +131,7 @@ export async function checkInstance(root: string): Promise<CheckResult> {
     const paths = Array.isArray(grant.paths) ? grant.paths : [];
     for (const p of paths) if (typeof p === "string" && /^(journal|entries|reflections|_private)(\/|$)/.test(p)) problems.push(`${g}: a grant can never name ${p}`);
   }
+  problems.push(...(await documentProblems(root, p)));
   const shas = lastShas(lines);
   const outside: string[] = [];
   const found = (await Promise.all(p.recordDirs.map((d) => walk(root, d)))).flat().filter((r) => !r.endsWith(".draft.json"));
