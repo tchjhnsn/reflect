@@ -452,63 +452,6 @@ describe("reflect CLI", () => {
     expect(await run("check", "--dir", dir)).toEqual({ code: 0, out: ["ok"] });
   });
 
-  it("moves the journal into a soul vault of its own, linked one way from the life vault", async () => {
-    const base = await mkdtemp(join(tmpdir(), "reflect-two-"));
-    const notes = await mkdtemp(join(tmpdir(), "reflect-notes-"));
-    dirs.push(base, notes);
-    const life = join(base, "life");
-    const soul = join(base, "soul");
-    await run("init", "--name", "Tester", "--dir", life);
-    const first = (await run("write", "Walked to the bakery at dawn.", "--date", "2026-11-09", "--dir", life)).out[0]!;
-    const kept = (await run("legacy", "hopes", "That you stay brave.", "--date", "2026-11-10", "--dir", life)).out[0]!;
-    await writeFile(join(notes, "2024-03-01.md"), "An old page about the river.\n");
-    await run("source", "add", "notes", notes, "--dir", life);
-    await writeFile(join(life, "reply.md"), JSON.stringify({ kind: "reflect.placements", version: 1, source: "notes", placements: [{ path: "2024-03-01.md", kind: "entry", date: "2024-03-01" }] }));
-    await run("source", "tag", "notes", join(life, "reply.md"), "--dir", life);
-    await run("source", "tag", "notes", "--keep", "1", "--dir", life);
-    expect((await run("soul", "--dir", life)).out[0]).toMatch(/No soul vault yet/);
-
-    await expect(run("soul", "init", join(life, "inner"), "--dir", life)).rejects.toThrow(/folder of its own/);
-    const init = (await run("soul", "init", soul, "--dir", life)).out;
-    expect(init[0]).toBe(`started the soul vault at ${soul}; moved 3 file(s) of the journal into it`);
-    await expect(run("soul", "init", join(base, "other"), "--dir", life)).rejects.toThrow(/already has a soul vault/);
-    expect(await readdir(join(life, "journal"))).toEqual(["README.md"]);
-    expect(await readFile(join(life, "journal", "README.md"), "utf8")).toContain("soul/moments");
-    expect(JSON.parse(await readFile(join(life, "reflect.json"), "utf8")).soul).toBe("../soul");
-    expect(JSON.parse(await readFile(join(soul, "reflect.json"), "utf8"))).toMatchObject({ layout: "soul", life: "../life" });
-    expect(await readFile(join(soul, "moments", `2026-11-09-${first}.md`), "utf8")).toContain("Walked to the bakery");
-
-    // The journal works from either folder, and lands in the soul vault; a pointer entry still reads its file.
-    const fromLife = (await run("list", "--dir", life)).out.join("\n");
-    expect(fromLife).toContain("Walked to the bakery");
-    expect(fromLife).toContain("An old page about the river.");
-    const next = (await run("write", "Bread again.", "--date", "2026-11-11", "--dir", life)).out[0]!;
-    expect(await readFile(join(soul, "moments", `2026-11-11-${next}.md`), "utf8")).toContain("Bread again.");
-    expect((await run("list", "--dir", soul)).out.join("\n")).toContain("Bread again.");
-    // A spark is a moment; its noun is a concept, a thing in shared reality, so its note goes to the life vault.
-    await run("spark", "river", "The river was high.", "--sentence", "--dir", soul);
-    expect(await readFile(join(life, "concepts", "river.md"), "utf8")).toContain("river");
-    await expect(readdir(join(soul, "concepts"))).rejects.toThrow();
-    expect((await run("soul", "--dir", life)).out).toEqual([`soul vault: ${soul}`, "5 moment(s), 0 reading file(s), 0 binding file(s), 0 hold(s), 0 reading(s) of you"]);
-
-    // The life vault's index does not list moments; its release hands on only the moment marked to survive.
-    await run("index", "--dir", life);
-    const index = await readFile(join(life, "index.md"), "utf8");
-    expect(index).toContain("kept in my soul vault (5 moments), not listed here");
-    expect(index).not.toContain("bakery at dawn");
-    await run("release", "give", "legacy-entries", "--to", "Sam", "--contact", "sam@example.test", "--dir", life);
-    expect((await run("release", "--dir", life)).out).toContain(`to Sam: soul:moments/2026-11-10-${kept}.md`);
-
-    // The wiki reads moments and cites them by their path in the soul vault.
-    await run("wiki", "on", "--dir", life);
-    expect((await run("wiki", "prompt", "--dir", life)).out.join("\n")).toContain(`### moments/2026-11-09-${first} (2026-11-09)`);
-    await writeFile(join(life, "w.json"), JSON.stringify({ kind: "reflect.wiki", version: 1, absorbed: [`moments/2026-11-09-${first}`], articles: [{ path: "places/bakery", title: "The bakery", type: "place", body: `The subject walked to the bakery at dawn [[moments/2026-11-09-${first}]].` }] }));
-    expect((await run("wiki", "absorb", join(life, "w.json"), "--dir", life)).out[0]).toBe("1 article(s) to keep, 1 entry absorbed:");
-    await run("wiki", "absorb", "--keep", "all", "--dir", life);
-    expect(await run("check", "--dir", life)).toEqual({ code: 0, out: ["ok"] });
-    expect(await run("check", "--dir", soul)).toEqual({ code: 0, out: ["ok"] });
-  });
-
   it("writes index.md, the catalog your own AI starts from, without journal text", async () => {
     const dir = await mkdtemp(join(tmpdir(), "reflect-cli-"));
     dirs.push(dir);

@@ -17,8 +17,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { headExtras, parseEntryFile, pointerText, POINTER_HEAD } from "./files-journal.ts";
-import { journalHome } from "./home.ts";
-import type { Layout } from "./layout.ts";
+import { recordPaths, type Layout } from "./layout.ts";
 import { readRecord, writeRecord } from "./record-io.ts";
 
 export const WIKI = "wiki";
@@ -31,7 +30,7 @@ const DRAFT = join(".reflect", "wiki-draft.json");
 /** Article types that are a reading of the person: labeled the AI's until the person confirms them. */
 export const READING_TYPES = ["pattern", "tension", "identity", "philosophy", "life", "assessment", "metaphor"] as const;
 /** Folders whose notes an article may cite: the record, never the wiki itself. */
-const CITABLE = ["journal", "moments", "ideas", "learn", "concepts", "telos", "intents", "belonging", "line", "household", "community", "polis", "needs", "life", "legacy", "sources", "documents"];
+const CITABLE = ["journal", "ideas", "learn", "concepts", "telos", "intents", "belonging", "line", "household", "community", "polis", "needs", "life", "legacy", "sources", "documents"];
 const PATH = /^[a-z0-9][a-z0-9-]*(\/[a-z0-9][a-z0-9-]*)+$/;
 const LINK = /\[\[([^\]|#]+)(?:[|#][^\]]*)?\]\]/g;
 const PROMPT_BUDGET = 80_000;
@@ -74,11 +73,8 @@ export async function wikiOn(root: string, now: Date): Promise<boolean> {
 }
 
 /** Every journal entry as a source: its vault path (journal/<file stem>), date and text, read live for a pointer entry. */
-export async function journalSources(lifeRoot: string, _layout: Layout, _person: string): Promise<{ id: string; date: string; text: string }[]> {
-  // The journal may be a soul vault's moments; its ids are then moments/<stem>.
-  const home = await journalHome(lifeRoot);
-  const root = home.root;
-  const dir = home.paths.journal;
+export async function journalSources(root: string, layout: Layout, person: string): Promise<{ id: string; date: string; text: string }[]> {
+  const dir = recordPaths(layout, person).journal;
   const names = (await readdir(join(root, dir)).catch(() => [] as string[])).filter((n) => n.endsWith(".md") && n.toLowerCase() !== "readme.md").sort();
   const out: { id: string; date: string; text: string }[] = [];
   for (const n of names) {
@@ -86,7 +82,7 @@ export async function journalSources(lifeRoot: string, _layout: Layout, _person:
     const e = parseEntryFile(n, raw);
     let text = e.parts.map((p) => p.text).join("\n\n");
     const ptr = headExtras(raw).map((l) => POINTER_HEAD.exec(l)).find(Boolean);
-    if (ptr) text = (await pointerText(home.lifeRoot, ptr[1]!, ptr[2]!.trim())) ?? text;
+    if (ptr) text = (await pointerText(root, ptr[1]!, ptr[2]!.trim())) ?? text;
     out.push({ id: join(dir, n.slice(0, -3)), date: e.localDate, text });
   }
   return out;
@@ -117,7 +113,7 @@ How to write:
 6. When you change an existing article, return it whole, rewritten as one coherent piece.
 
 Rules Reflect enforces (it refuses an article that breaks them):
-- Every paragraph, list item and table row cites at least one note it rests on, as a wikilink to the note's path, for example [[journal/2026-11-10-abc]] (or [[moments/2026-11-10-abc]] when my journal is in my soul vault) or [[learn/books/politics]]. Cite only notes listed below. Links to other wiki articles, like [[wiki/people/sam]], are welcome but are not citations.
+- Every paragraph, list item and table row cites at least one note it rests on, as a wikilink to the note's path, for example [[journal/2026-11-10-abc]] or [[learn/books/politics]]. Cite only notes listed below. Links to other wiki articles, like [[wiki/people/sam]], are welcome but are not citations.
 - A quote in double quotes of four words or more must appear word for word in a note that paragraph cites.
 - No em dash characters.
 - path is "<folder>/<slug>": lowercase letters, digits and dashes, folders like people, projects, places, books, patterns, tensions, identities, philosophies, eras, decisions. Folders emerge from the material.
@@ -219,7 +215,7 @@ export async function readWikiReply(root: string, layout: Layout, person: string
   }
   if (j.kind !== "reflect.wiki" || j.version !== 1) throw new Error('the JSON is not a wiki reply (kind "reflect.wiki", version 1)');
   const entries = new Map((await journalSources(root, layout, person)).map((s) => [s.id, s.text] as const));
-  const sourceText = async (p: string) => entries.get(p) ?? (p.startsWith("journal/") || p.startsWith("moments/") ? null : await readRecord(root, `${p}.md`));
+  const sourceText = async (p: string) => entries.get(p) ?? (p.startsWith("journal/") ? null : await readRecord(root, `${p}.md`));
   const articlesOut: Article[] = [];
   const rejected: Rejected[] = [];
   const seen = new Set<string>();
@@ -377,8 +373,7 @@ export async function wikiProblems(root: string): Promise<string[]> {
     const { body } = parseArticle(a.text);
     for (const m of body.matchAll(LINK)) {
       const p = m[1]!.trim().replace(/\.md$/, "");
-      const where = p.startsWith("moments/") ? (await journalHome(root)).root : root;
-      if (CITABLE.includes(p.split("/")[0]!) && (await readRecord(where, `${p}.md`)) === null) out.push(`wiki/${a.path}.md cites a note no longer in the vault: ${p}`);
+      if (CITABLE.includes(p.split("/")[0]!) && (await readRecord(root, `${p}.md`)) === null) out.push(`wiki/${a.path}.md cites a note no longer in the vault: ${p}`);
     }
   }
   return out;

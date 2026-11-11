@@ -10,7 +10,6 @@ import { learnProblems } from "./learning.ts";
 import { ideaProblems } from "./ideas.ts";
 import { sourceProblems } from "./sources.ts";
 import { wikiProblems } from "./wiki.ts";
-import { soulProblems } from "./soul.ts";
 import { LEGACY_TEMPLATES, LIFETIME_FOLDERS, lifetimeProblems } from "./lifetime.ts";
 import { readRecord, writeRecord } from "./record-io.ts";
 import { planProblems, readPlan } from "./release.ts";
@@ -23,12 +22,8 @@ export type InstanceConfig = {
   host: "files";
   /** "age" seals entries and reflections; null keeps them as text (the default, in a private repository). */
   encrypt: "age" | null;
-  /** "vault" puts the records at the folder's root; "soul" is a soul vault (soul.ts); absent means the older people/<id>/ layout. */
-  layout?: "vault" | "soul";
-  /** In a life vault: the soul vault holding its journal, relative to this folder. */
-  soul?: string;
-  /** In a soul vault: the life vault it pairs with, relative to this folder. */
-  life?: string;
+  /** "vault" puts the records at the folder's root; absent means the older people/<id>/ layout. */
+  layout?: "vault";
   /** Set when the instance moved to another host; writes here are then refused. */
   moved_to?: string;
 };
@@ -41,7 +36,7 @@ export async function readConfig(root: string): Promise<InstanceConfig> {
     throw new Error(`no reflect.json in ${root}; run \`reflect init\` first`);
   }
   const c = JSON.parse(text) as Partial<InstanceConfig>;
-  if (c.reflect !== 1 || typeof c.person !== "string" || !/^p-[0-9a-f]{8}$/.test(c.person) || c.host !== "files" || !(c.encrypt === null || c.encrypt === "age") || !(c.layout === undefined || c.layout === "vault" || c.layout === "soul")) {
+  if (c.reflect !== 1 || typeof c.person !== "string" || !/^p-[0-9a-f]{8}$/.test(c.person) || c.host !== "files" || !(c.encrypt === null || c.encrypt === "age") || !(c.layout === undefined || c.layout === "vault")) {
     throw new Error("reflect.json is not a Reflect instance config");
   }
   return c as InstanceConfig;
@@ -186,14 +181,13 @@ export async function checkInstance(root: string): Promise<CheckResult> {
   }
   problems.push(...verifyMemory(lines).map((p) => `memory.jsonl ${p}`));
   const p = recordPaths(layoutOf(config), config.person);
-  if (config.layout === "soul") problems.push(...(await soulProblems(root, config)));
   for (const g of await walk(root, p.grants)) {
     const grant = JSON.parse(await readFile(join(root, g), "utf8")) as { paths?: unknown };
     const paths = Array.isArray(grant.paths) ? grant.paths : [];
     for (const p of paths) if (typeof p === "string" && /^(journal|entries|reflections|_private)(\/|$)/.test(p)) problems.push(`${g}: a grant can never name ${p}`);
   }
-  if (config.layout !== "soul") problems.push(...(await documentProblems(root, p)), ...(await lifetimeProblems(root, p)));
-  if (!p.person && config.layout !== "soul") {
+  problems.push(...(await documentProblems(root, p)), ...(await lifetimeProblems(root, p)));
+  if (!p.person) {
     try {
       problems.push(...(await planProblems(root, await readPlan(root))).problems);
     } catch {
