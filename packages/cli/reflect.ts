@@ -15,7 +15,6 @@ import { keepSweep, readSweep, sweepLine, SWEEP_PROMPT, type Sweep } from "../co
 import { writeIndex } from "../core/src/catalog.ts";
 import { journalHome } from "../core/src/home.ts";
 import { initSoul, soulStatus } from "../core/src/soul.ts";
-import { serve } from "./serve.ts";
 import { bindingsOf, bindMoment, keepHold, listHolds, noteProfile, unbindMoment } from "../core/src/ground.ts";
 import { confirmReading, keepWikiDraft, readWikiDraft, readWikiReply, wikiOn, wikiPrompt, wikiStatus, type WikiDraft } from "../core/src/wiki.ts";
 import { planHandoff, runNaiveCapture, sendIdea } from "../core/src/naive-handoff.ts";
@@ -125,8 +124,6 @@ const USAGE = `reflect <command> [--dir <instance>]
                                   bound to it (or to notes under it), counted now and never stored
   soul confirm <of-me/path>       confirm a reading of you kept in the soul vault (it must still answer
                                   to the element table)
-  serve [--port 4500]             screens for your soul vault in your browser, served from this machine
-                                  only: moments, elements, life notes, holds and readings of you
   bind <moment> [<note>] [--role agent|patient|place|time|manner|cause|goal]
                                   say what a moment was about: a note or folder in your life vault, by
                                   its path; with no note, show what the moment is bound to
@@ -207,7 +204,6 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
       dir: { type: "string", default: "." },
       name: { type: "string" },
       role: { type: "string" },
-      port: { type: "string" },
       as: { type: "string" },
       held: { type: "string" },
       date: { type: "string" },
@@ -292,13 +288,6 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
     return 0;
   }
   const config = await readConfig(root);
-  if (cmd === "serve") {
-    const port = Number(values.port ?? 4500);
-    if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error("--port is a number from 1024 to 65535");
-    await serve(root, port);
-    out(`soul vault screens at http://127.0.0.1:${port} (this machine only; Ctrl-C stops them)`);
-    return 0;
-  }
   if (cmd === "soul") {
     const [sub, arg] = rest;
     if (sub === "init") {
@@ -934,10 +923,7 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
 
 if (import.meta.main) {
   main(process.argv.slice(2)).then(
-    // A server keeps running after main returns; everything else exits with its code.
-    (code) => {
-      if (!(code === 0 && process.argv[2] === "serve")) process.exit(code);
-    },
+    (code) => process.exit(code),
     (e: unknown) => {
       console.error(`reflect: ${(e as Error).message}`);
       process.exit(1);
