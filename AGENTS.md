@@ -17,7 +17,7 @@ Reflect, an open-source reference project. Vault: `projects/reflect/`.
 | `action/` | the GitHub Action an instance repository runs: refuses a public repository, checks the vault and records hand-written changes |
 | `packages/core/` | the headless core: the person's stores, journal and packs, in plain TypeScript that runs in Node with no database; see `packages/core/README.md` |
 | `web/` | the Reflect web app (Next.js), one interface over the core; see `web/README.md` |
-| `docs/design/` | designs; `HEADLESS_REFLECT_2026-11-10.md` is the plan for one core with two hosts |
+| `docs/design/` | designs; `HEADLESS_REFLECT_2026-11-10.md` is the plan for one core with two hosts; `LIFE_AND_MIND_DOMAIN_2026-11-11.md` and `LIFE_AND_MIND_SYSTEM_2026-11-11.md` propose the life and mind layers, ideas from micro to published, and the blog (not built) |
 | `README.md` | overview |
 | `pyproject.toml` | dependencies and scripts |
 
