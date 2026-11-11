@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // reflect: the command line over one person's instance in a folder. Node 22.18 or later runs it as is.
 import { readFileSync } from "node:fs";
-import { readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parseBundle } from "../core/src/bundle.ts";
 import { keepDraft, makeDraft, type Draft } from "../core/src/draft.ts";
@@ -9,9 +9,15 @@ import { parseArgs } from "node:util";
 import { filesJournal } from "../core/src/files-journal.ts";
 import { adopt, checkInstance, initInstance, layoutOf, readConfig, upgradeVault } from "../core/src/instance.ts";
 import { addGift, addTrustee, LEGACY_ENTRIES, planProblems, previewRelease, readPlan, setTerms } from "../core/src/release.ts";
-import { BOOK_STATUS, GRASP, keepBook, keepRecall, keepResource, keepSubject, learnMap, RESOURCE_STATUS, type BookStatus, type Grasp, type ResourceStatus, type SubjectRow } from "../core/src/learning.ts";
+import { BOOK_STATUS, FILM_STATUS, GRASP, keepBook, keepConversation, keepFilm, keepRecall, keepTalk, latestGrasp, parseSubject, keepResource, keepSubject, learnMap, RESOURCE_STATUS, type BookStatus, type FilmStatus, type Grasp, type ResourceStatus, type SubjectRow } from "../core/src/learning.ts";
+import { isStance, keepIdea, listIdeas, resolveTarget, STANCES, targetText, type Stance } from "../core/src/ideas.ts";
+import { keepSweep, readSweep, sweepLine, SWEEP_PROMPT, type Sweep } from "../core/src/sweep.ts";
 import { keepNeed, keepPassage, LEGACY_PROMPTS, legacyPrompt } from "../core/src/lifetime.ts";
 import { lookupIsbn, readCatalogEntry, saveCatalogEntry, searchBooks, type Fetch } from "../core/src/openlibrary.ts";
+import { draftTranscript, keepCourse, listCourses, transcriptText, type Chat, type TranscriptDraft } from "../core/src/transcript.ts";
+import { chatJson } from "../core/src/reader.ts";
+import { checkBadge, keepCredential, keepRecommendation, keepVouches } from "../core/src/credentials.ts";
+import { readLinkedInExport } from "../core/src/linkedin.ts";
 import { recordPaths } from "../core/src/layout.ts";
 import { CUSTODY, DOCUMENT_GROUPS, filesDocuments, isCustody, type ChecklistRow, type Connection } from "../core/src/documents.ts";
 import type { IsoDate } from "../core/src/person.ts";
@@ -35,22 +41,53 @@ const USAGE = `reflect <command> [--dir <instance>]
   release trustee <name> --contact <how to reach them>
   release give <legacy/... | legacy-entries> --to <name> --contact <how to reach them>
   release terms [--confirmations N] [--wait <days>]
-  learn                           what you know, the books you have read and what of them you have not
-                                  rated, what you aspire to and need to learn, and what you could learn next
+  learn                           what you know, what you showed and what was suggested, your books,
+                                  films, talks and conversations, what you aspire to and need to learn,
+                                  and what you could learn next
   learn find <title or author>     look a book up in Open Library: title, authors, year, ISBN
-  learn book <title> [--isbn N [--lookup]] [--by <author;author>] [--status want|reading|read|abandoned]
+  learn book <title> [--isbn N [--lookup]] [--by <author;author>] [--status want|reading|read|abandoned|referenced]
                 [--subjects a,b] [--on YYYY-MM[-DD]]
                                   --lookup fills authors from Open Library and shows its subjects and
                                   contents; you keep the subjects that fit with --subjects
   learn recall <book> [text]      name a book's key subjects without looking (text from the argument or
                                   stdin); then see which of its subjects you named, and its contents
+  learn transcript <file.txt|file.pdf>
+                                  a model drafts the courses on your transcript (only rows really in it);
+                                  learn/courses/transcript.draft.json holds the draft until you keep rows
+  learn transcript --keep <1,2,5 | all>
+                                  keep those rows as courses; rate each like any subject
+  learn credential <name> --issuer <who> [--issued <date>] [--expires <date>] [--url <link>]
+                [--subjects a,b] [--check]
+                                  a certificate, license or badge; --check reads an Open Badges link
+  learn linkedin <export folder or zip> [--keep all | endorsements,recommendations,certifications,skills]
+                                  what your LinkedIn data export says others vouch for; shows it first
   learn grasp <subject> <teach|explain|gist|forgot> [--book <title>] [--note <text>] [--on ...]
                                   your own grasp of a subject: could teach it, could explain the key
                                   ideas, remember the gist, or don't remember it
   learn aspire <subject> [--requires a,b] [--part-of x] [--same-as wikidata:Q123 | lcsh:sh123]
   learn need <subject> --for <intent, venture, need or role> [--requires a,b] [--same-as ...]
-  learn resource <name> [--kind video|channel|article|course|podcast|paper|lab|site] [--url <link>]
-                [--subjects a,b] [--by <who>] [--platform <id>] [--status saved|started|finished|dropped]
+  learn resource <name> [--kind video|channel|article|post|thread|newsletter|course|podcast|paper|lab|site]
+                [--url <link>] [--subjects a,b] [--by <who>] [--platform <id>] [--status saved|started|finished|dropped]
+                                  a link you keep: an X, Substack or Reddit link gets its source from the link
+  learn film <title> [--kind film|documentary|series|short] [--year N] [--by <director>]
+                [--status want|watching|watched|abandoned|referenced] [--subjects a,b]
+  learn talk <title> --speaker <who> [--on <date>] [--where <place>] [--url <link>] [--subjects a,b]
+                                  someone you saw speak: a lecture, a sermon, a keynote, a video of one
+  learn conversation <what it was about> --with <name;name> [--on <date>] [--subjects a,b]
+                                  a conversation that fed your thinking, in your words
+  learn sweep                     the prompt to paste into your AI: it lists from its memory of you what
+                                  you read, watched and heard, subjects you showed or it suggests, and
+                                  your own ideas with their inputs
+  learn sweep <reply file>        read your AI's reply into learn/sweep.draft.json and list its items
+  learn sweep --keep <1,2,5 | all>
+                                  keep those items; an idea's inputs your AI only inferred are kept as
+                                  maybe from, and nothing sets your grasp
+  idea                            your ideas, each with its inputs and recommendations
+  idea <title> [statement] [--from <input>]... [--maybe <input>]... [--how <text>]
+                [--related <stance>:<thing> --by <who> [--note <text>]]... [--drop <thing>]...
+                                  keep an idea in your words (outputs, apart from learn/). An input is a
+                                  note (learn/books/x), a title you kept, or your own words; stance is
+                                  supports, extends, parallels, challenges or opposes
   write [text] [--date YYYY-MM-DD] write an entry (text from the argument or stdin); prints its id
   spark [--minutes 1|5|10|15 | --sentence]
                                   a noun to write about, and how long
@@ -105,7 +142,7 @@ function sparkForm(minutes: string | undefined, sentence: boolean): SparkForm {
   return form;
 }
 
-export async function main(argv: string[], out: (s: string) => void = console.log, fetcher: Fetch = (url) => fetch(url, { headers: { "user-agent": "reflect-cli" } })): Promise<number> {
+export async function main(argv: string[], out: (s: string) => void = console.log, fetcher: Fetch = (url) => fetch(url, { headers: { "user-agent": "reflect-cli" } }), chat: Chat = (system, t) => chatJson(system, t, process.env.AI_GATEWAY_API_KEY ?? null)): Promise<number> {
   const { values, positionals } = parseArgs({
     args: argv,
     allowPositionals: true,
@@ -139,11 +176,24 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
       subjects: { type: "string" },
       isbn: { type: "string" },
       lookup: { type: "boolean", default: false },
+      keep: { type: "string" },
+      issuer: { type: "string" },
+      issued: { type: "string" },
+      expires: { type: "string" },
+      check: { type: "boolean", default: false },
       book: { type: "string" },
       platform: { type: "string" },
       status: { type: "string" },
       out: { type: "string" },
       "moving-to": { type: "string" },
+      speaker: { type: "string" },
+      year: { type: "string" },
+      with: { type: "string" },
+      how: { type: "string" },
+      from: { type: "string", multiple: true },
+      maybe: { type: "string", multiple: true },
+      related: { type: "string", multiple: true },
+      drop: { type: "string", multiple: true },
       help: { type: "boolean", short: "h" },
     },
   });
@@ -322,6 +372,81 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
       out(`Now rate each: reflect learn grasp <subject> <${GRASP.map((g) => g.id).join("|")}> --book "${r.book.title}"`);
       return 0;
     }
+    if (sub === "transcript") {
+      const draftRel = join("learn", "courses", "transcript.draft.json");
+      if (values.keep) {
+        const draft = JSON.parse(await readFile(join(root, draftRel), "utf8").catch(() => { throw new Error("no transcript draft; run: reflect learn transcript <file>"); })) as TranscriptDraft;
+        const picks = values.keep === "all" ? draft.courses.map((_, i) => i + 1) : list(values.keep).map(Number);
+        for (const n of picks) {
+          const c = draft.courses[n - 1];
+          if (!c) throw new Error(`the draft has no row ${n}`);
+          out(`kept: ${await keepCourse(root, c, draft.institution, now)}`);
+        }
+        out(`Rate each: reflect learn grasp "<course title>" <${GRASP.map((g) => g.id).join("|")}> --note "<what you remember>"`);
+        return 0;
+      }
+      if (!name) throw new Error("learn transcript <file.txt|file.pdf>, or --keep <rows>");
+      const bytes = new Uint8Array(await readFile(name));
+      let text: string;
+      if (/\.pdf$/i.test(name)) {
+        const mod = "unpdf";
+        const unpdf = (await import(mod).catch(() => null)) as { extractText(d: Uint8Array, o: { mergePages: true }): Promise<{ text: string }> } | null;
+        if (!unpdf) throw new Error("reading a PDF needs the unpdf package; or save the transcript as text and pass that");
+        text = (await unpdf.extractText(bytes, { mergePages: true })).text;
+      } else text = transcriptText(bytes, name);
+      const draft = await draftTranscript(text, chat);
+      if (!draft) throw new Error("no model is set up: set AI_GATEWAY_API_KEY or OLLAMA_API_KEY");
+      await mkdir(join(root, "learn", "courses"), { recursive: true });
+      await writeFile(join(root, draftRel), `${JSON.stringify(draft, null, 2)}\n`);
+      if (draft.institution) out(draft.institution);
+      draft.courses.forEach((c, i) => out(`${i + 1}. ${c.term}  ${c.code ? `${c.code} ` : ""}${c.title}${c.credits !== undefined ? `, ${c.credits} credits` : ""}${c.grade ? `, ${c.grade}` : ""}`));
+      if (draft.dropped.length) out(`Left out, because they are not in the transcript as written: ${draft.dropped.join("; ")}`);
+      out("Check each row against your transcript, then keep the right ones: reflect learn transcript --keep 1,2,3 (or all)");
+      return 0;
+    }
+    if (sub === "credential") {
+      if (!name) throw new Error("learn credential <name> --issuer <who>");
+      const checked = values.check && values.url ? await checkBadge(values.url, fetcher) : null;
+      if (values.check && !values.url) throw new Error("--check needs --url, the badge's link");
+      const c = await keepCredential(root, name, { issuer: values.issuer ?? checked?.issuer ?? "", ...(values.issued ?? checked?.issued ? { issued: values.issued ?? checked!.issued } : {}), ...(values.expires ? { expires: values.expires } : {}), ...(values.url ? { url: values.url } : {}), subjects: list(values.subjects), ...(checked ? { checked: { ...checked, at: now.toISOString() } } : {}) }, now);
+      out(`kept: learn/credentials/${c.id}.md`);
+      if (values.check) out(checked ? `The issuer's badge says: ${checked.name}, from ${checked.issuer}${checked.issued ? `, ${checked.issued}` : ""}` : "That link is not an Open Badges badge; the credential is kept as you stated it");
+      return 0;
+    }
+    if (sub === "linkedin") {
+      if (!name) throw new Error("learn linkedin <export folder or zip>");
+      const files = new Map<string, string>();
+      if (/\.zip$/i.test(name)) {
+        const mod = "fflate";
+        const fflate = (await import(mod).catch(() => null)) as { unzipSync(d: Uint8Array): Record<string, Uint8Array> } | null;
+        if (!fflate) throw new Error("reading a zip needs the fflate package; or unzip it and pass the folder");
+        for (const [k, v] of Object.entries(fflate.unzipSync(new Uint8Array(await readFile(name))))) if (k.toLowerCase().endsWith(".csv")) files.set(k, new TextDecoder().decode(v));
+      } else {
+        const { readdir } = await import("node:fs/promises");
+        for (const f of await readdir(name)) if (f.toLowerCase().endsWith(".csv")) files.set(f, await readFile(join(name, f), "utf8"));
+      }
+      const x = readLinkedInExport(files);
+      const bySkill = new Map<string, typeof x.endorsements>();
+      for (const e of x.endorsements) bySkill.set(e.skill, [...(bySkill.get(e.skill) ?? []), e]);
+      if (!values.keep) {
+        out(`Endorsements: ${x.endorsements.length}, on ${bySkill.size} skill(s)`);
+        for (const [skill, es] of bySkill) out(`  ${skill}: ${es.map((e) => e.by).join(", ")}`);
+        out(`Recommendations: ${x.recommendations.length}${x.recommendations.length ? ` (from ${x.recommendations.map((r) => r.by).join(", ")})` : ""}`);
+        out(`Certifications: ${x.certifications.length}${x.certifications.length ? ` (${x.certifications.map((c) => c.name).join(", ")})` : ""}`);
+        out(`Skills you listed: ${x.skills.length}`);
+        out("Keep what is right: reflect learn linkedin <export> --keep all (or endorsements,recommendations,certifications,skills)");
+        return 0;
+      }
+      const kinds = values.keep === "all" ? ["endorsements", "recommendations", "certifications", "skills"] : list(values.keep);
+      for (const k of kinds) if (!["endorsements", "recommendations", "certifications", "skills"].includes(k)) throw new Error(`--keep takes all or endorsements, recommendations, certifications, skills; not ${k}`);
+      let n = 0;
+      if (kinds.includes("endorsements")) for (const [skill, es] of bySkill) n += await keepVouches(root, skill, es.map((e) => ({ on: e.on, by: e.by, ...(e.url ? { url: e.url } : {}), source: "linkedin" })), now);
+      if (kinds.includes("recommendations")) for (const r of x.recommendations) await keepRecommendation(root, { ...r, source: "linkedin" }, now);
+      if (kinds.includes("certifications")) for (const c of x.certifications) await keepCredential(root, c.name, { issuer: c.issuer, ...(c.issued ? { issued: c.issued } : {}), ...(c.expires ? { expires: c.expires } : {}), ...(c.url ? { url: c.url } : {}) }, now);
+      if (kinds.includes("skills")) for (const sk of x.skills) await keepSubject(root, sk, {}, now);
+      out(`kept: ${n} new vouch(es)${kinds.includes("recommendations") ? `, ${x.recommendations.length} recommendation(s)` : ""}${kinds.includes("certifications") ? `, ${x.certifications.length} certification(s)` : ""}${kinds.includes("skills") ? `, ${x.skills.length} skill(s) as subjects for you to rate` : ""}`);
+      return 0;
+    }
     if (sub === "grasp") {
       if (!name || !level) throw new Error(`learn grasp <subject> <${GRASP.map((g) => g.id).join("|")}>`);
       const s = await keepSubject(root, name, { ...where, grasp: { grasp: level as Grasp, ...(values.book ? { book: values.book } : {}), ...(values.note ? { note: values.note } : {}), ...(values.on ? { on: values.on } : {}) } }, now);
@@ -334,6 +459,48 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
       out(`kept: learn/subjects/${s.id}.md ${sub}${s.for ? ` for ${s.for}` : ""}`);
       return 0;
     }
+    if (sub === "film") {
+      if (!name) throw new Error("learn film <title> [--status watched] [--subjects a,b]");
+      if (values.status && !(FILM_STATUS as readonly string[]).includes(values.status)) throw new Error(`--status is one of ${FILM_STATUS.join(", ")}`);
+      const f = await keepFilm(root, name, { ...(values.kind ? { kind: values.kind } : {}), ...(values.year ? { year: Number(values.year) } : {}), ...(values.by ? { by: values.by } : {}), ...(values.status ? { status: values.status as FilmStatus } : {}), subjects: list(values.subjects), ...(values.on ? { on: values.on } : {}) }, now);
+      out(`kept: learn/films/${f.id}.md ${f.status}`);
+      return 0;
+    }
+    if (sub === "talk") {
+      if (!name) throw new Error("learn talk <title> --speaker <who>");
+      const t = await keepTalk(root, name, { ...(values.speaker ? { speaker: values.speaker } : {}), ...(values.on ? { on: values.on } : {}), ...(values.where ? { where: values.where } : {}), ...(values.url ? { url: values.url } : {}), subjects: list(values.subjects) }, now);
+      out(`kept: learn/talks/${t.id}.md ${t.speaker}`);
+      return 0;
+    }
+    if (sub === "conversation") {
+      if (!name || !values.with) throw new Error("learn conversation <what it was about> --with <name;name>");
+      const c = await keepConversation(root, { with: values.with.split(";"), ...(values.on ? { on: values.on } : {}), about: name, subjects: list(values.subjects) }, now);
+      out(`kept: learn/conversations/${c.id}.md`);
+      return 0;
+    }
+    if (sub === "sweep") {
+      const draftRel = join("learn", "sweep.draft.json");
+      if (values.keep) {
+        const s = JSON.parse(await readFile(join(root, draftRel), "utf8").catch(() => { throw new Error("no sweep draft; run: reflect learn sweep <your AI's reply>"); })) as Sweep;
+        const nums = values.keep === "all" ? s.items.map((_, i) => i + 1) : values.keep.split(",").map((x) => Number(x.trim()));
+        if (nums.some((n) => !Number.isInteger(n) || n < 1)) throw new Error("--keep takes all or item numbers like 1,2,5");
+        for (const k of await keepSweep(root, s, nums, now)) out(`kept: ${k}`);
+        out(`Rate what you know: reflect learn grasp <subject> <${GRASP.map((g) => g.id).join("|")}>`);
+        return 0;
+      }
+      if (!name) {
+        out(SWEEP_PROMPT);
+        return 0;
+      }
+      const s = readSweep(await readFile(name, "utf8"));
+      await mkdir(join(root, "learn"), { recursive: true });
+      await writeFile(join(root, draftRel), `${JSON.stringify(s, null, 2)}\n`);
+      out(`${s.assistant}${s.reportedAt ? ` (${s.reportedAt})` : ""} found ${s.items.length} item(s):`);
+      s.items.forEach((i, n) => out(`  ${n + 1}. ${sweepLine(i)}`));
+      for (const oq of s.openQuestions) out(`  open: ${oq}`);
+      out("Check each against what you know, then keep the right ones: reflect learn sweep --keep 1,2,3 (or all)");
+      return 0;
+    }
     if (sub === "resource") {
       if (!name) throw new Error("learn resource <name> --kind <kind> [--url <link>] [--subjects a,b]");
       if (values.status && !(RESOURCE_STATUS as readonly string[]).includes(values.status)) throw new Error(`--status is one of ${RESOURCE_STATUS.join(", ")}`);
@@ -341,18 +508,56 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
       out(`kept: learn/resources/${r.id}.md ${r.status}`);
       return 0;
     }
-    if (sub) throw new Error("learn takes find, book, recall, grasp, aspire, need or resource");
+    if (sub) throw new Error("learn takes find, book, recall, transcript, credential, linkedin, grasp, aspire, need, resource, film, talk, conversation or sweep");
     const m = await learnMap(root);
     const text = (g: Grasp) => GRASP.find((x) => x.id === g)!.text;
-    const from = (r: SubjectRow) => [...r.books.map((b) => b.id), ...r.resources.map((x) => `${x.id} (${x.status})`)];
+    const from = (r: SubjectRow) => [...r.books.map((b) => b.id), ...r.films.map((f) => f.id), ...r.talks.map((t) => t.id), ...r.resources.map((x) => `${x.id} (${x.status})`)];
     const ready = (r: SubjectRow) => (r.blockedBy.length ? `first learn ${r.blockedBy.join(", ")}` : "ready");
     const via = (r: SubjectRow) => (from(r).length ? `; from ${from(r).join(", ")}` : "");
     out("Known");
-    for (const r of m.known) out(`  ${r.subject.id}  ${text(r.grasp!.grasp)} (${r.grasp!.on})${r.grasp!.book ? `, from ${r.grasp!.book}` : ""}`);
+    const vouched = (r: SubjectRow) => (r.vouches ? `; vouched for by ${r.vouches}` : "");
+    for (const r of m.known) out(`  ${r.subject.id}  ${text(r.grasp!.grasp)} (${r.grasp!.on})${r.grasp!.book ? `, from ${r.grasp!.book}` : ""}${vouched(r)}`);
     if (!m.known.length) out("  nothing rated yet: reflect learn grasp <subject> <level>");
+    const courses = await listCourses(root);
+    if (courses.length) {
+      out("Courses");
+      const graspOf = new Map([...m.known, ...m.aspire, ...m.need, ...m.possible].map((r) => [r.subject.id, r.grasp] as const));
+      for (const c of courses) {
+        let g = graspOf.get(c.subject);
+        if (!g) {
+          const t = await readFile(join(root, "learn", "subjects", `${c.subject}.md`), "utf8").catch(() => "");
+          g = latestGrasp(parseSubject(c.subject, t).grasps);
+        }
+        out(`  ${c.term}  ${c.code ? `${c.code} ` : ""}${c.title}${c.grade ? `  grade ${c.grade}` : ""}; ${g ? `you say: ${text(g.grasp)}` : "not yet rated by you"}`);
+      }
+    }
     out("Books");
     for (const { book: b, unrated } of m.books) out(`  ${b.id}  ${b.status}${b.finished ? ` ${b.finished}` : ""}${unrated.length ? `; not yet rated: ${unrated.join(", ")}` : ""}`);
     if (!m.books.length) out("  none yet: reflect learn book <title> --status read");
+    if (m.shown.length) {
+      out("Shown, not yet rated by you");
+      for (const r of m.shown) out(`  ${r.subject.id}  shown ${r.subject.shown} time(s)`);
+    }
+    if (m.vouched.length) {
+      out("Vouched for by others, not yet rated by you");
+      for (const r of m.vouched) out(`  ${r.subject.id}  vouched for by ${r.vouches}`);
+    }
+    if (m.suggested.length) {
+      out("Suggested, not known");
+      for (const r of m.suggested) out(`  ${r.subject.id}${via(r)}`);
+    }
+    if (m.films.length) {
+      out("Films");
+      for (const f of m.films) out(`  ${f.id}  ${f.kind}, ${f.status}${f.watched ? ` ${f.watched}` : ""}`);
+    }
+    if (m.talks.length) {
+      out("Talks");
+      for (const t of m.talks) out(`  ${t.id}  ${t.speaker}${t.on ? `, ${t.on}` : ""}`);
+    }
+    if (m.conversations.length) {
+      out("Conversations");
+      for (const c of m.conversations) out(`  ${c.on}  with ${c.with.join(", ")}: ${c.about}`);
+    }
     out("Aspire");
     for (const r of m.aspire) out(`  ${r.subject.id}  ${ready(r)}${via(r)}`);
     if (!m.aspire.length) out("  nothing yet: reflect learn aspire <subject>");
@@ -362,6 +567,33 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
     out("Possible next");
     for (const r of m.possible) out(`  ${r.subject.id}  ${r.subject.requires.length ? "you know what it requires" : `a first step toward ${[...m.aspire, ...m.need].filter((w) => w.subject.requires.includes(r.subject.id)).map((w) => w.subject.id).join(", ") || "what needs it"}`}`);
     if (!m.possible.length) out("  nothing your map names yet; the rest is the whole internet");
+    return 0;
+  }
+  if (cmd === "idea") {
+    if (layoutOf(config) !== "vault") throw new Error("idea needs a vault; this instance uses the older people/<id> layout");
+    const [title, statement] = rest;
+    if (!title) {
+      const ideas = await listIdeas(root);
+      if (!ideas.length) out("No ideas yet: reflect idea <title> <the idea in your words> --from <what fed it>");
+      for (const i of ideas) {
+        out(`${i.id}  ${i.statement ?? ""}`);
+        for (const x of i.from) out(`  from ${targetText(x)}${x.how ? `: ${x.how}` : ""}`);
+        for (const x of i.maybe) out(`  maybe from ${targetText(x)}${x.how ? `: ${x.how}` : ""}`);
+        for (const r of i.related) out(`  ${r.stance}: ${targetText(r)}, suggested by ${r.by}${r.note ? `: ${r.note}` : ""}`);
+      }
+      return 0;
+    }
+    const inputs = async (xs: string[] | undefined) => Promise.all((xs ?? []).map(async (x) => ({ target: await resolveTarget(root, x), ...(values.how ? { how: values.how } : {}) })));
+    const related = await Promise.all((values.related ?? []).map(async (r) => {
+      const at = r.indexOf(":");
+      const stance = at > 0 ? r.slice(0, at).trim() : "";
+      if (!isStance(stance)) throw new Error(`--related is <stance>:<thing>; stance is one of ${STANCES.map((x) => x.id).join(", ")}`);
+      if (!values.by) throw new Error("--related needs --by: who suggested it (you, your AI, a friend)");
+      return { target: await resolveTarget(root, r.slice(at + 1)), stance: stance as Stance, by: values.by, ...(values.note ? { note: values.note } : {}) };
+    }));
+    const drop = await Promise.all((values.drop ?? []).map((x) => resolveTarget(root, x)));
+    const i = await keepIdea(root, title, { ...(statement ? { statement } : {}), from: await inputs(values.from), maybe: await inputs(values.maybe), related, drop, ...(values.on ? { on: values.on } : {}) }, new Date());
+    out(`kept: ideas/${i.id}.md; ${i.from.length} from, ${i.maybe.length} maybe from, ${i.related.length} recommendation(s)`);
     return 0;
   }
   if ((cmd === "need" || cmd === "passage") && layoutOf(config) !== "vault") throw new Error(`${cmd} needs a vault; this instance uses the older people/<id> layout`);

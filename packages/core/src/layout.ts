@@ -1,6 +1,6 @@
 // Where a person's records sit in an instance folder. A vault (the default since 2026-11-10) is the
 // folder itself, opened as is in Obsidian or any editor: journal/, reflections/, library/, one folder
-// per venture of a lifetime, telos/, intents/, concepts/. The older "people" layout kept the same
+// per venture of a lifetime, telos/, intents/, concepts/, ideas/. The older "people" layout kept the same
 // records under people/<id>/ with entries/ for the journal; instances made that way still work.
 import { join } from "node:path";
 
@@ -34,7 +34,7 @@ export function recordPaths(layout: Layout, personId: string): RecordPaths {
   const person = layout === "vault" ? "" : join("people", personId);
   const at = (p: string) => (person ? join(person, p) : p);
   const journal = at(layout === "vault" ? "journal" : "entries");
-  const dirs = layout === "vault" ? [...LIFETIME_DIRS, "telos", "intents"] : ["intents", "telos"];
+  const dirs = layout === "vault" ? [...LIFETIME_DIRS, "telos", "intents", "ideas"] : ["intents", "telos"];
   return {
     person,
     journal,

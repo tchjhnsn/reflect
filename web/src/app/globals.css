@@ -298,6 +298,10 @@ button:disabled { opacity: 0.5; cursor: default; }
 .learn-select { font: 500 14px var(--sans); padding: 6px 8px; border: 1px solid var(--rule); border-radius: 8px; background: var(--paper); color: var(--ink); max-width: 100%; }
 .learn-text { width: 100%; font: 16px/1.5 var(--serif, inherit); border: 0; border-bottom: 1px solid var(--rule); background: transparent; color: var(--ink); padding: 8px 0; }
 .learn-recall { margin: 10px 0 0; padding-left: 12px; border-left: 2px solid var(--rule); }
+.learn-prompt { width: 100%; font: 400 13px/1.5 var(--mono, ui-monospace, monospace); padding: 10px; border: 1px solid var(--rule); border-radius: 8px; background: var(--paper); color: var(--ink); margin-top: 8px; }
+.idea-statement { font: 400 18px/1.55 var(--serif, Georgia, serif); margin: 8px 0 0; }
+.idea-stance { text-transform: none; }
+.link-button { background: none; border: 0; padding: 0; font: inherit; color: var(--muted, inherit); text-decoration: underline; cursor: pointer; }
 .learn-grasp { border: 0; padding: 12px 0; margin: 0; border-bottom: 1px solid var(--rule); }
 .learn-grasp legend { font: 500 15px var(--sans); margin-bottom: 8px; }
 .learn-grasp .chip input, .add .chip input { margin-right: 4px; }

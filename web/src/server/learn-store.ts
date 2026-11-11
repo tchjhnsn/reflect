@@ -13,14 +13,14 @@ import { open, seal, tag } from "./crypto";
  */
 
 export type BookOut = { id: string; title: string; authors: string[]; isbn: string | null; status: BookStatus; startedOn: string | null; finishedOn: string | null; subjects: SubjectOut[]; catalog: CatalogEntry | null; recalls: { at: string; text: string }[] };
-export type SubjectOut = { id: string; name: string; grasp: { grasp: Grasp; at: string; bookId: string | null } | null };
-export type LearnView = { known: SubjectOut[]; books: (BookOut & { unrated: string[] })[] };
+export type SubjectOut = { id: string; name: string; vouches: number; shown: number; suggested: number; grasp: { grasp: Grasp; at: string; bookId: string | null } | null };
+export type LearnView = { known: SubjectOut[]; shown: SubjectOut[]; vouched: SubjectOut[]; suggested: SubjectOut[]; books: (BookOut & { unrated: string[] })[] };
 
 const LIMIT = { title: 300, name: 120, text: 20_000, subjects: 60 };
 const knows = (g: Grasp | undefined) => g === "teach" || g === "explain" || g === "gist";
 const normName = (s: string) => s.replace(/\s+/g, " ").trim();
 
-async function tx<T>(f: (c: PoolClient) => Promise<T>): Promise<T> {
+export async function tx<T>(f: (c: PoolClient) => Promise<T>): Promise<T> {
   const client = await db().connect();
   try {
     await client.query("BEGIN");
@@ -35,7 +35,7 @@ async function tx<T>(f: (c: PoolClient) => Promise<T>): Promise<T> {
   }
 }
 
-async function subjectId(c: PoolClient, userId: string, name: string): Promise<string> {
+export async function subjectId(c: PoolClient, userId: string, name: string): Promise<string> {
   const n = normName(name);
   if (!n || n.length > LIMIT.name) throw new Error("a subject has a name of at most 120 characters");
   const t = tag(userId, n.toLowerCase());
@@ -119,14 +119,16 @@ export async function rateSubject(userId: string, subject: string, grasp: string
   });
 }
 
-async function subjects(userId: string): Promise<Map<string, SubjectOut>> {
+export async function subjects(userId: string): Promise<Map<string, SubjectOut>> {
   const r = await db().query(
-    `SELECT s.id, s.name_ct, g.grasp, g.created_at, g.book_id FROM learn_subject s
+    `SELECT s.id, s.name_ct, g.grasp, g.created_at, g.book_id, (SELECT count(*) FROM learn_vouch v WHERE v.subject_id = s.id)::int AS vouches,
+       (SELECT count(*) FROM learn_subject_mark m WHERE m.subject_id = s.id AND m.kind = 'shown')::int AS shown,
+       (SELECT count(*) FROM learn_subject_mark m WHERE m.subject_id = s.id AND m.kind = 'suggested')::int AS suggested FROM learn_subject s
      LEFT JOIN LATERAL (SELECT grasp, created_at, book_id FROM learn_grasp WHERE subject_id = s.id ORDER BY created_at DESC, id DESC LIMIT 1) g ON true
      WHERE s.user_id = $1`,
     [userId],
   );
-  return new Map(r.rows.map((x) => [x.id as string, { id: x.id as string, name: open(userId, x.name_ct as string), grasp: x.grasp ? { grasp: x.grasp as Grasp, at: new Date(x.created_at as string).toISOString(), bookId: (x.book_id as string | null) ?? null } : null }]));
+  return new Map(r.rows.map((x) => [x.id as string, { id: x.id as string, name: open(userId, x.name_ct as string), vouches: Number(x.vouches ?? 0), shown: Number(x.shown ?? 0), suggested: Number(x.suggested ?? 0), grasp: x.grasp ? { grasp: x.grasp as Grasp, at: new Date(x.created_at as string).toISOString(), bookId: (x.book_id as string | null) ?? null } : null }]));
 }
 
 const dayOf = (d: unknown) => (d ? (d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10)) : null);
@@ -159,12 +161,19 @@ export async function getBook(userId: string, bookId: string): Promise<BookOut |
   return (await books(userId, bookId))[0] ?? null;
 }
 
-/** Known subjects, and every book with the subjects of a read book not rated since it was finished. */
+/**
+ * Known subjects, and every book with the subjects of a read book not rated since it was finished. Shown
+ * and suggested are never known: shown waits for the person's rating, and suggested is only someone's
+ * thought that a subject relates to them.
+ */
 export async function learnView(userId: string): Promise<LearnView> {
   const subs = [...(await subjects(userId)).values()];
   const all = await books(userId);
   return {
     known: subs.filter((s) => knows(s.grasp?.grasp)).sort((a, b) => a.name.localeCompare(b.name)),
+    shown: subs.filter((s) => s.shown > 0 && !s.grasp).sort((a, b) => a.name.localeCompare(b.name)),
+    vouched: subs.filter((s) => s.vouches > 0 && !s.grasp).sort((a, b) => a.name.localeCompare(b.name)),
+    suggested: subs.filter((s) => s.suggested > 0 && !s.grasp && !s.shown && !s.vouches).sort((a, b) => a.name.localeCompare(b.name)),
     books: all.map((b) => ({
       ...b,
       unrated: b.status === "read" ? b.subjects.filter((s) => !s.grasp || (s.grasp.bookId !== b.id && b.finishedOn !== null && s.grasp.at.slice(0, 10) < b.finishedOn)).map((s) => s.name) : [],
