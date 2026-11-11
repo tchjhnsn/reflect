@@ -1,13 +1,13 @@
 # The library: domain design
 
-Status: design, not built. Proposed 2026-11-11 from Torian's direction in the Reflect thread. It goes with `LIFE_AND_MIND_DOMAIN_2026-11-11.md`, which covers a person's own ideas. This document covers what they read, adopt and write *into*. The system design is `LIBRARY_SYSTEM_2026-11-11.md`. The section on forms is a first draft that Torian marked as needing more discussion.
+Status: design, not built. Proposed 2026-11-11 from Torian's direction in the Reflect thread. It goes with `LIFE_AND_MIND_DOMAIN_2026-11-11.md`, which covers a person's own ideas. This document covers what they read, adopt and write *into*. The system design is `LIBRARY_SYSTEM_2026-11-11.md`. Forms are adopted from standards, not invented (Torian, 2026-11-11).
 
 ## What the library holds
 
 The library is shared, not any one person's. It holds three things:
 
 1. **Works.** Standard written works by area of life, with excerpts: the passages people actually cite and adopt.
-2. **Forms.** The kinds of work a person can write, each with a template: an essay, a thesis, a research paper, a biography, an encyclopedia entry and so on.
+2. **Forms.** The kinds of work a person can write (an essay, a thesis, a research paper, a biography, an encyclopedia entry and so on), adopted from standards such as the Library of Congress Genre/Form Terms.
 3. **Relations.** How works relate to each other: depends on, extends, complements, opposes, each with an optional scope.
 
 A person's vault holds their own ideas and links into the library. It never holds a copy of the canon.
@@ -33,26 +33,56 @@ Aristotle covers almost every area. That is why mapping his works is the first r
 
 An **excerpt** is a passage of a work, with its standard reference (Bekker number, chapter and verse, page). Excerpts are what a person adopts: one verse of a household code, not all of Ephesians.
 
+## Structure first: schemes and components
+
+Torian, 2026-11-11: structure is the most important part of what we are building. Every category system is a **scheme**, written as a W3C SKOS concept scheme. A scheme gives each concept a stable id, links to broader and narrower concepts, and a match to the standard it follows. Works and passages are **components**, called by their standard codes.
+
+| Scheme | Standard it follows |
+|---|---|
+| Areas of life | none; ours, citing Aristotle, *Politics* I.2 |
+| Forms of work | LCGFT, with FAST, COAR, Getty AAT, schema.org and Wikidata matches beside it |
+| Fields of study | UNESCO ISCED-F 2013 (the backbone), US CIP 2020 for detail, OECD Fields of Science for research |
+| Topics | LCSH and Wikidata |
+| Instruments of thought | LCC BC (logic) and BF (psychology), ISCED-F philosophy and psychology; frameworks filed from Moseley et al. 2005 |
+
+Works and passages are called by code:
+
+- **A work** follows the IFLA Library Reference Model's four levels: work, expression (a translation), manifestation (an edition) and item. A work's id is its Wikidata id. An edition hangs under it by ISBN. The International Standard Text Code, ISO 21047, was meant to identify works, but its agency closed in 2017 and ISO withdrew it in 2021, so it is not used.
+- **A passage** is called by CTS URN for classical texts (*Politics* is `urn:cts:greekLit:tlg0086.tlg035`, plus a Bekker reference) and by OSIS reference for the Bible (`Eph.6.4`). Any edition resolves it.
+
 ## Forms
 
-A **form** is a kind of work, defined by what it does and what it answers to. It is not a literary style. Each form has a template: its parts, its usual length, what it must contain, and how a reader judges it.
+A **form** is a kind of work: what the work is, not what it is about. We adopt forms from standards and do not invent our own. The default is the Library of Congress Genre/Form Terms (LCGFT), which hold about 390 terms for literary works and more for other materials. Other standards sit beside it, so the library or a person can choose which one a form follows:
 
-A first set, grouped by what the work answers to:
+| Standard | Kept by | Good for |
+|---|---|---|
+| LCGFT | Library of Congress | the fullest list of literary and document forms; the default |
+| FAST form/genre | OCLC | a simpler set derived from the LoC headings |
+| COAR Resource Types | Confederation of Open Access Repositories | research outputs: bachelor, master and doctoral theses, research and review articles, reports |
+| Getty AAT | Getty Research Institute | document and object types; visual and archival work such as a documentary |
+| schema.org CreativeWork | schema.org | how the blog marks up what it publishes |
+| Wikidata | community | the links between all of the above |
 
-| Answers to | Forms |
-|---|---|
-| Evidence and argument (inquiry) | micro post (a thesis, observation or question in one line), essay, thesis, research paper, treatise, commentary on a work, dialogue (Plato's form), review |
-| A life (true events) | biography, autobiography, memoir, profile, documentary, history |
-| Commitment (what a person or group holds) | house code, creed or confession, rule of life, manifesto, charter, constitution |
-| Reference (organized knowledge) | encyclopedia entry, glossary, commonplace book, annotated bibliography |
-| Address (a speech or letter to someone) | letter, sermon, speech, eulogy, testament |
-| Imagination | novel, short story, poem, play, film |
+LCGFT names and defines a form but does not say how it is built. Where a structure standard exists, it is adopted with the form: ISO 7144 for presenting a thesis, ANSI/NISO Z39.18 for scientific and technical reports, and the IMRaD convention for research papers. A form with no structure standard, such as an essay or a memoir, carries only its definition. The library does not make one up. (The ISO and NISO references are from memory and are checked before the library uses them.)
 
-Notes:
+Forms still relate to modes. Theses, research papers and essays are where an idea in inquiry mode ends up. A house code or a creed is where adopted ideas gather. A venture goes to Naive, though it may produce a written form such as a manifesto or a charter.
 
-- **Forms map onto modes.** Inquiry forms are where an idea in inquiry mode ends up. Commitment forms are where adopted ideas end up (a house code, a creed). A venture does not end in a written form; it goes to Naive. It can still produce one: a manifesto, a charter.
-- **Some forms gather others.** A rule of life gathers house codes. A treatise gathers essays. A commonplace book gathers excerpts.
-- **Old divisions back this up.** Aristotle's *Rhetoric* splits speeches into deliberative (what to do), forensic (what happened) and epideictic (what deserves praise). Those line up roughly with the commitment, life and address rows above.
+## Instruments of thought
+
+Thinking frameworks, heuristics and metacognition need a parent category. Logic is the right parent for half of them, the normative half, which says how a person ought to reason. Heuristics and metacognition are mostly descriptive: how people do think. Kahneman and Gigerenzer on heuristics, and Flavell on metacognition, belong to psychology. Library classification splits them the same way: LCC puts logic in BC and thinking and cognition in BF.
+
+Aristotle's name for the parent is the *Organon*. His logical works were the instrument of every science, not a branch of one. The scheme is:
+
+```
+Instruments of thought
+  Logic: formal, informal, dialectic
+  Rhetoric
+  Methods of inquiry: scientific method, historical method
+  Judgment and decision: decision theory, heuristics, biases
+  Metacognition: monitoring and regulating one's own thinking
+```
+
+Each branch matches its standard home. The 42 frameworks reviewed in Moseley et al., *Frameworks for Thinking* (Cambridge, 2005) are filed under these branches. Naive's decision frames belong under judgment and decision.
 
 ## Encyclopedias
 
@@ -82,7 +112,8 @@ Subscribing means wrote, adopts or adopts with changes. Those three make up the 
 
 ## Open questions
 
-1. Is the set of forms right, and is "what it answers to" the right grouping? (Torian: needs more discussion.)
+1. Which standard does each person default to when LCGFT and COAR both name a form (a doctoral thesis, for example)?
 2. Should a person's encyclopedia be one work (a single form), or a view over everything they subscribe to?
 3. Who may add works to the shared library: only us, or people too, with their published works?
 4. How much of an excerpt can the library hold before copyright matters? Public-domain works can be held whole; others only by reference and short quotation.
+5. Is "instruments of thought" the right parent, with logic as one branch beside psychology's heuristics and metacognition?

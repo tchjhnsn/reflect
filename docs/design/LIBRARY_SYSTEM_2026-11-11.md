@@ -6,10 +6,12 @@ Status: design, not built. This runs `LIBRARY_DOMAIN_2026-11-11.md`. It assumes 
 
 ```
 library/
-  works/<id>.md              title, authors, year, areas, edition, public domain or not
-  excerpts/<work>/<ref>.md   one passage: standard reference, text (public domain) or a short quote
+  works/<wikidata-id>.md     title, authors, year, areas, editions by ISBN, public domain or not
+  excerpts/<cts-or-osis>.md  one passage by CTS URN or OSIS reference: text (public domain) or a short quote
                              and a link, areas, a one-line gloss
-  forms/<form>.md            one template per form
+  schemes/<scheme>.json      SKOS concept schemes: areas, forms, fields, topics, instruments of thought
+  forms/<id>.md              one adopted form: its LCGFT term and matches, its definition, and a
+                             structure standard when one exists
   relations.jsonl            {from, to, relation, scope?, by, on}
   clusters.json              named clusters of works, kept coarse
   encyclopedia/<concept>.md  the library's own entries: concept, works and excerpts that treat it
@@ -17,37 +19,33 @@ library/
 
 A model may draft relations, clusters and encyclopedia entries. Each one lands only after a person on our side accepts it, using the same hold-gate pattern as Naive.
 
-## A form file
+## An adopted form
 
 ```
 ---
-form: essay
-answers_to: inquiry
-gathers: []
-length: 1,500 to 5,000 words
+id: academic-theses
+lcgft: Academic theses
+matches: { coar: c_46ec, schema: Thesis, wikidata: <id> }
+structure: ISO 7144
 ---
 
-## Parts
-1. The question or claim, stated in the first paragraph.
-2. The argument, with each step's grounds.
-3. The strongest objection, and the answer to it.
-4. What follows if it holds.
+The definition, quoted from LCGFT.
 
-## Must contain
-- A thesis sentence.
-- At least one cited source for each claim of fact.
-
-## How a reader judges it
-Is the claim clear, are the grounds sound, was the objection a real one.
+## Parts (from ISO 7144)
+...
 ```
 
-`answers_to` is one of inquiry, life, commitment, reference, address or imagination. `gathers` lists the forms it can collect: a rule of life gathers house codes, a commonplace book gathers excerpts.
+`structure` is present only when a standard says how the form is built. `reflect idea draft --form` uses those parts as headings. With no structure standard, the draft starts empty under the form's definition.
+
+## A scheme
+
+A SKOS concept scheme in JSON-LD: each concept has an id, a preferred label, `broader` and `narrower`, and `exactMatch` or `closeMatch` to the standard it follows. One loader reads every scheme, so areas of life, forms, fields of study and instruments of thought are handled the same way.
 
 ## How Reflect uses it
 
-- `reflect forms` lists the forms, grouped by what they answer to.
-- `reflect idea draft <slug> --form essay` creates `ideas/<slug>/drafts/<n>.md` from the template's parts. The parts become headings the person fills in. It adds a `form essay` line to the idea.
-- `reflect publish` reads the form's "must contain" list and checks it. A research paper with no sources is refused, and so is a thesis with no thesis sentence. A check the code cannot make, such as "the strongest objection", is shown to the person as a question. It is never decided by a model.
+- `reflect forms [--standard lcgft|coar|aat|fast]` lists the adopted forms, by the standard the person chooses.
+- `reflect idea draft <slug> --form <id>` creates `ideas/<slug>/drafts/<n>.md`, with the parts of the form's structure standard as headings when it has one. It adds a `form <id>` line to the idea.
+- `reflect publish` checks a draft against its form's structure standard when it has one, for example a research paper's sections. A check the code cannot make is shown to the person as a question. It is never decided by a model.
 - `reflect library <area>` lists the works and excerpts for an area of life.
 - `reflect adopt <excerpt> [--changes "<what changed>"]` writes a new idea whose first lines are `adopted from [[library/excerpts/...]]` and the excerpt's gloss in the person's words. That idea then joins the person's encyclopedia.
 
@@ -77,7 +75,7 @@ This is a view, not a separate store. Every idea whose stance is wrote, adopts o
 
 This follows build steps 1 to 4 of the life and mind system design.
 
-1. The library repository with works, excerpts and forms, starting with public-domain works for household, line and polis.
+1. The library repository with schemes, works and excerpts, starting with public-domain works for household, line and polis, and the forms adopted from LCGFT with their matches.
 2. `reflect forms` and `reflect idea draft --form`.
 3. `holds` lines, `reflect adopt` and `reflect encyclopedia`.
 4. Form checks in `reflect publish`.
