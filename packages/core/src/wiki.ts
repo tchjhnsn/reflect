@@ -17,7 +17,6 @@ import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { headExtras, parseEntryFile, pointerText, POINTER_HEAD } from "./files-journal.ts";
-import { citedMoments, confirmedElements, elementsOf, groundProblem, isGrounded, momentFiles, OF_ME } from "./ground.ts";
 import { journalHome } from "./home.ts";
 import type { Layout } from "./layout.ts";
 import { readRecord, writeRecord } from "./record-io.ts";
@@ -37,7 +36,7 @@ const PATH = /^[a-z0-9][a-z0-9-]*(\/[a-z0-9][a-z0-9-]*)+$/;
 const LINK = /\[\[([^\]|#]+)(?:[|#][^\]]*)?\]\]/g;
 const PROMPT_BUDGET = 80_000;
 
-export type Article = { path: string; title: string; type: string; also: string[]; related: string[]; body: string; elements?: string[] };
+export type Article = { path: string; title: string; type: string; also: string[]; related: string[]; body: string };
 export type Rejected = { path: string; why: string };
 export type WikiDraft = { articles: Article[]; rejected: Rejected[]; absorbed: string[] };
 type Absorb = { absorbed: Record<string, string> };
@@ -123,7 +122,6 @@ Rules Reflect enforces (it refuses an article that breaks them):
 - No em dash characters.
 - path is "<folder>/<slug>": lowercase letters, digits and dashes, folders like people, projects, places, books, patterns, tensions, identities, philosophies, eras, decisions. Folders emerge from the material.
 - type is one word, such as person, project, place, book, film, idea, event, era, decision, pattern, tension, identity, philosophy.
-- A pattern, tension or identity names its elements in "elements", from the element table: memory, image, will, desire, imagination, logos, emotion, intuition, conscience, reason, attention, awareness, self-differentiation, attachment, embodiment, temporality, aesthetic-sense, numinous-sense. It cites only entries whose confirmed elements (listed with each entry below) include every element it names. A tension is the two elements of one category held against each other: will and desire, imagination and logos, emotion and intuition, conscience and reason, attention and awareness, self-differentiation and attachment, embodiment and temporality, aesthetic-sense and numinous-sense. An entry with no confirmed reading supports none of these. When my journal is in my soul vault, these readings are kept there, not in the wiki.
 - Leave out health details, exact money figures and other people's private information.
 
 Reply with one JSON code block and nothing before it:
@@ -134,8 +132,7 @@ Reply with one JSON code block and nothing before it:
   "version": 1,
   "absorbed": ["journal/... every entry id below you have absorbed"],
   "articles": [
-    { "path": "people/sam", "title": "Sam", "type": "person", "also": ["Samuel"], "related": ["wiki/projects/corner-bakery"], "body": "Markdown body without front matter, every paragraph citing its notes." },
-    { "path": "tensions/building-or-resting", "title": "Building or resting", "type": "tension", "elements": ["will", "desire"], "also": [], "related": [], "body": "..." }
+    { "path": "people/sam", "title": "Sam", "type": "person", "also": ["Samuel"], "related": ["wiki/projects/corner-bakery"], "body": "Markdown body without front matter, every paragraph citing its notes." }
   ]
 }
 \`\`\``;
@@ -154,13 +151,7 @@ export async function wikiPrompt(root: string, layout: Layout, person: string, l
   else if (size <= PROMPT_BUDGET) for (const a of all) parts.push(`### wiki/${a.path}`, "", a.text, "");
   else parts.push((await readRecord(root, INDEX)) ?? "", "", "(The articles are too long to include. Create new articles only, and change an existing one only if I paste it.)");
   parts.push("", `## Entries to absorb (${batch.length} of ${pending.length})`, "");
-  const home = await journalHome(root);
-  const ids = new Map<string, string>((await momentFiles(home)).map((m) => [`${home.paths.journal}/${m.stem}`, m.id]));
-  for (const s of batch) {
-    const id = ids.get(s.id);
-    const els = id ? await confirmedElements(home, id) : [];
-    parts.push(`### ${s.id} (${s.date})`, "", `Confirmed elements: ${els.length ? els.join(", ") : "none (no confirmed reading)"}`, "", s.text, "");
-  }
+  for (const s of batch) parts.push(`### ${s.id} (${s.date})`, "", s.text, "");
   if (!batch.length) parts.push("(none: every entry is absorbed)");
   return { text: parts.join("\n"), entries: batch.map((s) => s.id), remaining: pending.length - batch.length };
 }
@@ -193,7 +184,7 @@ function citeBlocks(body: string): string[] {
 }
 
 /** Check one article against the record: its path, no em dash, every block cited, every long quote found in what it cites. */
-export async function checkArticle(root: string, a: Article, sourceText: (path: string) => Promise<string | null>, ground?: (a: Article) => Promise<string | null>): Promise<string | null> {
+export async function checkArticle(root: string, a: Article, sourceText: (path: string) => Promise<string | null>): Promise<string | null> {
   if (!PATH.test(a.path)) return `path must be <folder>/<slug> in lowercase letters, digits and dashes: ${a.path}`;
   if (!a.title) return "no title";
   if (!a.body.trim()) return "no body";
@@ -213,7 +204,7 @@ export async function checkArticle(root: string, a: Article, sourceText: (path: 
       if (quote.split(" ").length >= 4 && !texts.some((t) => t.includes(quote))) return `a quote is not in the notes its passage cites: "${quote.slice(0, 80)}"`;
     }
   }
-  return ground ? await ground(a) : null;
+  return null;
 }
 
 /** Read the AI's reply and check each article. Nothing is written; the result is kept as a draft. */
@@ -228,20 +219,19 @@ export async function readWikiReply(root: string, layout: Layout, person: string
   }
   if (j.kind !== "reflect.wiki" || j.version !== 1) throw new Error('the JSON is not a wiki reply (kind "reflect.wiki", version 1)');
   const entries = new Map((await journalSources(root, layout, person)).map((s) => [s.id, s.text] as const));
-  const home = await journalHome(root);
   const sourceText = async (p: string) => entries.get(p) ?? (p.startsWith("journal/") || p.startsWith("moments/") ? null : await readRecord(root, `${p}.md`));
   const articlesOut: Article[] = [];
   const rejected: Rejected[] = [];
   const seen = new Set<string>();
   for (const r of Array.isArray(j.articles) ? (j.articles as Record<string, unknown>[]) : []) {
     if (!r || typeof r !== "object") continue;
-    const a: Article = { path: str(r.path) ?? "", title: str(r.title) ?? "", type: (str(r.type) ?? "article").toLowerCase(), also: strs(r.also), related: strs(r.related), body: typeof r.body === "string" ? r.body.trim() : "", ...(isGrounded((str(r.type) ?? "").toLowerCase()) ? { elements: strs(r.elements) } : {}) };
+    const a: Article = { path: str(r.path) ?? "", title: str(r.title) ?? "", type: (str(r.type) ?? "article").toLowerCase(), also: strs(r.also), related: strs(r.related), body: typeof r.body === "string" ? r.body.trim() : "" };
     if (seen.has(a.path)) {
       rejected.push({ path: a.path, why: "the reply has this path twice" });
       continue;
     }
     seen.add(a.path);
-    const why = await checkArticle(root, a, sourceText, async (x) => groundProblem(x.type, x.elements ?? [], await citedMoments(home, x.body)));
+    const why = await checkArticle(root, a, sourceText);
     if (why) rejected.push({ path: a.path || "(no path)", why });
     else articlesOut.push(a);
   }
@@ -264,9 +254,7 @@ const yamlList = (xs: readonly string[]) => `[${xs.map((x) => JSON.stringify(x))
 
 function articleText(a: Article, confirmedOn: string | null, at: string): string {
   const sources = [...new Set([...a.body.matchAll(LINK)].map((m) => m[1]!.trim()).filter((p) => CITABLE.includes(p.split("/")[0]!)))];
-  const head = [`title: ${JSON.stringify(a.title)}`, `type: ${a.type}`];
-  if (isGrounded(a.type)) head.push(`elements: ${yamlList(a.elements ?? [])}`);
-  head.push(`also: ${yamlList(a.also)}`, `related: ${yamlList(a.related)}`, `sources: ${yamlList(sources)}`, `written: ${at}`);
+  const head = [`title: ${JSON.stringify(a.title)}`, `type: ${a.type}`, `also: ${yamlList(a.also)}`, `related: ${yamlList(a.related)}`, `sources: ${yamlList(sources)}`, `written: ${at}`];
   if (isReading(a.type)) head.push(`reading: ${confirmedOn ? `confirmed ${confirmedOn}` : "ai"}`);
   return `---\n${head.join("\n")}\n---\n\n# ${a.title}\n\n${a.body}\n`;
 }
@@ -281,33 +269,20 @@ export async function keepWikiDraft(root: string, numbers: readonly number[] | "
     return a;
   });
   const at = now.toISOString();
-  const home = await journalHome(root);
+  const confirmed = await json<Confirmed>(root, CONFIRMED, {});
   const kept: string[] = [];
   for (const a of chosen) {
-    // With a soul vault, a reading of the person's inner life is kept there, in of-me/, never in the life vault.
-    const where = placeOf(root, home.soul ? home.root : null, a.path, a.type);
-    const confirmed = await json<Confirmed>(where.root, where.confirmed, {});
-    const old = await readRecord(where.root, where.rel);
-    const c = confirmed[where.key];
-    await writeRecord(where.root, where.rel, articleText(a, c && c.sha === sha(a.body) ? c.on : null, at), old === null ? "create" : "append", at);
-    kept.push(`${where.shown}${isReading(a.type) ? (c && c.sha === sha(a.body) ? " (confirmed)" : " (reading: ai)") : ""}`);
+    const rel = join(WIKI, `${a.path}.md`);
+    const old = await readRecord(root, rel);
+    const c = confirmed[a.path];
+    await writeRecord(root, rel, articleText(a, c && c.sha === sha(a.body) ? c.on : null, at), old === null ? "create" : "append", at);
+    kept.push(`wiki/${a.path}${isReading(a.type) ? (c && c.sha === sha(a.body) ? " (confirmed)" : " (reading: ai)") : ""}`);
   }
   const log = await json<Absorb>(root, ABSORB, { absorbed: {} });
   for (const id of draft.absorbed) log.absorbed[id] ??= at;
   await writeRecord(root, ABSORB, `${JSON.stringify(log, null, 2)}\n`, "append", at);
   await rebuildWikiIndex(root, now);
   return kept;
-}
-
-const OF_ME_CONFIRMED = join(OF_ME, "_confirmed.json");
-
-/** Where an article is kept: the wiki, or the soul vault's of-me/ for a pattern, tension or identity when there is one. */
-function placeOf(root: string, soulRoot: string | null, path: string, type: string): { root: string; rel: string; confirmed: string; key: string; shown: string } {
-  if (soulRoot && isGrounded(type)) {
-    const key = path.replace(/\//g, "-");
-    return { root: soulRoot, rel: join(OF_ME, `${key}.md`), confirmed: OF_ME_CONFIRMED, key, shown: `soul:${OF_ME}/${key}` };
-  }
-  return { root, rel: join(WIKI, `${path}.md`), confirmed: CONFIRMED, key: path, shown: `${WIKI}/${path}` };
 }
 
 function parseArticle(text: string): { head: Record<string, string>; body: string } {
@@ -328,27 +303,19 @@ function parseArticle(text: string): { head: Record<string, string>; body: strin
 
 /** Confirm a reading: it becomes the person's, for this text only. */
 export async function confirmReading(root: string, path: string, now: Date): Promise<void> {
-  const ofMe = /^(soul:)?of-me\//.test(path);
-  if (!ofMe) await needOn(root);
-  const home = await journalHome(root);
-  if (ofMe && !home.soul) throw new Error("there is no soul vault, so nothing is kept in of-me/");
-  const p = path.replace(/^(soul:)?(wiki|of-me)\//, "").replace(/\.md$/, "");
-  const where = ofMe ? { root: home.root, rel: join(OF_ME, `${p}.md`), confirmed: OF_ME_CONFIRMED } : { root, rel: join(WIKI, `${p}.md`), confirmed: CONFIRMED };
-  const text = await readRecord(where.root, where.rel);
-  if (text === null) throw new Error(`no article ${where.rel}`);
+  await needOn(root);
+  const p = path.replace(/^wiki\//, "").replace(/\.md$/, "");
+  const rel = join(WIKI, `${p}.md`);
+  const text = await readRecord(root, rel);
+  if (text === null) throw new Error(`no article ${rel}`);
   const { head, body } = parseArticle(text);
-  if (!head.reading) throw new Error(`${where.rel} is a ${head.type ?? "plain"} article, not a reading of you; only patterns, tensions, identities, philosophies and the like need confirming`);
-  // A reading that no longer answers to the element table cannot be confirmed.
-  if (isGrounded(head.type ?? "")) {
-    const why = groundProblem(head.type!, elementsOf(head.elements), await citedMoments(home, body));
-    if (why) throw new Error(`${where.rel} does not answer to the element table: ${why}`);
-  }
+  if (!head.reading) throw new Error(`${rel} is a ${head.type ?? "plain"} article, not a reading of you; only patterns, tensions, identities, philosophies and the like need confirming`);
   const at = now.toISOString();
-  const confirmed = await json<Confirmed>(where.root, where.confirmed, {});
+  const confirmed = await json<Confirmed>(root, CONFIRMED, {});
   confirmed[p] = { sha: sha(body), on: at.slice(0, 10) };
-  await writeRecord(where.root, where.confirmed, `${JSON.stringify(confirmed, null, 2)}\n`, (await readRecord(where.root, where.confirmed)) === null ? "create" : "append", at);
-  await writeRecord(where.root, where.rel, text.replace(/^reading: .*$/m, `reading: confirmed ${at.slice(0, 10)}`), "append", at);
-  if (!ofMe) await rebuildWikiIndex(root, now);
+  await writeRecord(root, CONFIRMED, `${JSON.stringify(confirmed, null, 2)}\n`, "append", at);
+  await writeRecord(root, rel, text.replace(/^reading: .*$/m, `reading: confirmed ${at.slice(0, 10)}`), "append", at);
+  await rebuildWikiIndex(root, now);
 }
 
 /** Rewrite _index.md (articles by folder, with aliases and whether a reading is confirmed) and _backlinks.json. */
@@ -374,8 +341,6 @@ export async function rebuildWikiIndex(root: string, now: Date): Promise<void> {
     lines.push("");
   }
   if (!all.length) lines.push("(no articles yet)");
-  const home = await journalHome(root).catch(() => null);
-  if (home?.soul) lines.push("", "Readings of me (patterns, tensions, identities) are kept in my soul vault, in of-me/, not here.");
   const at = now.toISOString();
   const write = async (rel: string, text: string) => writeRecord(root, rel, text, (await readRecord(root, rel)) === null ? "create" : "append", at);
   await write(INDEX, `${lines.join("\n").replace(/\n+$/, "")}\n`);
@@ -408,13 +373,8 @@ export async function wikiStatus(root: string, layout: Layout, person: string): 
 export async function wikiProblems(root: string): Promise<string[]> {
   if (!(await isOn(root))) return [];
   const out: string[] = [];
-  const home = await journalHome(root);
   for (const a of await articles(root)) {
-    const { head, body } = parseArticle(a.text);
-    if (isGrounded(head.type ?? "")) {
-      const why = groundProblem(head.type!, elementsOf(head.elements), await citedMoments(home, body));
-      if (why) out.push(`wiki/${a.path}.md: ${why}`);
-    }
+    const { body } = parseArticle(a.text);
     for (const m of body.matchAll(LINK)) {
       const p = m[1]!.trim().replace(/\.md$/, "");
       const where = p.startsWith("moments/") ? (await journalHome(root)).root : root;

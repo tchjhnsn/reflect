@@ -10,7 +10,6 @@ import { mkdir, readdir, readFile, rename, rmdir, stat, writeFile } from "node:f
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { adopt, readConfig, type InstanceConfig } from "./instance.ts";
 import { recordPaths, SOUL_DIRS } from "./layout.ts";
-import { boundProblems, holdProblems, ofMeProblems } from "./ground.ts";
 import { nextLine } from "./memory.ts";
 import { readRecord, writeRecord } from "./record-io.ts";
 
@@ -100,11 +99,11 @@ export async function initSoul(lifeRoot: string, soulDir: string, now = new Date
 export type SoulStatus = { root: string; moments: number; readings: number; bindings: number; holds: number; ofMe: number };
 
 export async function soulStatus(soulRoot: string): Promise<SoulStatus> {
-  const count = async (dir: string) => (await filesIn(soulRoot, dir)).filter((f) => !f.endsWith("README.md") && !f.endsWith(".gitkeep") && !f.endsWith(".draft.json") && !f.split("/").pop()!.startsWith("_")).length;
+  const count = async (dir: string) => (await filesIn(soulRoot, dir)).filter((f) => !f.endsWith("README.md") && !f.endsWith(".gitkeep") && !f.endsWith(".draft.json")).length;
   return { root: soulRoot, moments: await count("moments"), readings: await count("readings"), bindings: await count("bindings"), holds: await count("holds"), ofMe: await count("of-me") };
 }
 
-/** Problems for `reflect check` in a soul vault: soul.json names this person, the life vault it names links back, and bindings, holds and readings of the person answer to the record and the table. */
+/** Problems for `reflect check` in a soul vault: soul.json names this person, and the life vault it names links back. */
 export async function soulProblems(soulRoot: string, config: InstanceConfig): Promise<string[]> {
   const out: string[] = [];
   const soul = await readRecord(soulRoot, "soul.json");
@@ -117,6 +116,5 @@ export async function soulProblems(soulRoot: string, config: InstanceConfig): Pr
     if (!life) out.push(`no life vault at ${lifeRoot}`);
     else if (life.person !== config.person || !life.soul || resolve(lifeRoot, life.soul) !== resolve(soulRoot)) out.push(`the life vault at ${lifeRoot} does not name this soul vault`);
   }
-  if (!out.length) out.push(...(await boundProblems(soulRoot)), ...(await holdProblems(soulRoot)), ...(await ofMeProblems(soulRoot)));
   return out;
 }
