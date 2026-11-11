@@ -2,7 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { BOOK_STATUS, type BookStatus } from "@reflect/core/learning";
+import { BOOK_STATUS, FILM_STATUS, type BookStatus, type FilmStatus } from "@reflect/core/learning";
+import { readSweep } from "@reflect/core/sweep";
+import { addInput } from "@/server/ideas-store";
+import { keepSweepItems } from "@/server/sweep-store";
 import { lookupIsbn } from "@reflect/core/openlibrary";
 import { requireUser } from "@/server/session";
 import { addBook, addSubjects, keepRecall, rateSubject, setBookStatus, getBook } from "@/server/learn-store";
@@ -130,4 +133,42 @@ export async function keepLinkedInAction(form: FormData): Promise<void> {
   await keepLinkedIn(user.id, u.linkedin, { endorsements: on("endorsements"), recommendations: on("recommendations"), certifications: on("certifications"), skills: on("skills") });
   revalidatePath("/learn");
   redirect("/learn");
+}
+
+const opt = (form: FormData, k: string) => String(form.get(k) ?? "").trim();
+
+/** Keep a film, talk, conversation or link: an input beside the books. */
+export async function addInputAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  const kind = opt(form, "kind");
+  const title = opt(form, "title");
+  const url = opt(form, "url");
+  const on = opt(form, "on");
+  const subjects = list(form.get("subjects"));
+  if (kind === "film") await addInput(user.id, { kind: "film", title, film: opt(form, "film") || "film", ...(opt(form, "year") ? { year: Number(opt(form, "year")) } : {}), status: ((FILM_STATUS as readonly string[]).includes(opt(form, "status")) ? opt(form, "status") : "watched") as FilmStatus }, subjects);
+  else if (kind === "talk") await addInput(user.id, { kind: "talk", title, speaker: opt(form, "who"), ...(on ? { on } : {}), ...(url ? { url } : {}) }, subjects);
+  else if (kind === "conversation") await addInput(user.id, { kind: "conversation", with: opt(form, "who").split(/[;,]/), on: on || new Date().toISOString().slice(0, 10), about: title }, subjects);
+  else if (kind === "link") await addInput(user.id, { kind: "link", title: title || url, link: opt(form, "link") || "article", ...(url ? { url } : {}), ...(opt(form, "who") ? { by: opt(form, "who") } : {}) }, subjects);
+  else throw new Error("choose a film, a talk, a conversation or a link");
+  revalidatePath("/learn");
+}
+
+/** Read the reply of the person's own AI to the memory sweep prompt; nothing is kept until they choose. */
+export async function sweepAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  const file = form.get("file");
+  const text = file instanceof File && file.size ? await file.text() : opt(form, "reply");
+  if (!text) throw new Error("paste your AI's reply, or choose the file it is in");
+  if (text.length > 2_000_000) throw new Error("the reply is too long");
+  const id = await saveUpload(user.id, "sweep", file instanceof File && file.size ? file.name : "pasted reply", readSweep(text));
+  redirect(`/learn/upload/${id}`);
+}
+
+export async function keepSweepAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  const id = String(form.get("upload") ?? "");
+  await keepSweepItems(user.id, id, form.getAll("row").map(Number).filter((n) => Number.isInteger(n) && n >= 0));
+  revalidatePath(`/learn/upload/${id}`);
+  revalidatePath("/learn");
+  revalidatePath("/ideas");
 }

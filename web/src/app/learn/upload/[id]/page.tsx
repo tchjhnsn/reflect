@@ -5,7 +5,8 @@ import { requireUser } from "@/server/session";
 import { currentName } from "@/server/person-store";
 import { getUpload } from "@/server/learn-sources-store";
 import { initialOf, Nav } from "../../../nav";
-import { keepCoursesAction, keepLinkedInAction } from "../../actions";
+import { keepCoursesAction, keepLinkedInAction, keepSweepAction } from "../../actions";
+import { sweepLine } from "@reflect/core/sweep";
 
 export const metadata: Metadata = { title: "Upload" };
 export const dynamic = "force-dynamic";
@@ -62,6 +63,25 @@ export default async function UploadPage({ params }: { params: Promise<{ id: str
               <p className="note">{u.linkedin.skills.join(", ")}</p>
             </fieldset>
             <div className="actions"><button type="submit" className="primary">Keep what is checked</button></div>
+          </form>
+        </>
+      ) : u.sweep ? (
+        <>
+          <h1 className="title">From {u.sweep.assistant}&apos;s memory</h1>
+          <p className="sec-note">Check each item against what you know and keep the right ones. Inputs go to Learn and your ideas to Ideas; an input your AI only inferred is kept as maybe from. Nothing here sets how well you know anything.</p>
+          <form action={keepSweepAction}>
+            <input type="hidden" name="upload" value={u.id} />
+            <ul className="note learn-list" style={{ listStyle: "none", paddingLeft: 0 }}>
+              {u.sweep.items.map((it, i) => (
+                <li key={i}>
+                  <label>
+                    <input type="checkbox" name="row" value={i} defaultChecked={!u.kept.includes(i) && it.confidence !== "low"} disabled={u.kept.includes(i)} /> {sweepLine(it)}{u.kept.includes(i) ? " (kept)" : ""}
+                  </label>
+                </li>
+              ))}
+            </ul>
+            {u.sweep.openQuestions.length ? <p className="sec-note">It could not tell: {u.sweep.openQuestions.join("; ")}</p> : null}
+            <div className="actions"><button type="submit" className="primary">Keep the checked items</button></div>
           </form>
         </>
       ) : null}

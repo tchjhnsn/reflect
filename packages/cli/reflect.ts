@@ -9,7 +9,9 @@ import { parseArgs } from "node:util";
 import { filesJournal } from "../core/src/files-journal.ts";
 import { adopt, checkInstance, initInstance, layoutOf, readConfig, upgradeVault } from "../core/src/instance.ts";
 import { addGift, addTrustee, LEGACY_ENTRIES, planProblems, previewRelease, readPlan, setTerms } from "../core/src/release.ts";
-import { BOOK_STATUS, GRASP, keepBook, keepRecall, latestGrasp, parseSubject, keepResource, keepSubject, learnMap, RESOURCE_STATUS, type BookStatus, type Grasp, type ResourceStatus, type SubjectRow } from "../core/src/learning.ts";
+import { BOOK_STATUS, FILM_STATUS, GRASP, keepBook, keepConversation, keepFilm, keepRecall, keepTalk, latestGrasp, parseSubject, keepResource, keepSubject, learnMap, RESOURCE_STATUS, type BookStatus, type FilmStatus, type Grasp, type ResourceStatus, type SubjectRow } from "../core/src/learning.ts";
+import { isStance, keepIdea, listIdeas, resolveTarget, STANCES, targetText, type Stance } from "../core/src/ideas.ts";
+import { keepSweep, readSweep, sweepLine, SWEEP_PROMPT, type Sweep } from "../core/src/sweep.ts";
 import { keepNeed, keepPassage, LEGACY_PROMPTS, legacyPrompt } from "../core/src/lifetime.ts";
 import { lookupIsbn, readCatalogEntry, saveCatalogEntry, searchBooks, type Fetch } from "../core/src/openlibrary.ts";
 import { draftTranscript, keepCourse, listCourses, transcriptText, type Chat, type TranscriptDraft } from "../core/src/transcript.ts";
@@ -39,10 +41,11 @@ const USAGE = `reflect <command> [--dir <instance>]
   release trustee <name> --contact <how to reach them>
   release give <legacy/... | legacy-entries> --to <name> --contact <how to reach them>
   release terms [--confirmations N] [--wait <days>]
-  learn                           what you know, the books you have read and what of them you have not
-                                  rated, what you aspire to and need to learn, and what you could learn next
+  learn                           what you know, what you showed and what was suggested, your books,
+                                  films, talks and conversations, what you aspire to and need to learn,
+                                  and what you could learn next
   learn find <title or author>     look a book up in Open Library: title, authors, year, ISBN
-  learn book <title> [--isbn N [--lookup]] [--by <author;author>] [--status want|reading|read|abandoned]
+  learn book <title> [--isbn N [--lookup]] [--by <author;author>] [--status want|reading|read|abandoned|referenced]
                 [--subjects a,b] [--on YYYY-MM[-DD]]
                                   --lookup fills authors from Open Library and shows its subjects and
                                   contents; you keep the subjects that fit with --subjects
@@ -63,8 +66,28 @@ const USAGE = `reflect <command> [--dir <instance>]
                                   ideas, remember the gist, or don't remember it
   learn aspire <subject> [--requires a,b] [--part-of x] [--same-as wikidata:Q123 | lcsh:sh123]
   learn need <subject> --for <intent, venture, need or role> [--requires a,b] [--same-as ...]
-  learn resource <name> [--kind video|channel|article|course|podcast|paper|lab|site] [--url <link>]
-                [--subjects a,b] [--by <who>] [--platform <id>] [--status saved|started|finished|dropped]
+  learn resource <name> [--kind video|channel|article|post|thread|newsletter|course|podcast|paper|lab|site]
+                [--url <link>] [--subjects a,b] [--by <who>] [--platform <id>] [--status saved|started|finished|dropped]
+                                  a link you keep: an X, Substack or Reddit link gets its source from the link
+  learn film <title> [--kind film|documentary|series|short] [--year N] [--by <director>]
+                [--status want|watching|watched|abandoned|referenced] [--subjects a,b]
+  learn talk <title> --speaker <who> [--on <date>] [--where <place>] [--url <link>] [--subjects a,b]
+                                  someone you saw speak: a lecture, a sermon, a keynote, a video of one
+  learn conversation <what it was about> --with <name;name> [--on <date>] [--subjects a,b]
+                                  a conversation that fed your thinking, in your words
+  learn sweep                     the prompt to paste into your AI: it lists from its memory of you what
+                                  you read, watched and heard, subjects you showed or it suggests, and
+                                  your own ideas with their inputs
+  learn sweep <reply file>        read your AI's reply into learn/sweep.draft.json and list its items
+  learn sweep --keep <1,2,5 | all>
+                                  keep those items; an idea's inputs your AI only inferred are kept as
+                                  maybe from, and nothing sets your grasp
+  idea                            your ideas, each with its inputs and recommendations
+  idea <title> [statement] [--from <input>]... [--maybe <input>]... [--how <text>]
+                [--related <stance>:<thing> --by <who> [--note <text>]]... [--drop <thing>]...
+                                  keep an idea in your words (outputs, apart from learn/). An input is a
+                                  note (learn/books/x), a title you kept, or your own words; stance is
+                                  supports, extends, parallels, challenges or opposes
   write [text] [--date YYYY-MM-DD] write an entry (text from the argument or stdin); prints its id
   spark [--minutes 1|5|10|15 | --sentence]
                                   a noun to write about, and how long
@@ -163,6 +186,14 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
       status: { type: "string" },
       out: { type: "string" },
       "moving-to": { type: "string" },
+      speaker: { type: "string" },
+      year: { type: "string" },
+      with: { type: "string" },
+      how: { type: "string" },
+      from: { type: "string", multiple: true },
+      maybe: { type: "string", multiple: true },
+      related: { type: "string", multiple: true },
+      drop: { type: "string", multiple: true },
       help: { type: "boolean", short: "h" },
     },
   });
@@ -428,6 +459,48 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
       out(`kept: learn/subjects/${s.id}.md ${sub}${s.for ? ` for ${s.for}` : ""}`);
       return 0;
     }
+    if (sub === "film") {
+      if (!name) throw new Error("learn film <title> [--status watched] [--subjects a,b]");
+      if (values.status && !(FILM_STATUS as readonly string[]).includes(values.status)) throw new Error(`--status is one of ${FILM_STATUS.join(", ")}`);
+      const f = await keepFilm(root, name, { ...(values.kind ? { kind: values.kind } : {}), ...(values.year ? { year: Number(values.year) } : {}), ...(values.by ? { by: values.by } : {}), ...(values.status ? { status: values.status as FilmStatus } : {}), subjects: list(values.subjects), ...(values.on ? { on: values.on } : {}) }, now);
+      out(`kept: learn/films/${f.id}.md ${f.status}`);
+      return 0;
+    }
+    if (sub === "talk") {
+      if (!name) throw new Error("learn talk <title> --speaker <who>");
+      const t = await keepTalk(root, name, { ...(values.speaker ? { speaker: values.speaker } : {}), ...(values.on ? { on: values.on } : {}), ...(values.where ? { where: values.where } : {}), ...(values.url ? { url: values.url } : {}), subjects: list(values.subjects) }, now);
+      out(`kept: learn/talks/${t.id}.md ${t.speaker}`);
+      return 0;
+    }
+    if (sub === "conversation") {
+      if (!name || !values.with) throw new Error("learn conversation <what it was about> --with <name;name>");
+      const c = await keepConversation(root, { with: values.with.split(";"), ...(values.on ? { on: values.on } : {}), about: name, subjects: list(values.subjects) }, now);
+      out(`kept: learn/conversations/${c.id}.md`);
+      return 0;
+    }
+    if (sub === "sweep") {
+      const draftRel = join("learn", "sweep.draft.json");
+      if (values.keep) {
+        const s = JSON.parse(await readFile(join(root, draftRel), "utf8").catch(() => { throw new Error("no sweep draft; run: reflect learn sweep <your AI's reply>"); })) as Sweep;
+        const nums = values.keep === "all" ? s.items.map((_, i) => i + 1) : values.keep.split(",").map((x) => Number(x.trim()));
+        if (nums.some((n) => !Number.isInteger(n) || n < 1)) throw new Error("--keep takes all or item numbers like 1,2,5");
+        for (const k of await keepSweep(root, s, nums, now)) out(`kept: ${k}`);
+        out(`Rate what you know: reflect learn grasp <subject> <${GRASP.map((g) => g.id).join("|")}>`);
+        return 0;
+      }
+      if (!name) {
+        out(SWEEP_PROMPT);
+        return 0;
+      }
+      const s = readSweep(await readFile(name, "utf8"));
+      await mkdir(join(root, "learn"), { recursive: true });
+      await writeFile(join(root, draftRel), `${JSON.stringify(s, null, 2)}\n`);
+      out(`${s.assistant}${s.reportedAt ? ` (${s.reportedAt})` : ""} found ${s.items.length} item(s):`);
+      s.items.forEach((i, n) => out(`  ${n + 1}. ${sweepLine(i)}`));
+      for (const oq of s.openQuestions) out(`  open: ${oq}`);
+      out("Check each against what you know, then keep the right ones: reflect learn sweep --keep 1,2,3 (or all)");
+      return 0;
+    }
     if (sub === "resource") {
       if (!name) throw new Error("learn resource <name> --kind <kind> [--url <link>] [--subjects a,b]");
       if (values.status && !(RESOURCE_STATUS as readonly string[]).includes(values.status)) throw new Error(`--status is one of ${RESOURCE_STATUS.join(", ")}`);
@@ -435,10 +508,10 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
       out(`kept: learn/resources/${r.id}.md ${r.status}`);
       return 0;
     }
-    if (sub) throw new Error("learn takes find, book, recall, transcript, credential, linkedin, grasp, aspire, need or resource");
+    if (sub) throw new Error("learn takes find, book, recall, transcript, credential, linkedin, grasp, aspire, need, resource, film, talk, conversation or sweep");
     const m = await learnMap(root);
     const text = (g: Grasp) => GRASP.find((x) => x.id === g)!.text;
-    const from = (r: SubjectRow) => [...r.books.map((b) => b.id), ...r.resources.map((x) => `${x.id} (${x.status})`)];
+    const from = (r: SubjectRow) => [...r.books.map((b) => b.id), ...r.films.map((f) => f.id), ...r.talks.map((t) => t.id), ...r.resources.map((x) => `${x.id} (${x.status})`)];
     const ready = (r: SubjectRow) => (r.blockedBy.length ? `first learn ${r.blockedBy.join(", ")}` : "ready");
     const via = (r: SubjectRow) => (from(r).length ? `; from ${from(r).join(", ")}` : "");
     out("Known");
@@ -461,9 +534,29 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
     out("Books");
     for (const { book: b, unrated } of m.books) out(`  ${b.id}  ${b.status}${b.finished ? ` ${b.finished}` : ""}${unrated.length ? `; not yet rated: ${unrated.join(", ")}` : ""}`);
     if (!m.books.length) out("  none yet: reflect learn book <title> --status read");
+    if (m.shown.length) {
+      out("Shown, not yet rated by you");
+      for (const r of m.shown) out(`  ${r.subject.id}  shown ${r.subject.shown} time(s)`);
+    }
     if (m.vouched.length) {
       out("Vouched for by others, not yet rated by you");
       for (const r of m.vouched) out(`  ${r.subject.id}  vouched for by ${r.vouches}`);
+    }
+    if (m.suggested.length) {
+      out("Suggested, not known");
+      for (const r of m.suggested) out(`  ${r.subject.id}${via(r)}`);
+    }
+    if (m.films.length) {
+      out("Films");
+      for (const f of m.films) out(`  ${f.id}  ${f.kind}, ${f.status}${f.watched ? ` ${f.watched}` : ""}`);
+    }
+    if (m.talks.length) {
+      out("Talks");
+      for (const t of m.talks) out(`  ${t.id}  ${t.speaker}${t.on ? `, ${t.on}` : ""}`);
+    }
+    if (m.conversations.length) {
+      out("Conversations");
+      for (const c of m.conversations) out(`  ${c.on}  with ${c.with.join(", ")}: ${c.about}`);
     }
     out("Aspire");
     for (const r of m.aspire) out(`  ${r.subject.id}  ${ready(r)}${via(r)}`);
@@ -474,6 +567,33 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
     out("Possible next");
     for (const r of m.possible) out(`  ${r.subject.id}  ${r.subject.requires.length ? "you know what it requires" : `a first step toward ${[...m.aspire, ...m.need].filter((w) => w.subject.requires.includes(r.subject.id)).map((w) => w.subject.id).join(", ") || "what needs it"}`}`);
     if (!m.possible.length) out("  nothing your map names yet; the rest is the whole internet");
+    return 0;
+  }
+  if (cmd === "idea") {
+    if (layoutOf(config) !== "vault") throw new Error("idea needs a vault; this instance uses the older people/<id> layout");
+    const [title, statement] = rest;
+    if (!title) {
+      const ideas = await listIdeas(root);
+      if (!ideas.length) out("No ideas yet: reflect idea <title> <the idea in your words> --from <what fed it>");
+      for (const i of ideas) {
+        out(`${i.id}  ${i.statement ?? ""}`);
+        for (const x of i.from) out(`  from ${targetText(x)}${x.how ? `: ${x.how}` : ""}`);
+        for (const x of i.maybe) out(`  maybe from ${targetText(x)}${x.how ? `: ${x.how}` : ""}`);
+        for (const r of i.related) out(`  ${r.stance}: ${targetText(r)}, suggested by ${r.by}${r.note ? `: ${r.note}` : ""}`);
+      }
+      return 0;
+    }
+    const inputs = async (xs: string[] | undefined) => Promise.all((xs ?? []).map(async (x) => ({ target: await resolveTarget(root, x), ...(values.how ? { how: values.how } : {}) })));
+    const related = await Promise.all((values.related ?? []).map(async (r) => {
+      const at = r.indexOf(":");
+      const stance = at > 0 ? r.slice(0, at).trim() : "";
+      if (!isStance(stance)) throw new Error(`--related is <stance>:<thing>; stance is one of ${STANCES.map((x) => x.id).join(", ")}`);
+      if (!values.by) throw new Error("--related needs --by: who suggested it (you, your AI, a friend)");
+      return { target: await resolveTarget(root, r.slice(at + 1)), stance: stance as Stance, by: values.by, ...(values.note ? { note: values.note } : {}) };
+    }));
+    const drop = await Promise.all((values.drop ?? []).map((x) => resolveTarget(root, x)));
+    const i = await keepIdea(root, title, { ...(statement ? { statement } : {}), from: await inputs(values.from), maybe: await inputs(values.maybe), related, drop, ...(values.on ? { on: values.on } : {}) }, new Date());
+    out(`kept: ideas/${i.id}.md; ${i.from.length} from, ${i.maybe.length} maybe from, ${i.related.length} recommendation(s)`);
     return 0;
   }
   if ((cmd === "need" || cmd === "passage") && layoutOf(config) !== "vault") throw new Error(`${cmd} needs a vault; this instance uses the older people/<id> layout`);

@@ -16,6 +16,9 @@ import { addCourses, addCredential, listCourses, listCredentials } from "./learn
 import { BOOK_STATUS, GRASP, type BookStatus } from "@reflect/core/learning";
 import { lookupIsbn, type Fetch } from "@reflect/core/openlibrary";
 import { siteUrl } from "./site";
+import { STANCES, type Stance, type Target } from "@reflect/core/ideas";
+import { FILM_KINDS, FILM_STATUS, RESOURCE_KINDS, type FilmStatus } from "@reflect/core/learning";
+import { addInput, keepIdea, listIdeas, listInputs, markSubject, resolveByTitle, inputTitle } from "./ideas-store";
 
 /** The elements, from the reader's own description, so an outside AI uses the same words. */
 const ELEMENTS = SALIENCE_PROMPT.slice(SALIENCE_PROMPT.indexOf("The 16 elements"), SALIENCE_PROMPT.indexOf("\n\nRules")).trim();
@@ -97,8 +100,11 @@ export async function toolRecallCheck(userId: string, bookId: string, recalled: 
 
 export async function toolLearning(userId: string) {
   const v = await learnView(userId);
-  const [courses, credentials] = await Promise.all([listCourses(userId), listCredentials(userId)]);
+  const [courses, credentials, inputs] = await Promise.all([listCourses(userId), listCredentials(userId), listInputs(userId)]);
   return {
+    shown_not_rated: v.shown.map((s) => s.name),
+    suggested_not_known: v.suggested.map((s) => s.name),
+    inputs: inputs.map((i) => ({ id: i.id, kind: i.body.kind, title: inputTitle(i.body), subjects: i.subjects })),
     known: v.known.map((s) => ({ subject: s.name, grasp: s.grasp, vouched_for_by: s.vouches })),
     vouched_not_rated: v.vouched.map((s) => ({ subject: s.name, vouched_for_by: s.vouches })),
     courses: courses.map((c) => ({ ...c.row, your_grasp: c.subject.grasp?.grasp ?? null })),
@@ -190,7 +196,7 @@ export function reflectServer(userId: string): McpServer {
 
   server.registerTool("learning", {
     title: "What the person knows",
-    description: "Subjects the person rated as known (could teach, explain or remember the gist), and their books with the subjects of read books not yet rated. Nothing is known until the person rates it.",
+    description: "What the person took in: subjects they rated as known (could teach, explain or remember the gist), subjects shown but not rated, subjects suggested, their books (with subjects of read books not yet rated), films, talks, conversations, links, courses and credentials. Nothing is known until the person rates it. Their own ideas are under ideas.",
     annotations: { readOnlyHint: true },
   }, async () => text(await toolLearning(userId)));
 
@@ -208,7 +214,7 @@ export function reflectServer(userId: string): McpServer {
 
   server.registerTool("set_book_status", {
     title: "Where the person is with a book",
-    description: "want, reading, read or abandoned. Reading records when they started; read records when they finished.",
+    description: "want, reading, read, abandoned or referenced (cited or mentioned, how far read not said). Reading records when they started; read records when they finished.",
     inputSchema: z.object({ book_id: z.string().uuid(), status: z.enum(BOOK_STATUS as unknown as [string, ...string[]]) }),
   }, async ({ book_id, status }) => text(await setBookStatus(userId, book_id, status as BookStatus).then(() => ({ ok: true }))));
 
@@ -235,6 +241,67 @@ export function reflectServer(userId: string): McpServer {
     description: "The person's own rating, never yours: teach (could teach it), explain (could explain the key ideas), gist (remember the gist) or forgot (don't remember it). A new rating never changes an old one; the latest counts.",
     inputSchema: z.object({ subject: z.string().min(1), grasp: z.enum(["teach", "explain", "gist", "forgot"]), book_id: z.string().uuid().optional(), note: z.string().optional() }),
   }, async ({ subject, grasp, book_id, note }) => text(await rateSubject(userId, subject, grasp, { ...(book_id ? { bookId: book_id } : {}), ...(note ? { note } : {}) }).then(() => ({ ok: true }))));
+
+  server.registerTool("add_input", {
+    title: "Keep a film, talk, conversation or link",
+    description: "Something the person took in beside books: a film, documentary or series; a talk (someone they saw speak); a conversation (with whom, what about); or a link (a post or thread on X, Substack or Reddit, a video, an article). Keep only what the person confirms, as they state it.",
+    inputSchema: z.object({
+      kind: z.enum(["film", "talk", "conversation", "link"]),
+      title: z.string().optional().describe("the title; for a conversation, what it was about"),
+      who: z.array(z.string().min(1)).optional().describe("the speaker, the people in the conversation, or the author"),
+      url: z.string().url().optional(),
+      on: z.string().optional().describe("YYYY, YYYY-MM or YYYY-MM-DD"),
+      film: z.enum(FILM_KINDS as unknown as [string, ...string[]]).optional(),
+      status: z.enum(FILM_STATUS as unknown as [string, ...string[]]).optional(),
+      year: z.number().int().optional(),
+      link: z.enum(RESOURCE_KINDS as unknown as [string, ...string[]]).optional(),
+      subjects: z.array(z.string().min(1)).max(60).optional(),
+    }),
+  }, async (a) => {
+    const title = a.title ?? "";
+    const who = a.who ?? [];
+    const body = a.kind === "film" ? { kind: "film" as const, title, film: a.film ?? "film", ...(a.year ? { year: a.year } : {}), status: (a.status ?? "watched") as FilmStatus }
+      : a.kind === "talk" ? { kind: "talk" as const, title, speaker: who.join(", "), ...(a.on ? { on: a.on } : {}), ...(a.url ? { url: a.url } : {}) }
+      : a.kind === "conversation" ? { kind: "conversation" as const, with: who, on: a.on ?? new Date().toISOString().slice(0, 10), about: title }
+      : { kind: "link" as const, title: title || a.url || "", link: a.link ?? "article", ...(a.url ? { url: a.url } : {}), ...(who.length ? { by: who.join(", ") } : {}) };
+    return text({ input_id: await addInput(userId, body, a.subjects ?? []) });
+  });
+
+  server.registerTool("mark_subject", {
+    title: "Note that the person showed knowledge of a subject, or suggest one",
+    description: "shown: you saw the person display knowledge of an established subject (they explained it, applied it, corrected you, taught it); say what you saw. suggested: you think a subject relates to them. Neither is a grasp; only the person rates their grasp (rate_subject). A framing of the person's own is an idea (keep_idea), not a subject. Mark only with the person's yes.",
+    inputSchema: z.object({ subject: z.string().min(1), kind: z.enum(["shown", "suggested"]), by: z.string().min(1).describe("your product name"), evidence: z.string().optional() }),
+  }, async ({ subject, kind, by, evidence }) => text(await markSubject(userId, subject, kind, by, evidence).then(() => ({ ok: true }))));
+
+  server.registerTool("ideas", {
+    title: "The person's own ideas",
+    description: "Each idea in the person's latest words, what it came from (and maybe from), and recommendations placed from supports to opposes. Ideas are outputs; what the person took in is under learning.",
+    annotations: { readOnlyHint: true },
+  }, async () => text((await listIdeas(userId)).map(({ labels, ...i }) => {
+    const named = (t: Target) => ({ ...(t.ref ? { ref: t.ref, title: labels[t.ref] } : { text: t.text }), ...(t.url ? { url: t.url } : {}) });
+    return { id: i.id, title: i.title, statement: i.statement, from: i.from.map((x) => ({ ...named(x), how: x.how })), maybe_from: i.maybe.map((x) => ({ ...named(x), how: x.how })), recommendations: i.related.map((r) => ({ ...named(r), stance: r.stance, by: r.by, note: r.note })) };
+  })));
+
+  server.registerTool("keep_idea", {
+    title: "Keep one of the person's ideas",
+    description: `An idea of the person's own: a framing, thesis or hybrid ("X applied to Y"). Say it in their words. Name inputs by title (a book, film, talk, conversation or link they kept, matched by title, else kept as their words): from when the person says it fed the idea, maybe_from when they are not sure. Recommendations are things to study, not inputs, each with a stance: ${STANCES.map((x) => `${x.id} (${x.text})`).join(", ")}. A new line each time; the latest line about a thing decides where it stands. Send only what the person said yes to.`,
+    inputSchema: z.object({
+      title: z.string().min(1).max(200),
+      statement: z.string().optional().describe("required for a new idea; a restatement otherwise"),
+      from: z.array(z.object({ title: z.string().min(1), how: z.string().optional() })).max(50).optional(),
+      maybe_from: z.array(z.object({ title: z.string().min(1), how: z.string().optional() })).max(50).optional(),
+      recommendations: z.array(z.object({ title: z.string().min(1), url: z.string().url().optional(), stance: z.enum(STANCES.map((x) => x.id) as [Stance, ...Stance[]]), by: z.string().min(1), note: z.string().optional() })).max(50).optional(),
+    }),
+  }, async ({ title, statement, from, maybe_from, recommendations }) => {
+    const t = async (x: { title: string; url?: string }) => ({ ...(await resolveByTitle(userId, x.title)), ...(x.url ? { url: x.url } : {}) });
+    const id = await keepIdea(userId, title, {
+      ...(statement ? { statement } : {}),
+      from: await Promise.all((from ?? []).map(async (x) => ({ target: await t(x), ...(x.how ? { how: x.how } : {}) }))),
+      maybe: await Promise.all((maybe_from ?? []).map(async (x) => ({ target: await t(x), ...(x.how ? { how: x.how } : {}) }))),
+      related: await Promise.all((recommendations ?? []).map(async (r) => ({ target: await t(r), stance: r.stance, by: r.by, ...(r.note ? { note: r.note } : {}) }))),
+    });
+    return text({ idea_id: id });
+  });
 
   return server;
 }

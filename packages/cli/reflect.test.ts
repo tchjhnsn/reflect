@@ -100,7 +100,7 @@ describe("reflect CLI", () => {
     dirs.push(dir);
     await run("init", "--name", "Tester", "--dir", dir);
     expect(JSON.parse(await readFile(join(dir, "reflect.json"), "utf8")).layout).toBe("vault");
-    expect((await readdir(dir)).sort()).toEqual([".github", ".gitignore", "belonging", "community", "concepts", "documents", "household", "intents", "journal", "learn", "legacy", "life", "line", "memory.jsonl", "needs", "person.json", "polis", "reflect.json", "reflections", "telos", "work"]);
+    expect((await readdir(dir)).sort()).toEqual([".github", ".gitignore", "belonging", "community", "concepts", "documents", "household", "ideas", "intents", "journal", "learn", "legacy", "life", "line", "memory.jsonl", "needs", "person.json", "polis", "reflect.json", "reflections", "telos", "work"]);
     expect((await readdir(join(dir, "household"))).sort()).toEqual(["members", "home", "money"].sort());
     expect((await readdir(join(dir, "legacy"))).sort()).toEqual(["README.md", "bucket-list.md", "letters", "wishes.md"]);
     expect(await readFile(join(dir, "household", "members", "README.md"), "utf8")).toContain("past the threshold");
@@ -357,6 +357,78 @@ describe("reflect CLI", () => {
     expect((await run("learn", "--dir", dir)).out.find((l) => l.startsWith("  systems-thinking"))).toMatch(/could teach it .*; vouched for by 2$/);
     await run("check", "--adopt", "--dir", dir);
     expect((await run("check", "--dir", dir)).out).toEqual(["ok"]);
+  });
+
+  it("keeps films, talks, conversations and posts as inputs, and ideas as outputs that link them", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "reflect-cli-"));
+    dirs.push(dir);
+    await run("init", "--name", "Tester", "--dir", dir);
+    await run("learn", "book", "Politics", "--by", "Aristotle", "--status", "read", "--subjects", "political philosophy", "--dir", dir);
+    await run("learn", "film", "Metropolis", "--year", "1927", "--status", "watched", "--subjects", "urban design", "--dir", dir);
+    await expect(run("learn", "talk", "The Death and Life of Cities", "--dir", dir)).rejects.toThrow(/speaker/);
+    await run("learn", "talk", "Strong Towns", "--speaker", "Chuck Marohn", "--on", "2025-04", "--dir", dir);
+    await run("learn", "conversation", "whether a city can be corrupt", "--with", "Dad", "--on", "2026-10-01", "--dir", dir);
+    await run("learn", "resource", "A thread on zoning", "--kind", "thread", "--url", "https://www.reddit.com/r/urbanplanning/comments/abc", "--dir", dir);
+    expect(await readFile(join(dir, "learn/resources/a-thread-on-zoning.md"), "utf8")).toContain("source: reddit");
+
+    await expect(run("idea", "Corrupt cities", "--dir", dir)).rejects.toThrow(/statement/);
+    await run("idea", "Corrupt and correct cities", "A city is built in a correct form when it serves the common good, and a corrupt one when it serves its builders.", "--from", "Politics", "--how", "the test of Politics III", "--dir", dir);
+    await run("idea", "Corrupt and correct cities", "--maybe", "Metropolis", "--maybe", "a sermon on Micah 6", "--dir", dir);
+    await run("idea", "Corrupt and correct cities", "--related", "challenges:The Death and Life of Great American Cities", "--by", "Claude", "--note", "order that grows from below", "--dir", dir);
+    await expect(run("idea", "Corrupt and correct cities", "--related", "agrees:x", "--by", "Claude", "--dir", dir)).rejects.toThrow(/stance/);
+    await run("idea", "Corrupt and correct cities", "--from", "Metropolis", "--dir", dir);
+    const note = await readFile(join(dir, "ideas/corrupt-and-correct-cities.md"), "utf8");
+    expect(note).toContain("from: [[learn/books/politics]], [[learn/films/metropolis]]");
+    expect(note).toContain('maybe from "a sermon on Micah 6"');
+    expect(note).toContain('related challenges by Claude "The Death and Life of Great American Cities": order that grows from below');
+    const list = (await run("idea", "--dir", dir)).out.join("\n");
+    expect(list).toContain("from [[learn/films/metropolis]]");
+    expect(list).not.toContain("maybe from [[learn/films/metropolis]]");
+    expect(list).toContain("challenges: \"The Death and Life of Great American Cities\", suggested by Claude");
+    await run("idea", "Corrupt and correct cities", "--drop", "a sermon on Micah 6", "--dir", dir);
+    expect((await run("idea", "--dir", dir)).out.join("\n")).not.toContain("Micah");
+    await expect(run("idea", "Other", "x", "--from", "learn/books/missing", "--dir", dir)).resolves.toBeTruthy();
+    expect(await run("check", "--dir", dir)).toEqual({ code: 0, out: ["ok"] });
+    const map = (await run("learn", "--dir", dir)).out.join("\n");
+    expect(map).toContain("Films\n  metropolis  film, watched");
+    expect(map).toContain("Talks\n  strong-towns  Chuck Marohn, 2025-04");
+    expect(map).toContain("with Dad: whether a city can be corrupt");
+  });
+
+  it("reads a memory sweep from your AI and keeps only what you choose, inputs apart from ideas", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "reflect-cli-"));
+    dirs.push(dir);
+    await run("init", "--name", "Tester", "--dir", dir);
+    expect((await run("learn", "sweep", "--dir", dir)).out[0]).toContain("reflect.learn-source");
+    const reply = {
+      kind: "reflect.learn-source",
+      version: 1,
+      reported_by: { assistant: "Claude", basis: "saved memory", reported_at: "2026-11-11" },
+      books: [{ title: "Politics", authors: ["Aristotle"], engaged: "referenced", subjects: ["political philosophy"], basis: "i-said", evidence: "you cite Book III often", confidence: "high" }],
+      films: [{ title: "Metropolis", year: 1927, kind: "film", engaged: "finished", subjects: [], basis: "you-inferred", evidence: "you described its city", confidence: "medium" }],
+      links: [{ title: "Zoning thread", url: "https://x.com/someone/status/1", kind: "post", subjects: [], basis: "i-said", evidence: "you shared it", confidence: "high" }],
+      subjects: { shown: [{ name: "Political philosophy", how: "explained", evidence: "you explained Aristotle's six constitutions", confidence: "high" }], suggested: [{ name: "Urban design", because: "your interest in how cities are built", confidence: "medium" }] },
+      ideas: [{ title: "Corrupt and correct cities", statement: "Aristotle's correct and corrupt forms, applied to urban development.", inputs: [{ title: "Politics", how: "the correct and corrupt test" }, { title: "a talk I half remember" }], basis: "you-inferred", evidence: "you framed it while studying", confidence: "medium" }],
+    };
+    await writeFile(join(dir, "reply.md"), `Here it is.\n\n\`\`\`json\n${JSON.stringify(reply)}\n\`\`\`\n\nLeast sure of the film.`);
+    const draft = (await run("learn", "sweep", join(dir, "reply.md"), "--dir", dir)).out;
+    expect(draft[0]).toBe("Claude (2026-11-11) found 6 item(s):");
+    expect(draft[1]).toContain("1. book: Politics by Aristotle (referenced); you said, high");
+    await expect(run("learn", "sweep", "--keep", "9", "--dir", dir)).rejects.toThrow(/no item 9/);
+    await run("learn", "sweep", "--keep", "6,1,4,5", "--dir", dir);
+    expect(await readFile(join(dir, "learn/books/politics.md"), "utf8")).toContain("status: referenced");
+    const subject = await readFile(join(dir, "learn/subjects/political-philosophy.md"), "utf8");
+    expect(subject).toContain("shown by Claude: explained: you explained Aristotle's six constitutions");
+    expect(subject).not.toContain("grasp");
+    const idea = await readFile(join(dir, "ideas/corrupt-and-correct-cities.md"), "utf8");
+    expect(idea).toContain("maybe from [[learn/books/politics]]: the correct and corrupt test");
+    expect(idea).toContain('maybe from "a talk I half remember"');
+    await expect(readFile(join(dir, "learn/films/metropolis.md"), "utf8")).rejects.toThrow();
+    const map = (await run("learn", "--dir", dir)).out.join("\n");
+    expect(map).toContain("Shown, not yet rated by you\n  political-philosophy");
+    expect(map).toContain("Suggested, not known\n  urban-design");
+    expect(map).not.toMatch(/Known\n  political-philosophy/);
+    expect(await run("check", "--dir", dir)).toEqual({ code: 0, out: ["ok"] });
   });
 
   it("offers legacy prompts and keeps what you write as entries marked to survive you", async () => {

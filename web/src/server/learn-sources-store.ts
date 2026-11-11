@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { CredentialInput } from "@reflect/core/credentials";
 import type { LinkedInExport } from "@reflect/core/linkedin";
 import type { CourseRow, TranscriptDraft } from "@reflect/core/transcript";
+import type { Sweep } from "@reflect/core/sweep";
 import { db } from "@/db/pool";
 import { open, seal, tag } from "./crypto";
 import { subjectId, subjects, tx, type SubjectOut } from "./learn-store";
@@ -12,13 +13,13 @@ import { subjectId, subjects, tx, type SubjectOut } from "./learn-store";
  * before keeping. None of them set the person's grasp.
  */
 
-export type Upload = { id: string; kind: "transcript" | "linkedin"; fileName: string; createdAt: string; transcript?: TranscriptDraft; linkedin?: LinkedInExport; kept: number[] };
+export type Upload = { id: string; kind: "transcript" | "linkedin" | "sweep"; fileName: string; createdAt: string; transcript?: TranscriptDraft; linkedin?: LinkedInExport; sweep?: Sweep; kept: number[] };
 export type CourseOut = { id: string; row: CourseRow & { institution?: string }; subject: SubjectOut };
 export type CredentialOut = { id: string; name: string; issuer: string; issued?: string; expires?: string; url?: string; checked?: { name: string; issuer: string; issued?: string; at: string }; subjects: string[] };
 
 const MAX_FILE = 5_000_000;
 
-export async function saveUpload(userId: string, kind: Upload["kind"], fileName: string, body: TranscriptDraft | LinkedInExport, file?: Uint8Array): Promise<string> {
+export async function saveUpload(userId: string, kind: Upload["kind"], fileName: string, body: TranscriptDraft | LinkedInExport | Sweep, file?: Uint8Array): Promise<string> {
   if (file && file.byteLength > MAX_FILE) throw new Error("the file is larger than 5 MB");
   const id = randomUUID();
   await db().query("INSERT INTO learn_upload (id, user_id, kind, file_name_ct, file_ct, draft_ct) VALUES ($1, $2, $3, $4, $5, $6)", [id, userId, kind, seal(userId, fileName.slice(0, 200)), file ? seal(userId, Buffer.from(file).toString("base64")) : null, seal(userId, JSON.stringify(body))]);
@@ -30,9 +31,10 @@ export async function getUpload(userId: string, id: string): Promise<Upload | nu
   const r = await db().query("SELECT * FROM learn_upload WHERE id = $1 AND user_id = $2", [id, userId]);
   const u = r.rows[0];
   if (!u) return null;
-  const kept = (await db().query("SELECT row_index FROM learn_course WHERE upload_id = $1", [id])).rows.map((x) => Number(x.row_index));
+  const kept = (await db().query(u.kind === "transcript" ? "SELECT row_index FROM learn_course WHERE upload_id = $1" : "SELECT row_index FROM learn_upload_kept WHERE upload_id = $1", [id])).rows.map((x) => Number(x.row_index));
   const body = JSON.parse(open(userId, u.draft_ct));
-  return { id, kind: u.kind, fileName: open(userId, u.file_name_ct), createdAt: new Date(u.created_at).toISOString(), ...(u.kind === "transcript" ? { transcript: body as TranscriptDraft } : { linkedin: body as LinkedInExport }), kept };
+  const parts = u.kind === "transcript" ? { transcript: body as TranscriptDraft } : u.kind === "sweep" ? { sweep: body as Sweep } : { linkedin: body as LinkedInExport };
+  return { id, kind: u.kind, fileName: open(userId, u.file_name_ct), createdAt: new Date(u.created_at).toISOString(), ...parts, kept };
 }
 
 /** Keep the rows of a transcript draft the person confirmed, once each. */
