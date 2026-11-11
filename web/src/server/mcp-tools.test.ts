@@ -1,22 +1,21 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { db } from "@/db/pool";
-import { PRIMES } from "@reflect/core/state";
-import { GUIDE, toolAddBook, toolLearning, toolRecallCheck, toolConceptHistory, toolGetEntry, toolKeepReading, toolListEntries, toolWriteEntry } from "./mcp-tools";
+import { GUIDE, toolAddBook, toolLearning, toolRecallCheck, toolGetEntry, toolListEntries, toolWriteEntry } from "./mcp-tools";
 
 const live = Boolean(process.env.DATABASE_URL && process.env.REFLECT_DATA_KEY);
 
 describe("the guide an outside AI reads", () => {
-  it("names every element and the rule that the person decides", () => {
-    for (const p of PRIMES) expect(GUIDE).toContain(p);
-    expect(GUIDE).toContain("only with what they said yes to");
+  it("says the person decides and names no element model", () => {
+    expect(GUIDE).toContain("save only what the person asked you to save");
+    expect(GUIDE).not.toMatch(/element|binding/i);
   });
 });
 
 describe.skipIf(!live)("MCP tools on Neon", () => {
   afterAll(() => db().end());
 
-  it("writes only today's entry, keeps a reading, and answers for one person only", async () => {
+  it("writes only today's entry and answers for one person only", async () => {
     const user = randomUUID();
     const other = randomUUID();
     for (const id of [user, other]) {
@@ -25,15 +24,11 @@ describe.skipIf(!live)("MCP tools on Neon", () => {
     const now = new Date("2026-11-10T12:00:00Z");
     await expect(toolWriteEntry(user, "Old news.", "2020-01-01", now)).rejects.toThrow(/today/);
     const { id } = await toolWriteEntry(user, "Walked to the lake with Mom, slowly.", "2026-11-10", now);
-    await toolKeepReading(user, id, [{ element: "attachment", weight: 0.9, on: [{ concept: { kind: "entity", name: "Mom", sort: "person" }, words: "Mom" }, { concept: { kind: "quality", name: "slow" }, words: "slowly", role: "manner" }] }]);
 
     expect((await toolListEntries(user, 5)).map((e) => e.id)).toEqual([id]);
-    expect((await toolGetEntry(user, id)).readings).toHaveLength(1);
+    expect((await toolGetEntry(user, id)).text).toBe("Walked to the lake with Mom, slowly.");
     await expect(toolGetEntry(other, id)).rejects.toThrow(/no such entry/);
     expect(await toolListEntries(other, 5)).toEqual([]);
-    const mom = await toolConceptHistory(user, { kind: "entity", name: "mom", sort: "person" });
-    expect(mom.entries).toEqual([id]);
-    expect(mom.now.attachment!.value).toBeCloseTo(0.9, 5);
   });
 
   it("keeps a book from the person's AI, with Open Library's subjects only suggested, and a recall check", async () => {

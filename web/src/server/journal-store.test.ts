@@ -7,8 +7,7 @@ import { filesJournal } from "@reflect/core/files-journal";
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { addPart, closeEntry, exportJournal, importJournal, postgresJournal, createEntry, entryText, keepAnswer, keepLabels, listEntries, researchAllowed, setResearchAllowed, startReflection } from "./journal-store";
-import { decide } from "@reflect/core/state";
+import { addPart, closeEntry, exportJournal, importJournal, postgresJournal, createEntry, entryText, keepAnswer, listEntries, researchAllowed, setResearchAllowed, startReflection } from "./journal-store";
 
 const live = Boolean(process.env.DATABASE_URL && process.env.REFLECT_DATA_KEY);
 const DAY = "2026-11-09" as IsoDate;
@@ -24,7 +23,7 @@ describe.skipIf(!live)("journal store on Neon", () => {
 
   journalContract(async () => postgresJournal(await newUser()));
 
-  it("moves a journal from a folder to Postgres and back, keeping times and decisions", async () => {
+  it("moves a journal from a folder to Postgres and back, keeping times", async () => {
     const dir = await mkdtemp(join(tmpdir(), "reflect-move-"));
     try {
       let t = 0;
@@ -36,9 +35,6 @@ describe.skipIf(!live)("journal store on Neon", () => {
       await files.closeEntry(id);
       const r = await files.startReflection(id, "feeling");
       await files.keepAnswer(r, 0, "Close to him.");
-      await files.keepLabels(id, decide({ emotion: 0.95 }, new Set(["emotion", "attachment"]), 0.9), [
-        { quote: "Dad", term: "Dad", whose: "other", modelBasis: "logos", basis: "attachment", decision: "corrected" },
-      ]);
       const before = await files.exportBundle();
 
       const user = await newUser();
@@ -49,10 +45,8 @@ describe.skipIf(!live)("journal store on Neon", () => {
       expect(hand?.id).toMatch(/^[0-9a-f-]{36}$/);
       const norm = (b: typeof before) => ({
         entries: b.entries.map(({ id: _id, reflections, ...e }) => ({ ...e, reflections: (reflections ?? []).map(({ id: _r, ...x }) => x) })),
-        labelings: b.labelings.map(({ entry: _e, ...l }) => l),
       });
       expect(norm(middle)).toEqual(norm(before));
-      expect((await listEntries(user)).find((e) => e.id === id)?.labels).toEqual(["emotion", "attachment"]);
 
       const back = filesJournal(join(dir, "back"), "p-move");
       await back.importBundle(middle);
@@ -111,25 +105,12 @@ describe.skipIf(!live)("journal store on Neon", () => {
     await expect(db().query("DELETE FROM reflection_answer WHERE reflection_id = $1", [r])).rejects.toThrow(/written once/);
   });
 
-  it("keeps the person's labels beside the model's guess, once, and research stays off until allowed", async () => {
+  it("answers for one person only, and research stays off until allowed", async () => {
     const user = await newUser();
     const other = await newUser();
     const id = await createEntry(user, "I keep telling myself I'm the independent one.", DAY, null);
     expect(await entryText(user, id)).toContain("independent");
     expect(await entryText(other, id)).toBeNull();
-    const weights = Object.fromEntries(decide(null, new Set()).map((r) => [r.element, 0.1]));
-    weights.emotion = 0.8;
-    weights.attachment = 0.6;
-    const rows = decide(weights, new Set(["emotion", "embodiment"]));
-    expect(rows.find((r) => r.element === "attachment")?.decision).toBe("rejected");
-    expect(rows.find((r) => r.element === "embodiment")?.decision).toBe("added");
-    expect(rows.find((r) => r.element === "will")?.decision).toBe("absent");
-    await keepLabels(user, id, rows, [{ quote: "the independent one", term: "independent", whose: "self", modelBasis: "will", basis: "imagination", decision: "corrected" }]);
-    await expect(keepLabels(other, id, rows, [])).rejects.toThrow(/no such entry/);
-    expect((await listEntries(user))[0]?.labels).toEqual(["emotion", "embodiment"]);
-    const raw = await db().query("SELECT quote_ct FROM entry_self_term WHERE entry_id = $1", [id]);
-    expect((raw.rows[0] as { quote_ct: string }).quote_ct).not.toContain("independent");
-    await expect(db().query("UPDATE entry_label SET decision = 'confirmed' WHERE entry_id = $1", [id])).rejects.toThrow(/written once/);
     expect(await researchAllowed(user)).toBe(false);
     await setResearchAllowed(user, true);
     expect(await researchAllowed(user)).toBe(true);

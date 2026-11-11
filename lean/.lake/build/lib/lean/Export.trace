@@ -1,0 +1,32 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["379abad1f71f48ce.olean"],
+  "m": false,
+  "i": "90b245cf4442748e.ilean",
+  "c": "e992f8de68860b12.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/home/user/reflect/lean/.lake/build/lib/lean /root/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean /home/user/reflect/lean/Export.lean -o /home/user/reflect/lean/.lake/build/lib/lean/Export.olean -i /home/user/reflect/lean/.lake/build/lib/lean/Export.ilean -c /home/user/reflect/lean/.lake/build/ir/Export.c --setup /home/user/reflect/lean/.lake/build/ir/Export.setup.json --json",
+   "level": "trace"}],
+ "inputs":
+ [["deps",
+   [["«reflect-nts»/«nts-export»:extraDep",
+     [["@«reflect-nts»:extraDep", "00000000000006bb"]]],
+    ["imports",
+     [["NTS transitive imports (legacy)", "13818c94bc951937"],
+      ["NTS:importAllArts", "1fa9ff5ce1f2a347"]]]]],
+  ["libs",
+   [["import dynlibs", "00000000000006bb"],
+    ["package external libraries", "00000000000006bb"],
+    ["module dynlibs", "00000000000006bb"],
+    ["module plugins", "00000000000006bb"]]],
+  ["Lean 4.33.1, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6",
+   "0051240b7c23c453"],
+  ["/home/user/reflect/lean/Export.lean", "21e9a0888ebb10c6"],
+  ["options", "00000000000006bb"],
+  ["isModule: false", "feefd2a0d3a1847e"],
+  ["Module.name: Export", "4c31cefdbdcef7fd"],
+  ["Package.id?: (some reflect-nts)", "4fa17da1a8c09ea0"],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "6261dc97bad099fd"}

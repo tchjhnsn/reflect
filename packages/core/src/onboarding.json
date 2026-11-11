@@ -1,0 +1,93 @@
+{
+  "onboarding": [
+    {
+      "id": "name",
+      "destination": {
+        "store": "profile",
+        "key": "name"
+      }
+    },
+    {
+      "id": "date_of_birth",
+      "destination": {
+        "store": "profile",
+        "key": "date_of_birth"
+      }
+    },
+    {
+      "id": "occupation",
+      "destination": {
+        "store": "profile",
+        "key": "occupation"
+      }
+    },
+    {
+      "id": "closest_friend",
+      "destination": {
+        "store": "relationships",
+        "kind": "closest_friend"
+      }
+    },
+    {
+      "id": "marital_status",
+      "destination": {
+        "store": "profile",
+        "key": "marital_status"
+      }
+    },
+    {
+      "id": "seeing_someone",
+      "destination": {
+        "store": "profile",
+        "key": "seeing_someone"
+      }
+    },
+    {
+      "id": "children",
+      "destination": {
+        "store": "profile",
+        "key": "children"
+      }
+    },
+    {
+      "id": "hold_partnership",
+      "destination": {
+        "store": "holds",
+        "subject": "partnership"
+      }
+    },
+    {
+      "id": "hold_children",
+      "destination": {
+        "store": "holds",
+        "subject": "children"
+      }
+    }
+  ],
+  "holds": [
+    {
+      "id": "desire",
+      "stance": "descriptive"
+    },
+    {
+      "id": "will",
+      "stance": "descriptive"
+    },
+    {
+      "id": "duty",
+      "stance": "normative"
+    },
+    {
+      "id": "sacred",
+      "stance": "descriptive"
+    },
+    {
+      "id": "not_for_me",
+      "stance": "descriptive"
+    },
+    {
+      "id": "unsure",
+      "stance": "descriptive"
+    }
+  ]
+}

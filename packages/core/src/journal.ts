@@ -15,8 +15,6 @@ export type Entry = {
   closedAt: string | null;
   parts: readonly Part[];
   reflections?: readonly Reflection[];
-  /** Elements the person labeled for this entry. */
-  labels?: readonly string[];
 };
 
 /** One run of reflecting on an entry: the frame picked and the answers given, in order. */

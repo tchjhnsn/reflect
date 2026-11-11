@@ -1,0 +1,9 @@
+{"plugins": [],
+ "package": "reflect-nts",
+ "options": {},
+ "name": "NTS.Scope",
+ "isModule": false,
+ "importArts":
+ {"NTS.Elements":
+  [["/home/user/reflect/lean/.lake/build/lib/lean/NTS/Elements.olean"]]},
+ "dynlibs": []}

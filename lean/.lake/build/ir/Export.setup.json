@@ -1,0 +1,22 @@
+{"plugins": [],
+ "package": "reflect-nts",
+ "options": {},
+ "name": "Export",
+ "isModule": false,
+ "importArts":
+ {"NTS.State":
+  [["/home/user/reflect/lean/.lake/build/lib/lean/NTS/State.olean"]],
+  "NTS.Scope":
+  [["/home/user/reflect/lean/.lake/build/lib/lean/NTS/Scope.olean"]],
+  "NTS.Person":
+  [["/home/user/reflect/lean/.lake/build/lib/lean/NTS/Person.olean"]],
+  "NTS.Output":
+  [["/home/user/reflect/lean/.lake/build/lib/lean/NTS/Output.olean"]],
+  "NTS.Onboarding":
+  [["/home/user/reflect/lean/.lake/build/lib/lean/NTS/Onboarding.olean"]],
+  "NTS.Frames":
+  [["/home/user/reflect/lean/.lake/build/lib/lean/NTS/Frames.olean"]],
+  "NTS.Elements":
+  [["/home/user/reflect/lean/.lake/build/lib/lean/NTS/Elements.olean"]],
+  "NTS": [["/home/user/reflect/lean/.lake/build/lib/lean/NTS.olean"]]},
+ "dynlibs": []}

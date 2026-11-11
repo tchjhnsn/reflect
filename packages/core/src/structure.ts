@@ -1,4 +1,5 @@
-import raw from "./structure.json" with { type: "json" };
+// The onboarding questions and the ways a person can hold partnership or children, as Reflect asks them.
+import raw from "./onboarding.json" with { type: "json" };
 
 export type Destination =
   | { store: "profile"; key: string }
@@ -8,7 +9,7 @@ export type Destination =
 export type OnboardingQuestion = { id: string; destination: Destination };
 
 function fail(path: string): never {
-  throw new Error(`structure.json: missing or malformed ${path}`);
+  throw new Error(`onboarding.json: missing or malformed ${path}`);
 }
 
 function parseDestination(value: unknown, path: string): Destination {
@@ -33,19 +34,18 @@ export function parseOnboarding(json: unknown): readonly OnboardingQuestion[] {
 export const ONBOARDING: readonly OnboardingQuestion[] = parseOnboarding(raw);
 
 export type HoldId = "desire" | "will" | "duty" | "sacred" | "not_for_me" | "unsure";
-export type HoldDef = { id: HoldId; stance: "descriptive" | "normative"; prime: string | null };
+export type HoldDef = { id: HoldId; stance: "descriptive" | "normative" };
 
 export function parseHolds(json: unknown): readonly HoldDef[] {
   const list = (json as { holds?: unknown })?.holds;
   if (!Array.isArray(list) || list.length === 0) fail("holds");
   return list.map((h: unknown, i) => {
-    const item = h as { id?: unknown; stance?: unknown; facet?: { prime?: unknown } | null };
+    const item = h as { id?: unknown; stance?: unknown };
     if (typeof item.id !== "string") fail(`holds[${i}].id`);
     if (item.stance !== "descriptive" && item.stance !== "normative") fail(`holds[${i}].stance`);
-    const prime = item.facet && typeof item.facet.prime === "string" ? item.facet.prime : null;
-    return { id: item.id as HoldId, stance: item.stance, prime };
+    return { id: item.id as HoldId, stance: item.stance };
   });
 }
 
-/** How a person can hold partnership or children, from lean/NTS/Onboarding.lean. Duty is normative. */
+/** How a person can hold partnership or children. Duty is normative. */
 export const HOLDS: readonly HoldDef[] = parseHolds(raw);
