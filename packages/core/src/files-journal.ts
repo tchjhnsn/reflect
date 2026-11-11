@@ -10,6 +10,7 @@ import type { Entry, Part, Reflection } from "./journal.ts";
 import { nextLine, parseMemory, type MemoryLine } from "./memory.ts";
 import type { IsoDate } from "./person.ts";
 import { recordPaths, type Layout } from "./layout.ts";
+import { readRecord, writeRecord } from "./record-io.ts";
 import { frameById } from "./reflect.ts";
 import { conceptNote, sparkHead, type SparkForm } from "./spark.ts";
 import { kept, type Journal, type LabelRow, type SelfTermRow } from "./store.ts";
@@ -132,7 +133,13 @@ export type ReflectionFile = {
   labelings: { at: string; labels: LabelRow[]; terms: SelfTermRow[] }[];
 };
 
-export type FilesOptions = { now?: () => Date; id?: () => string; layout?: Layout };
+export type FilesOptions = {
+  now?: () => Date;
+  id?: () => string;
+  layout?: Layout;
+  /** The life vault, when this journal is a soul vault's moments: its sources.json resolves pointer entries, and concept notes are kept there. */
+  lifeRoot?: string;
+};
 
 /** The folder host's journal, with export and import of a whole bundle, and sparks. */
 export type FilesJournal = Journal & {
@@ -182,7 +189,7 @@ export function filesJournal(root: string, personId: string, opts: FilesOptions 
         const entry = parseEntryFile(n, text);
         const ptr = headExtras(text).map((l) => POINTER_HEAD.exec(l)).find(Boolean);
         if (ptr) {
-          const live = await pointerText(root, ptr[1]!, ptr[2]!.trim());
+          const live = await pointerText(opts.lifeRoot ?? root, ptr[1]!, ptr[2]!.trim());
           if (live) entry.parts = [{ seq: 0, text: live, createdAt: entry.createdAt }, ...entry.parts.filter((p) => p.seq > 0)];
         }
         return { rel: join(entriesDir, n), entry };
@@ -246,7 +253,10 @@ export function filesJournal(root: string, personId: string, opts: FilesOptions 
     async writeSpark(noun, form, text, localDate) {
       const at = now();
       const note = join(paths.concepts, `${noun}.md`);
-      if ((await read(note)) === null) await write(note, conceptNote(noun, at), "create");
+      if (opts.lifeRoot && opts.lifeRoot !== root) {
+        // A concept is a thing in shared reality: in a soul vault's journal, its note goes to the life vault.
+        if ((await readRecord(opts.lifeRoot, note)) === null) await writeRecord(opts.lifeRoot, note, conceptNote(noun, at), "create", at);
+      } else if ((await read(note)) === null) await write(note, conceptNote(noun, at), "create");
       const id = newId();
       const e: Entry = { id, localDate, createdAt: at, promptId: `spark/${form}`, closedAt: at, parts: [{ seq: 0, text, createdAt: at }] };
       await write(join(entriesDir, `${localDate}-${id}.md`), entryFileText(e, sparkHead(noun, form)), "create");
