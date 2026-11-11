@@ -374,3 +374,45 @@ export async function learnProblems(root: string): Promise<string[]> {
   }
   return out;
 }
+
+const STOP = new Set(["the", "and", "for", "with", "from", "into", "its", "their", "this", "that", "about", "of", "in", "on", "to", "a", "an"]);
+const stems = (text: string) =>
+  text.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").split(/[^a-z0-9]+/).filter((w) => w.length > 1 && !STOP.has(w)).map((w) => w.replace(/(ies)$/, "y").replace(/(ing|es|s)$/, "").slice(0, 6));
+
+/**
+ * Which subjects the person named in what they recalled, by matching words (no model): a subject counts
+ * as named when every word of its name appears in the recall. It only marks what they named before
+ * they saw the list; their grasp is still theirs to give.
+ */
+export function namedSubjects(recall: string, subjects: readonly { id: string; title: string }[]): Set<string> {
+  const said = new Set(stems(recall));
+  const out = new Set<string>();
+  for (const s of subjects) {
+    const words = stems(s.title.replace(/-/g, " "));
+    if (words.length && words.every((w) => said.has(w))) out.add(s.id);
+  }
+  return out;
+}
+
+/** A recall line on a book note: `2026-11-11 recall: what the person named without looking`. */
+export const parseRecall = (line: string): { on: string; text: string } | null => {
+  const m = /^(\d{4}-\d{2}(?:-\d{2})?) recall: (.*)$/.exec(line);
+  return m ? { on: m[1]!, text: m[2]! } : null;
+};
+
+/** Keep what the person named of a book's subjects without looking, and say which of its subjects they named. */
+export async function keepRecall(root: string, book: string, recall: string, now: Date, contents: readonly string[] = []): Promise<{ book: Book; named: string[]; unnamed: string[]; contents: string[] }> {
+  const id = slugOf(book);
+  const rel = join(BOOKS, `${id}.md`);
+  const old = await readRecord(root, rel);
+  if (old === null) throw new Error(`no book ${book}; keep it first: reflect learn book <title>`);
+  const said = oneLine(recall);
+  if (!said) throw new Error("name what you remember, in your own words");
+  const b = parseBook(id, old);
+  const at = now.toISOString();
+  const lines = [...body(old).history, `${at.slice(0, 10)} recall: ${said}`];
+  await writeRecord(root, rel, bookText(b, lines), "append", at);
+  const subjects = new Map((await notes(root, SUBJECTS)).map(([sid, t]) => [sid, parseSubject(sid, t)] as const));
+  const named = namedSubjects(said, b.subjects.map((s) => ({ id: s, title: subjects.get(s)?.title ?? s.replace(/-/g, " ") })));
+  return { book: b, named: b.subjects.filter((s) => named.has(s)), unnamed: b.subjects.filter((s) => !named.has(s)), contents: [...contents] };
+}
