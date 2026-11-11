@@ -155,7 +155,7 @@ Where a file can belong (kind):
 - conversation: notes of a conversation. name is what it was about; with is who it was with.
 - subject: study notes on an established field (for example, statistics or urban design). name is the subject.
 - idea: my own thinking: a thesis, a framing, a plan of mine. name is a short name; statement is the idea in my words, quoted from the file where you can.
-- venture: material for something I am building (a business, a project, an organization). name is the venture.
+- venture: material for something I am building (a business, a project, an organization). name is the venture; statement is what it is, in my words from the file, if the file says.
 - document: an official document or a scan of one (a certificate, a deed, a will, a diploma). name is its type, one of: {DOCUMENT_TYPES}.
 - none: anything else, or when you cannot tell.
 
@@ -319,6 +319,7 @@ export async function keepPlacements(root: string, name: string, numbers: readon
   const day = at.slice(0, 10);
   const mapRel = join(MAPS, `${name}.md`);
   const kept: string[] = [];
+  const notes: string[] = [];
   const lines: string[] = [];
   for (const n of [...new Set(numbers)]) {
     const p = draft[n - 1];
@@ -348,19 +349,29 @@ export async function keepPlacements(root: string, name: string, numbers: readon
       const exists = (await readRecord(root, join("ideas", `${id}.md`))) !== null;
       if (!exists && !p.statement) throw new Error(`placement ${n} (${p.path}) is a new idea and needs its statement`);
       target = `ideas/${(await keepIdea(root, p.name!, { ...(p.statement ? { statement: p.statement } : {}), from: [{ target: { text: `my notes in ${from}` } }] }, now)).id}`;
+    } else if (p.kind === "venture") {
+      // A venture folder under work/ is a Naive venture, which Reflect never writes into: the placement
+      // only maps to it. Without one, material for something being built is an idea until the person
+      // sends it to Naive, so it is kept as an idea when it has a statement (or the idea exists).
+      const id = slugOf(need("the venture's name"));
+      const folder = join(recordPaths(layout, person).person, "work", id);
+      if ((await stat(join(root, folder)).catch(() => null))?.isDirectory()) target = folder;
+      else if (p.statement || (await readRecord(root, join("ideas", `${id}.md`))) !== null) {
+        target = `ideas/${(await keepIdea(root, p.name!, { ...(p.statement ? { statement: p.statement } : {}), from: [{ target: { text: `my notes in ${from}` } }] }, now)).id}`;
+      } else notes.push(`${p.path}: no venture folder work/${id} and no statement, so it is only mapped`);
     } else if (p.kind === "document") {
       if (!documentType(need("the document type"))) throw new Error(`placement ${n}: no document type ${p.name}; \`reflect documents\` lists them`);
       await filesDocuments(root, recordPaths(layout, person), () => now).check(p.name!, "digital-copy", { where: from });
       target = `documents/${p.name}`;
     }
-    if (target && p.kind !== "document" && p.kind !== "entry") await appendLine(root, `${target}.md`, pointer, at);
+    if (target && !target.startsWith("work/") && p.kind !== "document" && p.kind !== "entry") await appendLine(root, `${target}.md`, pointer, at);
     lines.push(`${day} placed ${JSON.stringify(p.path)} #${sha} as ${p.kind}${target ? ` [[${target}]]` : ""}`);
     kept.push(`${p.path} -> ${target ?? p.kind}`);
   }
   const old = await readRecord(root, mapRel);
   const head = old ?? `---\nsource: ${name}\npath: ${JSON.stringify(s.path)}\n---\n\n# ${name}\n\nWhere the files in this folder belong. The files stay where they are; each line is a placement you kept.\n\n`;
   await writeRecord(root, mapRel, `${head.replace(/\n*$/, "\n")}${old ? "" : "\n"}${lines.map((l) => `- ${l}`).join("\n")}\n`, old ? "append" : "create", at);
-  return kept;
+  return [...kept, ...notes.map((x) => `note: ${x}`)];
 }
 
 export type SourceStatus = { source: Source; reachable: boolean; files: number; placed: number; open: number; changed: string[]; missing: string[] };

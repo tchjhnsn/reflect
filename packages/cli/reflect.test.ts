@@ -443,6 +443,9 @@ describe("reflect CLI", () => {
     await writeFile(join(notes, "cities.md"), "A city is correct when it serves the common good.\n");
     await writeFile(join(notes, "2024-03-01.md"), "Walked downtown today.\n");
     await writeFile(join(notes, "diploma.pdf"), "%PDF-1.4 fake");
+    await writeFile(join(notes, "plan.md"), "A bakery on my corner that opens at five.\n");
+    await writeFile(join(notes, "acme.md"), "Acme roadmap\n");
+    await writeFile(join(notes, "pitch.md"), "something\n");
     await writeFile(join(notes, ".env"), "SHOULD_NOT_BE_SEEN=1\n");
     await writeFile(join(notes, "api_token.txt"), "nope\n");
     await writeFile(join(notes, "Private", "diary.md"), "private\n");
@@ -451,7 +454,7 @@ describe("reflect CLI", () => {
     await expect(run("source", "add", "Notes", notes, "--dir", dir)).rejects.toThrow(/lowercase/);
     await expect(run("source", "add", "inside", join(dir, "learn"), "--dir", dir)).rejects.toThrow(/inside the vault/);
     const added = (await run("source", "add", "notes", notes, "--exclude", "Private", "--dir", dir)).out;
-    expect(added[0]).toContain("4 file(s) indexed");
+    expect(added[0]).toContain("7 file(s) indexed");
     const prompt = (await run("source", "prompt", "notes", "--dir", dir)).out.join("\n");
     expect(prompt).toContain('"source": "notes"');
     expect(prompt).toContain("- Reading/Politics.md");
@@ -466,14 +469,24 @@ describe("reflect CLI", () => {
         { path: "cities.md", kind: "idea", name: "Corrupt and correct cities", statement: "A city is correct when it serves the common good.", confidence: "medium" },
         { path: "2024-03-01.md", kind: "entry", date: "2024-03-01", confidence: "high" },
         { path: "diploma.pdf", kind: "document", name: "diploma", confidence: "medium" },
+        { path: "plan.md", kind: "venture", name: "Corner Bakery", statement: "A bakery on my corner that opens at five.", confidence: "high" },
+        { path: "acme.md", kind: "venture", name: "Acme", confidence: "high" },
+        { path: "pitch.md", kind: "venture", name: "Side Thing", confidence: "low" },
         { path: ".env", kind: "none" },
         { path: "made-up.md", kind: "book", name: "Nothing" },
       ],
     };
     await writeFile(join(dir, "reply.md"), "```json\n" + JSON.stringify(reply) + "\n```");
     const draft = (await run("source", "tag", "notes", join(dir, "reply.md"), "--dir", dir)).out;
-    expect(draft[0]).toBe("4 placement(s) for files in notes:");
-    await run("source", "tag", "notes", "--keep", "1,2,3,4", "--dir", dir);
+    expect(draft[0]).toBe("7 placement(s) for files in notes:");
+    await mkdir(join(dir, "work", "acme"), { recursive: true });
+    const keptOut = (await run("source", "tag", "notes", "--keep", "1,2,3,4,5,6,7", "--dir", dir)).out;
+    // A venture with a folder under work/ is mapped to it, never written into; one without a folder but
+    // with a statement is kept as an idea; one with neither is only mapped, and says so.
+    expect(keptOut).toContain("kept: acme.md -> work/acme");
+    expect(await readdir(join(dir, "work", "acme"))).toEqual([]);
+    expect(await readFile(join(dir, "ideas/corner-bakery.md"), "utf8")).toMatch(/pointer notes:plan\.md #/);
+    expect(keptOut.join("\n")).toContain("note: pitch.md: no venture folder work/side-thing");
     const book = await readFile(join(dir, "learn/books/politics.md"), "utf8");
     expect(book).toMatch(/pointer notes:Reading\/Politics\.md #[0-9a-f]{12}/);
     expect(await readFile(join(dir, "ideas/corrupt-and-correct-cities.md"), "utf8")).toMatch(/pointer notes:cities\.md #/);
@@ -492,7 +505,7 @@ describe("reflect CLI", () => {
     expect((await readdir(join(dir, "journal"))).filter((n) => n.startsWith("2024-03-01-"))).toHaveLength(1);
     expect(await readFile(join(notes, "Reading", "Politics.md"), "utf8")).toContain("Book III");
     expect(await run("check", "--dir", dir)).toEqual({ code: 0, out: ["ok"] });
-    expect((await run("source", "--dir", dir)).out[1]).toBe("  4 file(s): 4 placed, 0 open");
+    expect((await run("source", "--dir", dir)).out[1]).toBe("  7 file(s): 7 placed, 0 open");
 
     await writeFile(join(notes, "Reading", "Politics.md"), "# Politics\n\nRewritten.\n");
     await rm(join(notes, "cities.md"));
