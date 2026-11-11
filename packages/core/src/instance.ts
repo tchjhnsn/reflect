@@ -8,6 +8,7 @@ import { documentProblems } from "./documents.ts";
 import { recordPaths, type Layout } from "./layout.ts";
 import { LEGACY_TEMPLATES, LIFETIME_FOLDERS, lifetimeProblems } from "./lifetime.ts";
 import { readRecord, writeRecord } from "./record-io.ts";
+import { planProblems, readPlan } from "./release.ts";
 import { rename, rmdir } from "node:fs/promises";
 import { lastShas, nextLine, parseMemory, sha256, verifyMemory } from "./memory.ts";
 
@@ -182,6 +183,13 @@ export async function checkInstance(root: string): Promise<CheckResult> {
     for (const p of paths) if (typeof p === "string" && /^(journal|entries|reflections|_private)(\/|$)/.test(p)) problems.push(`${g}: a grant can never name ${p}`);
   }
   problems.push(...(await documentProblems(root, p)), ...(await lifetimeProblems(root, p)));
+  if (!p.person) {
+    try {
+      problems.push(...(await planProblems(root, await readPlan(root))).problems);
+    } catch {
+      problems.push("legacy/release.json is not JSON");
+    }
+  }
   const shas = lastShas(lines);
   const outside: string[] = [];
   const found = (await Promise.all(p.recordDirs.map((d) => walk(root, d)))).flat().filter((r) => !r.endsWith(".draft.json"));

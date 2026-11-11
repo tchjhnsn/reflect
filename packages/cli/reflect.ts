@@ -8,6 +8,7 @@ import { keepDraft, makeDraft, type Draft } from "../core/src/draft.ts";
 import { parseArgs } from "node:util";
 import { filesJournal } from "../core/src/files-journal.ts";
 import { adopt, checkInstance, initInstance, layoutOf, readConfig, upgradeVault } from "../core/src/instance.ts";
+import { addGift, addTrustee, LEGACY_ENTRIES, planProblems, previewRelease, readPlan, setTerms } from "../core/src/release.ts";
 import { keepNeed, keepPassage, LEGACY_PROMPTS, legacyPrompt } from "../core/src/lifetime.ts";
 import { recordPaths } from "../core/src/layout.ts";
 import { CUSTODY, DOCUMENT_GROUPS, filesDocuments, isCustody, type ChecklistRow, type Connection } from "../core/src/documents.ts";
@@ -27,6 +28,11 @@ const USAGE = `reflect <command> [--dir <instance>]
                                   keep a move in your life: provide, belonging or line
   legacy [prompt] [text]          a prompt for what you want to survive you; with text, keep it as a
                                   journal entry marked to survive you
+  release                         your release plan: who may confirm your death, and what of your
+                                  legacy goes to whom (only legacy/ and entries marked to survive you)
+  release trustee <name> --contact <how to reach them>
+  release give <legacy/... | legacy-entries> --to <name> --contact <how to reach them>
+  release terms [--confirmations N] [--wait <days>]
   write [text] [--date YYYY-MM-DD] write an entry (text from the argument or stdin); prints its id
   spark [--minutes 1|5|10|15 | --sentence]
                                   a noun to write about, and how long
@@ -101,6 +107,10 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
       runway: { type: "string" },
       note: { type: "string" },
       on: { type: "string" },
+      to: { type: "string" },
+      contact: { type: "string" },
+      confirmations: { type: "string" },
+      wait: { type: "string" },
       out: { type: "string" },
       "moving-to": { type: "string" },
       help: { type: "boolean", short: "h" },
@@ -249,6 +259,31 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
     if (!p) throw new Error(`no such prompt; one of ${LEGACY_PROMPTS.map((x) => x.id).join(", ")}`);
     out(await journal.writeWithHead(textFrom(rest[1]), date as IsoDate, `legacy/${p.id}`, ["legacy: true", `prompt: ${JSON.stringify(p.text)}`]));
     return 0;
+  }
+  if (cmd === "release") {
+    if (layoutOf(config) !== "vault") throw new Error("release needs a vault; this instance uses the older people/<id> layout");
+    const [sub, what] = rest;
+    const now = new Date();
+    if (sub === "trustee") {
+      if (!what || !values.contact) throw new Error("release trustee <name> --contact <how to reach them>");
+      await addTrustee(root, what, values.contact, now);
+    } else if (sub === "give") {
+      if (!what || !values.to || !values.contact) throw new Error(`release give <legacy/... | ${LEGACY_ENTRIES}> --to <name> --contact <how to reach them>`);
+      await addGift(root, what, values.to, values.contact, now);
+    } else if (sub === "terms") {
+      const terms: { confirmations?: number; wait_days?: number } = {};
+      if (values.confirmations !== undefined) terms.confirmations = Number(values.confirmations);
+      if (values.wait !== undefined) terms.wait_days = Number(values.wait);
+      await setTerms(root, terms, now);
+    } else if (sub) throw new Error("release takes trustee, give or terms");
+    const plan = await readPlan(root);
+    out(`trustees: ${plan.trustees.map((t) => t.name).join(", ") || "none yet"}`);
+    out(`a release needs ${plan.confirmations} trustee confirmation(s), then ${plan.wait_days} day(s) of waiting in which you or any trustee can stop it`);
+    for (const [to, files] of await previewRelease(root, paths, plan)) out(`to ${to}: ${files.join(", ") || "nothing yet"}`);
+    const { problems, notes } = await planProblems(root, plan);
+    for (const p of problems) out(`problem: ${p}`);
+    for (const n of notes) out(`note: ${n}`);
+    return problems.length ? 1 : 0;
   }
   if (cmd === "documents") {
     const [type, custody] = rest;
