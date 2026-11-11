@@ -4,7 +4,7 @@
 // the end of a reflection file.
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { makeBundle, type Bundle } from "./bundle.ts";
 import type { Entry, Part, Reflection } from "./journal.ts";
 import { nextLine, parseMemory, type MemoryLine } from "./memory.ts";
@@ -77,7 +77,46 @@ export function parseEntryFile(name: string, text: string): Entry {
   return { id: head.id ?? stem, localDate, createdAt, promptId: head.prompt_id ?? null, closedAt: head.closed_at ?? null, parts };
 }
 
-function entryFileText(e: Entry, extras: readonly string[] = []): string {
+/** The front matter line that makes an entry a pointer: its text lives in a source folder (sources.ts). */
+export const POINTER_HEAD = /^pointer:\s*([a-z0-9][a-z0-9-]{0,39}):(.+)$/;
+const POINTER_MAX = 512 * 1024;
+
+/**
+ * The text of a file in a named source folder, front matter left out, or null when the source or the
+ * file cannot be read. The path must stay inside the source folder.
+ */
+export async function pointerText(root: string, source: string, path: string): Promise<string | null> {
+  let sources: { name: string; path: string }[] = [];
+  try {
+    sources = (JSON.parse(await readFile(join(root, "sources.json"), "utf8")) as { sources?: { name: string; path: string }[] }).sources ?? [];
+  } catch {
+    return null;
+  }
+  const s = sources.find((x) => x.name === source);
+  if (!s) return null;
+  const file = resolve(s.path, path);
+  const r = relative(resolve(s.path), file);
+  if (!r || r.startsWith("..") || isAbsolute(r)) return null;
+  let text: string;
+  try {
+    const buf = await readFile(file);
+    if (buf.length > POINTER_MAX || buf.includes(0)) return null;
+    text = buf.toString("utf8").replace(/\r\n/g, "\n");
+  } catch {
+    return null;
+  }
+  if (text.startsWith("---\n")) {
+    const end = text.indexOf("\n---\n", 4);
+    if (end > 0) text = text.slice(end + 5);
+  }
+  return text.trim();
+}
+
+/** The body a pointer entry keeps in the vault: what a reader of the file sees, and the text used when the source is out of reach. */
+export const pointerBody = (source: string, path: string) =>
+  `This entry is kept in ${source}:${path}. Reflect reads its text from there and does not copy it; that folder is not reachable right now.`;
+
+export function entryFileText(e: Entry, extras: readonly string[] = []): string {
   const head = [`id: ${e.id}`, `local_date: ${e.localDate}`, `created_at: ${e.createdAt}`];
   if (e.promptId) head.push(`prompt_id: ${e.promptId}`);
   if (e.closedAt) head.push(`closed_at: ${e.closedAt}`);
@@ -137,13 +176,26 @@ export function filesJournal(root: string, personId: string, opts: FilesOptions 
       if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
       throw e;
     }
-    return Promise.all(names.map(async (n) => ({ rel: join(entriesDir, n), entry: parseEntryFile(n, (await read(join(entriesDir, n)))!) })));
+    return Promise.all(
+      names.map(async (n) => {
+        const text = (await read(join(entriesDir, n)))!;
+        const entry = parseEntryFile(n, text);
+        const ptr = headExtras(text).map((l) => POINTER_HEAD.exec(l)).find(Boolean);
+        if (ptr) {
+          const live = await pointerText(root, ptr[1]!, ptr[2]!.trim());
+          if (live) entry.parts = [{ seq: 0, text: live, createdAt: entry.createdAt }, ...entry.parts.filter((p) => p.seq > 0)];
+        }
+        return { rel: join(entriesDir, n), entry };
+      }),
+    );
   }
 
   async function find(entryId: string): Promise<{ rel: string; entry: Entry; extras: string[] }> {
     const hit = (await entryFiles()).find((f) => f.entry.id === entryId);
     if (!hit) throw new Error("no such entry");
-    return { ...hit, extras: headExtras((await read(hit.rel)) ?? "") };
+    // Writes use the file as it is, so a pointer entry's live text is never copied into the vault.
+    const text = (await read(hit.rel)) ?? "";
+    return { rel: hit.rel, entry: parseEntryFile(hit.rel.split("/").pop()!, text), extras: headExtras(text) };
   }
 
   async function reflFile(entryId: string): Promise<ReflectionFile> {

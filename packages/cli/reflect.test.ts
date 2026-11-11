@@ -481,12 +481,23 @@ describe("reflect CLI", () => {
     expect(map).toContain('placed "2024-03-01.md"');
     expect(map).toContain("as entry");
     expect(map).toContain("[[documents/diploma]]");
+    // The entry is a journal entry that points at the file: listed with the file's text, never a copy of it.
+    const entryFile = (await readdir(join(dir, "journal"))).find((n) => n.startsWith("2024-03-01-"))!;
+    const entryText = await readFile(join(dir, "journal", entryFile), "utf8");
+    expect(entryText).toContain("pointer: notes:2024-03-01.md\npointer_sha: ");
+    expect(entryText).not.toContain("Walked downtown");
+    expect(map).toContain(`[[journal/${entryFile.replace(/\.md$/, "")}]]`);
+    expect((await run("list", "--dir", dir)).out.join("\n")).toContain("Walked downtown today.");
+    await run("source", "tag", "notes", "--keep", "3", "--dir", dir);
+    expect((await readdir(join(dir, "journal"))).filter((n) => n.startsWith("2024-03-01-"))).toHaveLength(1);
     expect(await readFile(join(notes, "Reading", "Politics.md"), "utf8")).toContain("Book III");
     expect(await run("check", "--dir", dir)).toEqual({ code: 0, out: ["ok"] });
     expect((await run("source", "--dir", dir)).out[1]).toBe("  4 file(s): 4 placed, 0 open");
 
     await writeFile(join(notes, "Reading", "Politics.md"), "# Politics\n\nRewritten.\n");
     await rm(join(notes, "cities.md"));
+    await writeFile(join(notes, "2024-03-01.md"), "Walked downtown today, then home by the river.\n");
+    expect((await run("list", "--dir", dir)).out.join("\n")).toContain("home by the river");
     const status = (await run("source", "notes", "--dir", dir)).out.join("\n");
     expect(status).toContain("changed since placed: Reading/Politics.md");
     expect(status).toContain("no longer in the folder: cities.md");
