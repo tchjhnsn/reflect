@@ -13,6 +13,7 @@ import { BOOK_STATUS, FILM_STATUS, GRASP, keepBook, keepConversation, keepFilm, 
 import { isStance, keepIdea, listIdeas, resolveTarget, STANCES, targetText, type Stance } from "../core/src/ideas.ts";
 import { keepSweep, readSweep, sweepLine, SWEEP_PROMPT, type Sweep } from "../core/src/sweep.ts";
 import { writeIndex } from "../core/src/catalog.ts";
+import { confirmReading, keepWikiDraft, readWikiDraft, readWikiReply, wikiOn, wikiPrompt, wikiStatus, type WikiDraft } from "../core/src/wiki.ts";
 import { planHandoff, runNaiveCapture, sendIdea } from "../core/src/naive-handoff.ts";
 import { addSource, getSource, indexSource, keepPlacements, placementLine, placementPrompt, readDraft, readPlacements, saveDraft, sourceStatus } from "../core/src/sources.ts";
 import { keepNeed, keepPassage, LEGACY_PROMPTS, legacyPrompt } from "../core/src/lifetime.ts";
@@ -103,6 +104,15 @@ const USAGE = `reflect <command> [--dir <instance>]
                                   journal entry that reads its text from the file, so you can reflect
                                   on it without copying it in. A venture maps to its folder under
                                   work/ (never written into), else becomes an idea if it has a statement
+  wiki                            the wiki: written by your own AI from your notes, kept apart from them
+  wiki on                         turn it on (wiki/README.md says what it is)
+  wiki prompt [--limit 15]        the prompt for your AI: your index, the wiki so far, and entries it has
+                                  not absorbed yet
+  wiki absorb <reply file>        check your AI's articles: every passage must cite your notes, and a
+                                  quote must be in what it cites; lists what passed and what was refused
+  wiki absorb --keep <1,2 | all>  keep those articles, log the entries absorbed, rebuild wiki/_index.md
+  wiki confirm <path>             a pattern, tension, identity or philosophy is the AI's reading until you
+                                  confirm it; a rewrite makes it a reading again
   index                           rewrite index.md, the catalog of your notes where your own AI starts
                                   reading: one linked line per note, journal entries by date only
   idea                            your ideas, each with its inputs and recommendations
@@ -655,6 +665,58 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
         for (const p of s.missing) out(`  no longer in the folder: ${p}`);
       }
     }
+    return 0;
+  }
+  if (cmd === "wiki") {
+    if (layoutOf(config) !== "vault") throw new Error("wiki needs a vault; this instance uses the older people/<id> layout");
+    const [sub, arg] = rest;
+    const now = new Date();
+    const show = (d: WikiDraft) => {
+      out(`${d.articles.length} article(s) to keep, ${d.absorbed.length} entr${d.absorbed.length === 1 ? "y" : "ies"} absorbed:`);
+      d.articles.forEach((a, n) => out(`  ${n + 1}. wiki/${a.path} (${a.type}) ${a.title}`));
+      for (const r of d.rejected) out(`  refused: ${r.path}: ${r.why}`);
+      if (d.articles.length) out("Read them, then keep the right ones: reflect wiki absorb --keep 1,2 (or all)");
+    };
+    if (sub === "on") {
+      out((await wikiOn(root, now)) ? "the wiki is on: wiki/README.md says what it is. Next: reflect wiki prompt" : "the wiki is already on");
+      return 0;
+    }
+    if (sub === "prompt") {
+      const p = await wikiPrompt(root, layoutOf(config), config.person, values.limit ? Number(values.limit) : 15);
+      out(p.text);
+      out("");
+      out(`(${p.entries.length} entr${p.entries.length === 1 ? "y" : "ies"} in this prompt, ${p.remaining} more after. Save your AI's reply to a file, then: reflect wiki absorb <file>)`);
+      return 0;
+    }
+    if (sub === "absorb") {
+      if (values.keep) {
+        const nums = values.keep === "all" ? "all" : values.keep.split(",").map((x) => Number(x.trim()));
+        if (nums !== "all" && nums.some((n) => !Number.isInteger(n) || n < 1)) throw new Error("--keep takes numbers like 1,2,5 or all");
+        for (const k of await keepWikiDraft(root, nums, now)) out(`kept: ${k}`);
+        return 0;
+      }
+      if (!arg) {
+        show(await readWikiDraft(root));
+        return 0;
+      }
+      show(await readWikiReply(root, layoutOf(config), config.person, await readFile(arg, "utf8")));
+      return 0;
+    }
+    if (sub === "confirm") {
+      if (!arg) throw new Error("wiki confirm <article path, like patterns/building-alone>");
+      await confirmReading(root, arg, now);
+      out(`confirmed: wiki/${arg.replace(/^wiki\//, "").replace(/\.md$/, "")} is yours now, as written`);
+      return 0;
+    }
+    if (sub) throw new Error("wiki takes on, prompt, absorb or confirm");
+    const s = await wikiStatus(root, layoutOf(config), config.person);
+    if (!s.on) {
+      out("The wiki is off. It is written by your own AI from your notes and journal, and kept apart from them. Turn it on: reflect wiki on");
+      return 0;
+    }
+    out(`${s.articles} article(s)${Object.keys(s.byType).length ? `: ${Object.entries(s.byType).map(([t, n]) => `${n} ${t}`).join(", ")}` : ""}`);
+    out(`${s.readings} reading(s) of you, ${s.confirmed} confirmed`);
+    out(`${s.absorbed} entr${s.absorbed === 1 ? "y" : "ies"} absorbed, ${s.pending} waiting`);
     return 0;
   }
   if (cmd === "index") {

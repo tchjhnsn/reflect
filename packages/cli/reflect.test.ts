@@ -395,6 +395,63 @@ describe("reflect CLI", () => {
     expect(map).toContain("with Dad: whether a city can be corrupt");
   });
 
+  it("keeps an AI-written wiki apart from the record: cited, quotes checked, readings until confirmed", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "reflect-cli-"));
+    dirs.push(dir);
+    await run("init", "--name", "Tester", "--dir", dir);
+    const a = (await run("write", "Baked bread with Sam again. I keep building things alone and then asking why nobody joins.", "--date", "2026-11-09", "--dir", dir)).out[0]!;
+    const b = (await run("write", "Sam said the bakery could open at five if we split the mornings.", "--date", "2026-11-10", "--dir", dir)).out[0]!;
+    const ea = `journal/2026-11-09-${a}`;
+    const eb = `journal/2026-11-10-${b}`;
+    expect((await run("wiki", "--dir", dir)).out[0]).toMatch(/The wiki is off/);
+    await expect(run("wiki", "prompt", "--dir", dir)).rejects.toThrow(/wiki is off/);
+    expect((await run("wiki", "on", "--dir", dir)).out[0]).toMatch(/the wiki is on/);
+    const prompt = (await run("wiki", "prompt", "--dir", dir)).out.join("\n");
+    expect(prompt).toContain(`### ${ea} (2026-11-09)`);
+    expect(prompt).toContain("I keep building things alone");
+    const reply = {
+      kind: "reflect.wiki",
+      version: 1,
+      absorbed: [ea, eb, "journal/not-a-real-entry"],
+      articles: [
+        { path: "people/sam", title: "Sam", type: "person", also: ["Samuel"], related: ["wiki/patterns/building-alone"], body: `Sam bakes with the subject and proposed splitting the mornings so the bakery could open at five [[${eb}]]. They baked bread together more than once [[${ea}]].\n\nSee [[wiki/patterns/building-alone]].` },
+        { path: "patterns/building-alone", title: "Building alone", type: "pattern", body: `The subject described a cycle: "I keep building things alone" and then wondering why nobody joins [[${ea}]]. Sam's offer to split the mornings is the first counterexample in the entries [[${eb}]].` },
+        { path: "places/corner", title: "The corner", type: "place", body: "The bakery would sit on the corner. Nobody cited this." },
+        { path: "ideas/bakery", title: "Bakery", type: "idea", body: `The subject wrote "the bakery will make millions by spring" [[${eb}]].` },
+        { path: "eras/2026", title: "2026", type: "era", body: `A year of bread \u2014 and of Sam [[${ea}]].` },
+      ],
+    };
+    await writeFile(join(dir, "wiki-reply.md"), "```json\n" + JSON.stringify(reply) + "\n```");
+    const draft = (await run("wiki", "absorb", join(dir, "wiki-reply.md"), "--dir", dir)).out;
+    expect(draft[0]).toBe("2 article(s) to keep, 2 entries absorbed:");
+    expect(draft.join("\n")).toContain("refused: places/corner: a passage cites no note in the record");
+    expect(draft.join("\n")).toContain("refused: ideas/bakery: a quote is not in the notes its passage cites");
+    expect(draft.join("\n")).toContain("refused: eras/2026: uses an em dash");
+    const kept = (await run("wiki", "absorb", "--keep", "all", "--dir", dir)).out;
+    expect(kept).toEqual(["kept: wiki/people/sam", "kept: wiki/patterns/building-alone (reading: ai)"]);
+    const sam = await readFile(join(dir, "wiki/people/sam.md"), "utf8");
+    expect(sam).toContain(`sources: ["${eb}", "${ea}"]`);
+    expect(sam).not.toContain("reading:");
+    expect(await readFile(join(dir, "wiki/patterns/building-alone.md"), "utf8")).toContain("reading: ai");
+    const index = await readFile(join(dir, "wiki/_index.md"), "utf8");
+    expect(index).toContain("- [[wiki/people/sam]] Sam (also: Samuel)");
+    expect(index).toContain("- [[wiki/patterns/building-alone]] Building alone; the AI's reading, not confirmed; linked from 1");
+    expect(JSON.parse(await readFile(join(dir, "wiki/_backlinks.json"), "utf8"))).toEqual({ "patterns/building-alone": ["people/sam"] });
+    await expect(run("wiki", "confirm", "people/sam", "--dir", dir)).rejects.toThrow(/not a reading of you/);
+    await run("wiki", "confirm", "patterns/building-alone", "--dir", dir);
+    expect(await readFile(join(dir, "wiki/patterns/building-alone.md"), "utf8")).toMatch(/reading: confirmed \d{4}-\d{2}-\d{2}/);
+    expect((await run("wiki", "--dir", dir)).out).toEqual(["2 article(s): 1 pattern, 1 person", "1 reading(s) of you, 1 confirmed", "2 entries absorbed, 0 waiting"]);
+    expect((await run("wiki", "prompt", "--dir", dir)).out.join("\n")).toContain("(none: every entry is absorbed)");
+    // A rewrite of a confirmed reading makes it the AI's reading again.
+    const again = { kind: "reflect.wiki", version: 1, absorbed: [], articles: [{ ...reply.articles[1], body: `${reply.articles[1]!.body} The pattern held for a year [[${ea}]].` }] };
+    await writeFile(join(dir, "wiki-reply.md"), JSON.stringify(again));
+    await run("wiki", "absorb", join(dir, "wiki-reply.md"), "--dir", dir);
+    expect((await run("wiki", "absorb", "--keep", "1", "--dir", dir)).out).toEqual(["kept: wiki/patterns/building-alone (reading: ai)"]);
+    await run("index", "--dir", dir);
+    expect(await readFile(join(dir, "index.md"), "utf8")).toContain("[[wiki/_index]]");
+    expect(await run("check", "--dir", dir)).toEqual({ code: 0, out: ["ok"] });
+  });
+
   it("writes index.md, the catalog your own AI starts from, without journal text", async () => {
     const dir = await mkdtemp(join(tmpdir(), "reflect-cli-"));
     dirs.push(dir);
