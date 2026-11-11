@@ -291,3 +291,13 @@ button:disabled { opacity: 0.5; cursor: default; }
 .self-term select { font: 500 14px var(--sans); padding: 6px 8px; border: 1px solid var(--rule); border-radius: 8px; background: var(--paper); color: var(--ink); max-width: 100%; }
 .entry-labels { margin: 8px 0 0; font: 500 12px var(--sans); letter-spacing: 0.04em; color: var(--soft); }
 
+
+/* Learn */
+.learn-list { padding-left: 1.1em; }
+.learn-list li { margin: 6px 0; }
+.learn-select { font: 500 14px var(--sans); padding: 6px 8px; border: 1px solid var(--rule); border-radius: 8px; background: var(--paper); color: var(--ink); max-width: 100%; }
+.learn-text { width: 100%; font: 16px/1.5 var(--serif, inherit); border: 0; border-bottom: 1px solid var(--rule); background: transparent; color: var(--ink); padding: 8px 0; }
+.learn-recall { margin: 10px 0 0; padding-left: 12px; border-left: 2px solid var(--rule); }
+.learn-grasp { border: 0; padding: 12px 0; margin: 0; border-bottom: 1px solid var(--rule); }
+.learn-grasp legend { font: 500 15px var(--sans); margin-bottom: 8px; }
+.learn-grasp .chip input, .add .chip input { margin-right: 4px; }

@@ -221,6 +221,13 @@ describe("reflect CLI", () => {
     expect(map).toContain("  thinking-in-systems  read 2025-06-01; not yet rated: systems-thinking, feedback-loops");
     expect(map).toContain("  nothing rated yet: reflect learn grasp <subject> <level>");
 
+    // The recall check: name what you remember first, then see the book's subjects.
+    const recall = (await run("learn", "recall", "Thinking in Systems", "It was about stocks and flows and feedback, and systems thinking in general.", "--dir", dir)).out;
+    expect(recall).toContain("You named: systems-thinking");
+    expect(recall).toContain("Its other subjects: feedback-loops");
+    expect(await readFile(join(dir, "learn", "books", "thinking-in-systems.md"), "utf8")).toMatch(/- \S+ recall: It was about stocks and flows/);
+    await expect(run("learn", "recall", "Nope", "x", "--dir", dir)).rejects.toThrow(/no book Nope/);
+
     await expect(run("learn", "grasp", "systems thinking", "knows", "--dir", dir)).rejects.toThrow(/grasp is one of/);
     await expect(run("learn", "grasp", "systems thinking", "teach", "--book", "Nope", "--dir", dir)).rejects.toThrow(/no book Nope/);
     await run("learn", "grasp", "systems thinking", "explain", "--book", "Thinking in Systems", "--dir", dir);

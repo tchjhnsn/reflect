@@ -11,6 +11,9 @@ import { PRIMES } from "@reflect/core/state";
 import { conceptHistory, keepReading, onThisConcept, readings } from "./binding-store";
 import { closeEntry, createEntry, entryText, listEntries } from "./journal-store";
 import { keepPlan, legacyStatus, type PlanInput } from "./legacy-store";
+import { addBook, addSubjects, getBook, keepRecall, learnView, rateSubject, setBookStatus } from "./learn-store";
+import { BOOK_STATUS, GRASP, type BookStatus } from "@reflect/core/learning";
+import { lookupIsbn, type Fetch } from "@reflect/core/openlibrary";
 import { siteUrl } from "./site";
 
 /** The elements, from the reader's own description, so an outside AI uses the same words. */
@@ -73,6 +76,27 @@ export async function toolKeepLegacyPlan(userId: string, plan: PlanInput) {
 export async function toolLegacyStatus(userId: string) {
   const s = await legacyStatus(userId);
   return { plan: s.plan, trustees: s.trustees.map((t) => ({ name: t.name, contact: t.contact })), gifts: s.gifts, release: s.release };
+}
+
+const openLibrary: Fetch = (url) => fetch(url, { headers: { "user-agent": "reflect-app" } });
+
+/** Keep a book the person names. With an ISBN, Open Library fills the authors; its subjects come back as suggestions only. */
+export async function toolAddBook(userId: string, b: { title: string; isbn?: string; status?: BookStatus; subjects?: string[] }, fetcher: Fetch = openLibrary) {
+  const catalog = b.isbn ? await lookupIsbn(b.isbn, fetcher).catch(() => null) : null;
+  const id = await addBook(userId, { ...b, authors: catalog?.authors ?? [], catalog });
+  return { book_id: id, authors: catalog?.authors ?? [], suggested_subjects: catalog?.subjects ?? [], note: "Suggested subjects are Open Library's. Add only the ones the person says fit, with add_book_subjects." };
+}
+
+/** Keep what the person named of a book without looking, then the book's subjects to rate. */
+export async function toolRecallCheck(userId: string, bookId: string, recalled: string) {
+  const r = await keepRecall(userId, bookId, recalled);
+  const book = await getBook(userId, bookId);
+  return { ...r, contents: book?.catalog?.contents ?? [], grasp_levels: GRASP, next: "Show the person the subjects they named and the rest, then ask their grasp of each in their words and keep it with rate_subject. Do not rate for them." };
+}
+
+export async function toolLearning(userId: string) {
+  const v = await learnView(userId);
+  return { known: v.known.map((s) => ({ subject: s.name, grasp: s.grasp })), books: v.books.map((b) => ({ id: b.id, title: b.title, authors: b.authors, status: b.status, finished: b.finishedOn, subjects: b.subjects.map((s) => s.name), not_yet_rated: b.unrated })) };
 }
 
 const legacySchema = z.object({
@@ -155,6 +179,42 @@ export function reflectServer(userId: string): McpServer {
     description: "Who the trustees are, who receives something (not what), and whether a release is under way.",
     annotations: { readOnlyHint: true },
   }, async () => text(await toolLegacyStatus(userId)));
+
+  server.registerTool("learning", {
+    title: "What the person knows",
+    description: "Subjects the person rated as known (could teach, explain or remember the gist), and their books with the subjects of read books not yet rated. Nothing is known until the person rates it.",
+    annotations: { readOnlyHint: true },
+  }, async () => text(await toolLearning(userId)));
+
+  server.registerTool("add_book", {
+    title: "Keep a book",
+    description: "Keep a book the person names, where they are with it, and the key subjects as they name them. Give an ISBN to look it up in Open Library; its subjects come back as suggestions, never kept without the person.",
+    inputSchema: z.object({ title: z.string().min(1), isbn: z.string().optional(), status: z.enum(BOOK_STATUS as unknown as [string, ...string[]]).default("read"), subjects: z.array(z.string().min(1)).max(60).optional() }),
+  }, async ({ title, isbn, status, subjects }) => text(await toolAddBook(userId, { title, ...(isbn ? { isbn } : {}), status: status as BookStatus, ...(subjects ? { subjects } : {}) })));
+
+  server.registerTool("add_book_subjects", {
+    title: "Add subjects to a book",
+    description: "Add subjects the person says the book covers.",
+    inputSchema: z.object({ book_id: z.string().uuid(), subjects: z.array(z.string().min(1)).min(1).max(60) }),
+  }, async ({ book_id, subjects }) => text(await addSubjects(userId, book_id, subjects).then(() => ({ ok: true }))));
+
+  server.registerTool("set_book_status", {
+    title: "Where the person is with a book",
+    description: "want, reading, read or abandoned. Reading records when they started; read records when they finished.",
+    inputSchema: z.object({ book_id: z.string().uuid(), status: z.enum(BOOK_STATUS as unknown as [string, ...string[]]) }),
+  }, async ({ book_id, status }) => text(await setBookStatus(userId, book_id, status as BookStatus).then(() => ({ ok: true }))));
+
+  server.registerTool("recall_check", {
+    title: "What the person remembers of a book",
+    description: "First ask the person, without showing them anything, to name the book's key subjects from memory. Send their words here as they said them. It keeps the recall and returns which of the book's subjects they named, the rest, and the book's contents if known.",
+    inputSchema: z.object({ book_id: z.string().uuid(), recalled: z.string().min(1).describe("the person's own words, before seeing any list") }),
+  }, async ({ book_id, recalled }) => text(await toolRecallCheck(userId, book_id, recalled)));
+
+  server.registerTool("rate_subject", {
+    title: "Keep the person's grasp of a subject",
+    description: "The person's own rating, never yours: teach (could teach it), explain (could explain the key ideas), gist (remember the gist) or forgot (don't remember it). A new rating never changes an old one; the latest counts.",
+    inputSchema: z.object({ subject: z.string().min(1), grasp: z.enum(["teach", "explain", "gist", "forgot"]), book_id: z.string().uuid().optional(), note: z.string().optional() }),
+  }, async ({ subject, grasp, book_id, note }) => text(await rateSubject(userId, subject, grasp, { ...(book_id ? { bookId: book_id } : {}), ...(note ? { note } : {}) }).then(() => ({ ok: true }))));
 
   return server;
 }

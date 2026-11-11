@@ -2,7 +2,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { db } from "@/db/pool";
 import { PRIMES } from "@reflect/core/state";
-import { GUIDE, toolConceptHistory, toolGetEntry, toolKeepReading, toolListEntries, toolWriteEntry } from "./mcp-tools";
+import { GUIDE, toolAddBook, toolLearning, toolRecallCheck, toolConceptHistory, toolGetEntry, toolKeepReading, toolListEntries, toolWriteEntry } from "./mcp-tools";
 
 const live = Boolean(process.env.DATABASE_URL && process.env.REFLECT_DATA_KEY);
 
@@ -34,5 +34,21 @@ describe.skipIf(!live)("MCP tools on Neon", () => {
     const mom = await toolConceptHistory(user, { kind: "entity", name: "mom", sort: "person" });
     expect(mom.entries).toEqual([id]);
     expect(mom.now.attachment!.value).toBeCloseTo(0.9, 5);
+  });
+
+  it("keeps a book from the person's AI, with Open Library's subjects only suggested, and a recall check", async () => {
+    const user = randomUUID();
+    await db().query(`INSERT INTO "user" (id, name, email, "emailVerified", "createdAt", "updatedAt") VALUES ($1, '', $2, false, now(), now())`, [user, `${user}@example.test`]);
+    const fetcher = async (url: string) => ({ ok: true, status: 200, json: async () => (url.includes("search.json") ? { docs: [{ key: "/works/OL1W", title: "Meditations", author_name: ["Marcus Aurelius"], subject: ["Stoics", "Ethics"] }] } : { table_of_contents: ["Book One"] }) });
+    const added = await toolAddBook(user, { title: "Meditations", isbn: "9780140449334", status: "read", subjects: ["Stoicism"] }, fetcher);
+    expect(added.authors).toEqual(["Marcus Aurelius"]);
+    expect(added.suggested_subjects).toEqual(["Stoics", "Ethics"]);
+    const r = await toolRecallCheck(user, added.book_id, "Mostly stoicism and duty.");
+    expect(r.named).toEqual(["Stoicism"]);
+    expect(r.contents).toEqual(["Book One"]);
+    const l = await toolLearning(user);
+    expect(l.known).toEqual([]);
+    expect(l.books[0]!.subjects).toEqual(["Stoicism"]);
+    expect(l.books[0]!.not_yet_rated).toEqual(["Stoicism"]);
   });
 });

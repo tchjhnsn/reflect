@@ -9,9 +9,9 @@ import { parseArgs } from "node:util";
 import { filesJournal } from "../core/src/files-journal.ts";
 import { adopt, checkInstance, initInstance, layoutOf, readConfig, upgradeVault } from "../core/src/instance.ts";
 import { addGift, addTrustee, LEGACY_ENTRIES, planProblems, previewRelease, readPlan, setTerms } from "../core/src/release.ts";
-import { BOOK_STATUS, GRASP, keepBook, keepResource, keepSubject, learnMap, RESOURCE_STATUS, type BookStatus, type Grasp, type ResourceStatus, type SubjectRow } from "../core/src/learning.ts";
+import { BOOK_STATUS, GRASP, keepBook, keepRecall, keepResource, keepSubject, learnMap, RESOURCE_STATUS, type BookStatus, type Grasp, type ResourceStatus, type SubjectRow } from "../core/src/learning.ts";
 import { keepNeed, keepPassage, LEGACY_PROMPTS, legacyPrompt } from "../core/src/lifetime.ts";
-import { lookupIsbn, saveCatalogEntry, searchBooks, type Fetch } from "../core/src/openlibrary.ts";
+import { lookupIsbn, readCatalogEntry, saveCatalogEntry, searchBooks, type Fetch } from "../core/src/openlibrary.ts";
 import { recordPaths } from "../core/src/layout.ts";
 import { CUSTODY, DOCUMENT_GROUPS, filesDocuments, isCustody, type ChecklistRow, type Connection } from "../core/src/documents.ts";
 import type { IsoDate } from "../core/src/person.ts";
@@ -42,6 +42,8 @@ const USAGE = `reflect <command> [--dir <instance>]
                 [--subjects a,b] [--on YYYY-MM[-DD]]
                                   --lookup fills authors from Open Library and shows its subjects and
                                   contents; you keep the subjects that fit with --subjects
+  learn recall <book> [text]      name a book's key subjects without looking (text from the argument or
+                                  stdin); then see which of its subjects you named, and its contents
   learn grasp <subject> <teach|explain|gist|forgot> [--book <title>] [--note <text>] [--on ...]
                                   your own grasp of a subject: could teach it, could explain the key
                                   ideas, remember the gist, or don't remember it
@@ -305,6 +307,21 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
       if (b.status === "read" && b.subjects.length) out(`Which of its subjects can you name without looking? Then rate each: reflect learn grasp <subject> <${GRASP.map((g) => g.id).join("|")}> --book "${b.title}"`);
       return 0;
     }
+    if (sub === "recall") {
+      if (!name) throw new Error("learn recall <book> [what you remember]");
+      if (rest[2] === undefined && process.stdin.isTTY) {
+        out(`Without looking, name the key subjects of ${name}: what it is about, its main ideas, what you would tell someone. Then: reflect learn recall "${name}" "<what you named>"`);
+        return 0;
+      }
+      const r = await keepRecall(root, name, textFrom(rest[2]), now, (await readCatalogEntry(root, name))?.contents ?? []);
+      out(`kept your recall on learn/books/${r.book.id}.md`);
+      if (r.named.length) out(`You named: ${r.named.join(", ")}`);
+      if (r.unnamed.length) out(`Its other subjects: ${r.unnamed.join(", ")}`);
+      if (!r.book.subjects.length) out("The book has no subjects yet; add the ones you named: reflect learn book <title> --subjects a,b");
+      if (r.contents.length) out(`Contents:\n${r.contents.map((c) => `  ${c}`).join("\n")}`);
+      out(`Now rate each: reflect learn grasp <subject> <${GRASP.map((g) => g.id).join("|")}> --book "${r.book.title}"`);
+      return 0;
+    }
     if (sub === "grasp") {
       if (!name || !level) throw new Error(`learn grasp <subject> <${GRASP.map((g) => g.id).join("|")}>`);
       const s = await keepSubject(root, name, { ...where, grasp: { grasp: level as Grasp, ...(values.book ? { book: values.book } : {}), ...(values.note ? { note: values.note } : {}), ...(values.on ? { on: values.on } : {}) } }, now);
@@ -324,7 +341,7 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
       out(`kept: learn/resources/${r.id}.md ${r.status}`);
       return 0;
     }
-    if (sub) throw new Error("learn takes book, grasp, aspire, need or resource");
+    if (sub) throw new Error("learn takes find, book, recall, grasp, aspire, need or resource");
     const m = await learnMap(root);
     const text = (g: Grasp) => GRASP.find((x) => x.id === g)!.text;
     const from = (r: SubjectRow) => [...r.books.map((b) => b.id), ...r.resources.map((x) => `${x.id} (${x.status})`)];
