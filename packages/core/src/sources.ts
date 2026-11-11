@@ -5,15 +5,20 @@
 // and proposes where each belongs (a book, a film, an idea, a journal entry, a venture, a document, or
 // nowhere), with a reason and a confidence: a draft the person keeps item by item. A kept placement becomes a
 // pointer: a dated line on the note it belongs to (`pointer notes:Reading/Politics.md #<sha>`) and a line
-// in the source's map (sources/<name>.md). The file stays where it is and stays the original; check says
+// in the source's map (sources/<name>.md). A journal entry is the one placement that is a whole record: an
+// entry in journal/ whose front matter points at the file, and whose text the journal reads from the file
+// each time, so it can be reflected on and labeled without being copied. The file stays where it is and stays the original; check says
 // when a pointed-to file changed, moved or vanished.
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { documentType, filesDocuments } from "./documents.ts";
 import { keepIdea } from "./ideas.ts";
-import { recordPaths } from "./layout.ts";
+import type { Entry } from "./journal.ts";
+import type { IsoDate } from "./person.ts";
+import { entryFileText, headExtras, POINTER_HEAD, pointerBody } from "./files-journal.ts";
+import { recordPaths, type Layout } from "./layout.ts";
 import { keepBook, keepConversation, keepFilm, keepResource, keepSubject, keepTalk, slugOf } from "./learning.ts";
 import { readRecord, writeRecord } from "./record-io.ts";
 
@@ -142,7 +147,7 @@ export type Placement = {
 export const PLACEMENT_PROMPT = `You are helping me organize my own files into Reflect, my notes vault, without moving them. Below is a folder of mine and a list of its files. Read each file you can open (they are on my computer) and say where it belongs. Do not move, rename, edit or summarize any file into another place.
 
 Where a file can belong (kind):
-- entry: my own dated writing, like a journal page. Give its date (YYYY-MM-DD) if the file shows one.
+- entry: my own dated writing, like a journal page, in a plain text file (.md, .txt). Give its date (YYYY-MM-DD) if the file shows one.
 - book: notes, highlights or a summary of a book. name is the book's title; add authors if the file names them.
 - film: notes on a film, documentary or series. name is its title.
 - talk: notes on a talk, lecture, sermon or video of someone speaking. name is its title; speaker is who spoke.
@@ -271,7 +276,42 @@ async function appendLine(root: string, rel: string, line: string, at: string): 
 }
 
 /** Keep the placements the person chose (numbers from 1): each becomes a pointer on its note and a line in the source's map. */
-export async function keepPlacements(root: string, name: string, numbers: readonly number[], person: string, now: Date): Promise<string[]> {
+/**
+ * A journal entry that points at a file in a source: the entry's front matter names the file, and the
+ * journal reads its text from there each time (files-journal.ts). The entry is closed, since the writing
+ * is already done; reflecting on it and labeling it work as on any entry. A file placed again keeps the
+ * same entry, with the fingerprint brought up to date.
+ */
+async function keepPointerEntry(root: string, journalDir: string, name: string, f: IndexedFile, date: string | undefined, at: string): Promise<string> {
+  const from = `${name}:${f.path}`;
+  const sha = f.sha256.slice(0, 12);
+  let files: string[] = [];
+  try {
+    files = (await readdir(join(root, journalDir))).filter((n) => n.endsWith(".md"));
+  } catch {
+    // no journal yet
+  }
+  for (const n of files) {
+    const rel = join(journalDir, n);
+    const text = (await readRecord(root, rel)) ?? "";
+    const extras = headExtras(text);
+    const ptr = extras.map((l) => POINTER_HEAD.exec(l)).find(Boolean);
+    if (!ptr || `${ptr[1]}:${ptr[2]!.trim()}` !== from) continue;
+    if (!extras.includes(`pointer_sha: ${sha}`)) {
+      const next = text.replace(/^pointer_sha: .*$/m, `pointer_sha: ${sha}`);
+      await writeRecord(root, rel, next, "append", at);
+    }
+    return n.replace(/\.md$/, "");
+  }
+  const localDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : f.modified.slice(0, 10);
+  const id = randomUUID();
+  const entry: Entry = { id, localDate: localDate as IsoDate, createdAt: at, promptId: null, closedAt: at, parts: [{ seq: 0, text: pointerBody(name, f.path), createdAt: at }] };
+  const stem = `${localDate}-${id}`;
+  await writeRecord(root, join(journalDir, `${stem}.md`), entryFileText(entry, [`pointer: ${from}`, `pointer_sha: ${sha}`]), "create", at);
+  return stem;
+}
+
+export async function keepPlacements(root: string, name: string, numbers: readonly number[], person: string, now: Date, layout: Layout = "vault"): Promise<string[]> {
   const s = await getSource(root, name);
   const draft = await readDraft(root, name);
   const index = new Map(((await readIndex(root, name)) ?? []).map((f) => [f.path, f] as const));
@@ -293,7 +333,11 @@ export async function keepPlacements(root: string, name: string, numbers: readon
       return p.name;
     };
     let target: string | undefined;
-    if (p.kind === "book") target = `learn/books/${(await keepBook(root, need("the book's title"), { ...(p.authors ? { authors: p.authors } : {}), source: `notes in ${from}` }, now)).id}`;
+    if (p.kind === "entry") {
+      if (!TEXT.test(f.path)) throw new Error(`placement ${n} (${p.path}) is not a plain text file; an entry must be text Reflect can read, like .md or .txt`);
+      const journalDir = recordPaths(layout, person).journal;
+      target = join(journalDir, await keepPointerEntry(root, journalDir, name, f, p.date, at));
+    } else if (p.kind === "book") target = `learn/books/${(await keepBook(root, need("the book's title"), { ...(p.authors ? { authors: p.authors } : {}), source: `notes in ${from}` }, now)).id}`;
     else if (p.kind === "film") target = `learn/films/${(await keepFilm(root, need("the film's title"), { source: `notes in ${from}` }, now)).id}`;
     else if (p.kind === "talk") target = `learn/talks/${(await keepTalk(root, need("the talk's title"), { ...(p.speaker ? { speaker: p.speaker } : {}), source: `notes in ${from}` }, now)).id}`;
     else if (p.kind === "link") target = `learn/resources/${(await keepResource(root, need("the link's title"), { kind: "article", ...(p.url ? { url: p.url } : {}), source: `saved in ${from}` }, now)).id}`;
@@ -306,10 +350,10 @@ export async function keepPlacements(root: string, name: string, numbers: readon
       target = `ideas/${(await keepIdea(root, p.name!, { ...(p.statement ? { statement: p.statement } : {}), from: [{ target: { text: `my notes in ${from}` } }] }, now)).id}`;
     } else if (p.kind === "document") {
       if (!documentType(need("the document type"))) throw new Error(`placement ${n}: no document type ${p.name}; \`reflect documents\` lists them`);
-      await filesDocuments(root, recordPaths("vault", person), () => now).check(p.name!, "digital-copy", { where: from });
+      await filesDocuments(root, recordPaths(layout, person), () => now).check(p.name!, "digital-copy", { where: from });
       target = `documents/${p.name}`;
     }
-    if (target && p.kind !== "document") await appendLine(root, `${target}.md`, pointer, at);
+    if (target && p.kind !== "document" && p.kind !== "entry") await appendLine(root, `${target}.md`, pointer, at);
     lines.push(`${day} placed ${JSON.stringify(p.path)} #${sha} as ${p.kind}${target ? ` [[${target}]]` : ""}`);
     kept.push(`${p.path} -> ${target ?? p.kind}`);
   }

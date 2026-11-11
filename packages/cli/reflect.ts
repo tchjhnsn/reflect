@@ -97,7 +97,9 @@ const USAGE = `reflect <command> [--dir <instance>]
   source tag <name> <reply file>  read your AI's reply into a draft and list each placement
   source tag <name> --keep <1,2,5 | all>
                                   keep those: each becomes a pointer on its note and a line in
-                                  sources/<name>.md; the file stays where it is
+                                  sources/<name>.md; the file stays where it is. An entry becomes a
+                                  journal entry that reads its text from the file, so you can reflect
+                                  on it without copying it in
   idea                            your ideas, each with its inputs and recommendations
   idea <title> [statement] [--from <input>]... [--maybe <input>]... [--how <text>]
                 [--related <stance>:<thing> --by <who> [--note <text>]]... [--drop <thing>]...
@@ -618,7 +620,7 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
         const draft = await readDraft(root, name);
         const nums = values.keep === "all" ? draft.map((_, i) => i + 1) : values.keep.split(",").map((x) => Number(x.trim()));
         if (nums.some((n) => !Number.isInteger(n) || n < 1)) throw new Error("--keep takes all or numbers like 1,2,5");
-        for (const k of await keepPlacements(root, name, nums, config.person, now)) out(`kept: ${k}`);
+        for (const k of await keepPlacements(root, name, nums, config.person, now, layoutOf(config))) out(`kept: ${k}`);
         return 0;
       }
       if (!arg) throw new Error("source tag <name> <reply file>");
