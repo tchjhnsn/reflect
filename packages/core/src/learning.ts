@@ -1,57 +1,64 @@
-// What a person knows, needs to know and wants to know, as files in learn/. A topic is a note in
-// learn/topics/; what the person wants of it (aspire, or need for something they name) is a field, and
-// what they have shown of it is evidence, kept as dated lines the way evidence-centered design (Mislevy,
-// Steinberg and Almond 2003) backs a claim. Learned is derived from evidence, never set. What is
-// possible to learn next is derived too: the fringe of knowledge space theory (Doignon and Falmagne),
-// a topic whose prerequisites are all learned. Topics point at a shared map (Wikidata, ESCO) instead of
-// Reflect keeping one. A resource is a note in learn/resources/: a link to a channel, article, book or
-// course, and finishing one counts as studying the topics it names.
+// What a person knows, as files in learn/. Books are the center: a book note in learn/books/ says what the
+// person read and which subjects it covers. A subject note in learn/subjects/ is a node of their knowledge
+// graph, and the person rates their own grasp of it, dated, often in the context of a book: could teach
+// it, could explain the key ideas, remember the gist, or don't remember it. Known is never computed: a
+// subject is known only at the grasp the person last gave it, and a book read but not rated counts as read,
+// not as known. A subject the person wants is aspire, or need when they name what needs it. Possible next
+// is derived: the fringe of knowledge space theory (Doignon and Falmagne), a subject whose prerequisites
+// are known. Subjects point at a shared map (Wikidata, Library of Congress subject headings, ESCO) instead
+// of Reflect keeping one. A resource in learn/resources/ is any other link (a channel, an article, a
+// course) kept for what the person wants to learn.
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { headOf } from "./lifetime.ts";
 import { readRecord, writeRecord } from "./record-io.ts";
 
-export const TOPICS = join("learn", "topics");
+export const BOOKS = join("learn", "books");
+export const SUBJECTS = join("learn", "subjects");
 export const RESOURCES = join("learn", "resources");
 
 export const WANTS = ["aspire", "need"] as const;
 export type Want = (typeof WANTS)[number];
 
-/** Kinds of evidence. `said` alone leaves a topic stated; any other kind shows it. */
-export const EVIDENCE_KINDS = [
-  { id: "said", text: "you say you know it" },
-  { id: "studied", text: "you finished a book, course or lecture on it" },
-  { id: "practiced", text: "you used it in real work; link the record in work/ or a venture" },
-  { id: "made", text: "something others can inspect: a repo, an essay, a build" },
-  { id: "assessed", text: "an exam or test result" },
-  { id: "certified", text: "a credential; link its card in documents/" },
-  { id: "vouched", text: "someone who knows the subject says you know it (--by)" },
-  { id: "taught", text: "you taught it to others" },
+/** The person's own grasp of a subject, from most to least. Only they set it. */
+export const GRASP = [
+  { id: "teach", text: "could teach it" },
+  { id: "explain", text: "could explain the key ideas" },
+  { id: "gist", text: "remember the gist" },
+  { id: "forgot", text: "don't remember it" },
 ] as const;
-export type EvidenceKind = (typeof EVIDENCE_KINDS)[number]["id"];
-export const isEvidenceKind = (s: string): s is EvidenceKind => EVIDENCE_KINDS.some((k) => k.id === s);
+export type Grasp = (typeof GRASP)[number]["id"];
+export const isGrasp = (s: string): s is Grasp => GRASP.some((g) => g.id === s);
+const knows = (g: Grasp | undefined) => g === "teach" || g === "explain" || g === "gist";
 
-export const RESOURCE_KINDS = ["video", "channel", "article", "book", "course", "podcast", "paper", "lab", "site"] as const;
+export const BOOK_STATUS = ["want", "reading", "read", "abandoned"] as const;
+export type BookStatus = (typeof BOOK_STATUS)[number];
+
+export const RESOURCE_KINDS = ["video", "channel", "article", "course", "podcast", "paper", "lab", "site"] as const;
 export const RESOURCE_STATUS = ["saved", "started", "finished", "dropped"] as const;
 export type ResourceStatus = (typeof RESOURCE_STATUS)[number];
 
-/** A topic's id in a shared map: a Wikidata item, an ESCO concept, or a link. */
-const SAME_AS = /^(wikidata:Q\d+|esco:\S+|https?:\/\/\S+)$/;
+/** A subject's id in a shared map: a Wikidata item, a Library of Congress subject heading, an ESCO concept, or a link. */
+const SAME_AS = /^(wikidata:Q\d+|lcsh:sh\d+|esco:\S+|https?:\/\/\S+)$/;
+const ISBN = /^(97[89])?\d{9}[\dX]$/;
 
-export type Evidence = { on: string; kind: EvidenceKind; link?: string; by?: string; note?: string; from?: string };
-export type Topic = { id: string; title: string; want?: Want; for?: string; same_as?: string; requires: string[]; part_of: string[]; evidence: Evidence[] };
-export type Resource = { id: string; kind: string; title: string; url?: string; by?: string; platform?: string; topics: string[]; status: ResourceStatus };
+export type GraspLine = { on: string; grasp: Grasp; book?: string; note?: string };
+export type Subject = { id: string; title: string; want?: Want; for?: string; same_as?: string; requires: string[]; part_of: string[]; grasps: GraspLine[] };
+export type Book = { id: string; title: string; authors: string[]; isbn?: string; status: BookStatus; started?: string; finished?: string; subjects: string[] };
+export type Resource = { id: string; kind: string; title: string; url?: string; by?: string; platform?: string; subjects: string[]; status: ResourceStatus };
 
 export function slugOf(name: string): string {
   const s = name.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
-  if (!s) throw new Error("a topic or resource needs a name with letters or digits");
+  if (!s) throw new Error("a book, subject or resource needs a name with letters or digits");
   return s;
 }
 
-const links = (v: string | undefined) => [...(v ?? "").matchAll(/\[\[(?:learn\/topics\/)?([^\]|]+)(?:\|[^\]]*)?\]\]/g)].map((m) => m[1]!.trim());
-const linkList = (ids: readonly string[]) => ids.map((t) => `[[learn/topics/${t}]]`).join(", ");
+export const cleanIsbn = (s: string) => s.replace(/^isbn:?/i, "").replace(/[\s-]/g, "").toUpperCase();
+const links = (v: string | undefined, dir: string) => [...(v ?? "").matchAll(new RegExp(`\\[\\[(?:${dir.replace("/", "\\/")}\\/)?([^\\]|]+)(?:\\|[^\\]]*)?\\]\\]`, "g"))].map((m) => m[1]!.trim());
+const linkList = (ids: readonly string[], dir: string) => ids.map((t) => `[[${dir}/${t}]]`).join(", ");
 const q = (s: string) => JSON.stringify(s);
 const oneLine = (s: string) => s.replace(/\s+/g, " ").trim();
+const S = "learn/subjects";
 
 function body(text: string): { head: Record<string, string>; history: string[] } {
   const t = text.replace(/\r\n/g, "\n");
@@ -60,18 +67,18 @@ function body(text: string): { head: Record<string, string>; history: string[] }
   return { head: headOf(t), history: rest.split("\n").filter((l) => l.startsWith("- ")).map((l) => l.slice(2)) };
 }
 
-/** An evidence line: `2026-11-11 made: https://… by Ana: a note`. Other history lines are not evidence. */
-export function parseEvidence(line: string): Evidence | null {
-  const m = /^(\d{4}-\d{2}(?:-\d{2})?) evidence ([a-z]+)(?: <([^>]*)>)?(?: by ([^:]+?))?(?:: (.*))?$/.exec(line);
-  if (!m || !isEvidenceKind(m[2]!)) return null;
-  return { on: m[1]!, kind: m[2], ...(m[3] ? { link: m[3] } : {}), ...(m[4] ? { by: m[4] } : {}), ...(m[5] ? { note: m[5] } : {}) };
+const page = (head: string[], title: string, lines: readonly string[]) => `---\n${head.join("\n")}\n---\n\n# ${title}\n\n${lines.map((h) => `- ${h}`).join("\n")}\n`;
+
+/** A grasp line: `2026-11-11 grasp explain [[learn/books/x]]: a note`. Other history lines are not grasps. */
+export function parseGrasp(line: string): GraspLine | null {
+  const m = /^(\d{4}-\d{2}(?:-\d{2})?) grasp ([a-z]+)(?: \[\[(?:learn\/books\/)?([^\]]+)\]\])?(?:: (.*))?$/.exec(line);
+  if (!m || !isGrasp(m[2]!)) return null;
+  return { on: m[1]!, grasp: m[2], ...(m[3] ? { book: m[3] } : {}), ...(m[4] ? { note: m[4] } : {}) };
 }
 
-function evidenceLine(e: Evidence): string {
-  return `${e.on} evidence ${e.kind}${e.link ? ` <${e.link}>` : ""}${e.by ? ` by ${oneLine(e.by)}` : ""}${e.note ? `: ${oneLine(e.note)}` : ""}`;
-}
+const graspLine = (g: GraspLine) => `${g.on} grasp ${g.grasp}${g.book ? ` [[learn/books/${g.book}]]` : ""}${g.note ? `: ${oneLine(g.note)}` : ""}`;
 
-export function parseTopic(id: string, text: string): Topic {
+export function parseSubject(id: string, text: string): Subject {
   const { head, history } = body(text);
   const want = (WANTS as readonly string[]).includes(head.want ?? "") ? (head.want as Want) : undefined;
   return {
@@ -80,20 +87,45 @@ export function parseTopic(id: string, text: string): Topic {
     ...(want ? { want } : {}),
     ...(head.for ? { for: head.for } : {}),
     ...(head.same_as ? { same_as: head.same_as } : {}),
-    requires: links(head.requires),
-    part_of: links(head.part_of),
-    evidence: history.map(parseEvidence).filter((e): e is Evidence => e !== null),
+    requires: links(head.requires, S),
+    part_of: links(head.part_of, S),
+    grasps: history.map(parseGrasp).filter((g): g is GraspLine => g !== null),
   };
 }
 
-function topicText(t: Topic, history: readonly string[]): string {
-  const head = [`topic: ${t.id}`, `title: ${q(t.title)}`];
-  if (t.want) head.push(`want: ${t.want}`);
-  if (t.for) head.push(`for: ${q(t.for)}`);
-  if (t.same_as) head.push(`same_as: ${t.same_as}`);
-  if (t.requires.length) head.push(`requires: ${linkList(t.requires)}`);
-  if (t.part_of.length) head.push(`part_of: ${linkList(t.part_of)}`);
-  return `---\n${head.join("\n")}\n---\n\n# ${t.title}\n\n${history.map((h) => `- ${h}`).join("\n")}\n`;
+function subjectText(s: Subject, lines: readonly string[]): string {
+  const head = [`subject: ${s.id}`, `title: ${q(s.title)}`];
+  if (s.want) head.push(`want: ${s.want}`);
+  if (s.for) head.push(`for: ${q(s.for)}`);
+  if (s.same_as) head.push(`same_as: ${s.same_as}`);
+  if (s.requires.length) head.push(`requires: ${linkList(s.requires, S)}`);
+  if (s.part_of.length) head.push(`part_of: ${linkList(s.part_of, S)}`);
+  return page(head, s.title, lines);
+}
+
+export function parseBook(id: string, text: string): Book {
+  const { head } = body(text);
+  return {
+    id,
+    title: head.title ?? id,
+    authors: (head.authors ?? "").split(";").map((a) => a.trim()).filter(Boolean),
+    ...(head.isbn ? { isbn: head.isbn } : {}),
+    status: (BOOK_STATUS as readonly string[]).includes(head.status ?? "") ? (head.status as BookStatus) : "want",
+    ...(head.started ? { started: head.started } : {}),
+    ...(head.finished ? { finished: head.finished } : {}),
+    subjects: links(head.subjects, S),
+  };
+}
+
+function bookText(b: Book, lines: readonly string[]): string {
+  const head = [`book: ${b.id}`, `title: ${q(b.title)}`];
+  if (b.authors.length) head.push(`authors: ${q(b.authors.join("; "))}`);
+  if (b.isbn) head.push(`isbn: ${b.isbn}`);
+  head.push(`status: ${b.status}`);
+  if (b.started) head.push(`started: ${b.started}`);
+  if (b.finished) head.push(`finished: ${b.finished}`);
+  if (b.subjects.length) head.push(`subjects: ${linkList(b.subjects, S)}`);
+  return page(head, b.title, lines);
 }
 
 export function parseResource(id: string, text: string): Resource {
@@ -105,77 +137,105 @@ export function parseResource(id: string, text: string): Resource {
     ...(head.url ? { url: head.url } : {}),
     ...(head.by ? { by: head.by } : {}),
     ...(head.platform ? { platform: head.platform } : {}),
-    topics: links(head.topics),
+    subjects: links(head.subjects, S),
     status: (RESOURCE_STATUS as readonly string[]).includes(head.status ?? "") ? (head.status as ResourceStatus) : "saved",
   };
 }
 
-function resourceText(r: Resource, history: readonly string[]): string {
+function resourceText(r: Resource, lines: readonly string[]): string {
   const head = [`resource: ${r.id}`, `kind: ${r.kind}`, `title: ${q(r.title)}`];
   if (r.url) head.push(`url: ${r.url}`);
   if (r.by) head.push(`by: ${q(r.by)}`);
   if (r.platform) head.push(`platform: ${r.platform}`);
-  if (r.topics.length) head.push(`topics: ${linkList(r.topics)}`);
+  if (r.subjects.length) head.push(`subjects: ${linkList(r.subjects, S)}`);
   head.push(`status: ${r.status}`);
-  return `---\n${head.join("\n")}\n---\n\n# ${r.title}\n\n${r.url ? `${r.url}\n\n` : ""}${history.map((h) => `- ${h}`).join("\n")}\n`;
+  return page(head, r.title, lines);
 }
 
-export type TopicChange = { title?: string; want?: Want; for?: string; same_as?: string; requires?: string[]; part_of?: string[] };
+const DAY = /^\d{4}-\d{2}(-\d{2})?$/;
 
-/** Keep what the person wants of a topic, and where it sits. Each change adds a dated line. */
-export async function keepTopic(root: string, name: string, change: TopicChange, now: Date, evidence?: Omit<Evidence, "on"> & { on?: string }): Promise<Topic> {
+export type SubjectChange = { title?: string; want?: Want; for?: string; same_as?: string; requires?: string[]; part_of?: string[]; grasp?: { grasp: Grasp; book?: string; note?: string; on?: string } };
+
+/** Keep a subject: what the person wants of it, where it sits, or their grasp of it. Each change adds a dated line. */
+export async function keepSubject(root: string, name: string, change: SubjectChange, now: Date): Promise<Subject> {
   const id = slugOf(name);
   if (change.want === "need" && !change.for) throw new Error("a need names what it is for: an intent, a venture, a need or a role (--for)");
-  if (change.same_as && !SAME_AS.test(change.same_as)) throw new Error("--same-as is wikidata:Q<number>, esco:<uri> or a link");
-  if (evidence) evidenceProblem(evidence);
-  const rel = join(TOPICS, `${id}.md`);
+  if (change.same_as && !SAME_AS.test(change.same_as)) throw new Error("--same-as is wikidata:Q<number>, lcsh:sh<number>, esco:<uri> or a link");
+  if (change.grasp && !isGrasp(change.grasp.grasp)) throw new Error(`grasp is one of ${GRASP.map((g) => `${g.id} (${g.text})`).join(", ")}`);
+  if (change.grasp?.on && !DAY.test(change.grasp.on)) throw new Error("--on is YYYY-MM or YYYY-MM-DD");
+  if (change.grasp?.book && (await readRecord(root, join(BOOKS, `${slugOf(change.grasp.book)}.md`))) === null) throw new Error(`no book ${change.grasp.book}; keep it first: reflect learn book <title>`);
+  const rel = join(SUBJECTS, `${id}.md`);
   const old = await readRecord(root, rel);
-  const prev = old ? parseTopic(id, old) : { id, title: name.trim(), requires: [], part_of: [], evidence: [] };
-  const t: Topic = {
+  const prev: Subject = old ? parseSubject(id, old) : { id, title: name.trim(), requires: [], part_of: [], grasps: [] };
+  const s: Subject = {
     ...prev,
     ...(change.title ? { title: change.title } : {}),
-    ...(change.want ? { want: change.want, ...(change.want === "need" ? { for: change.for } : {}) } : {}),
+    ...(change.want ? { want: change.want } : {}),
+    ...(change.want === "need" ? { for: change.for } : {}),
     ...(change.same_as ? { same_as: change.same_as } : {}),
     requires: [...new Set([...prev.requires, ...(change.requires ?? []).map(slugOf)])],
     part_of: [...new Set([...prev.part_of, ...(change.part_of ?? []).map(slugOf)])],
   };
-  if (change.want === "aspire") delete t.for;
-  if (t.requires.includes(id) || t.part_of.includes(id)) throw new Error("a topic cannot require itself or be part of itself");
+  if (change.want === "aspire") delete s.for;
+  if (s.requires.includes(id) || s.part_of.includes(id)) throw new Error("a subject cannot require itself or be part of itself");
   const at = now.toISOString();
   const day = at.slice(0, 10);
   const lines = old ? body(old).history : [];
   if (change.want) lines.push(`${day} want ${change.want}${change.want === "need" ? ` for ${oneLine(change.for!)}` : ""}`);
-  if (evidence) {
-    const e = { ...evidence, on: evidence.on ?? day };
-    lines.push(evidenceLine(e));
-    t.evidence = [...t.evidence, e];
+  if (change.grasp) {
+    const g: GraspLine = { on: change.grasp.on ?? day, grasp: change.grasp.grasp, ...(change.grasp.book ? { book: slugOf(change.grasp.book) } : {}), ...(change.grasp.note ? { note: change.grasp.note } : {}) };
+    lines.push(graspLine(g));
+    s.grasps = [...s.grasps, g];
   }
   if (!old && !lines.length) lines.push(`${day} noted`);
-  await writeRecord(root, rel, topicText(t, lines), old ? "append" : "create", at);
-  return t;
+  await writeRecord(root, rel, subjectText(s, lines), old ? "append" : "create", at);
+  return s;
 }
 
-function evidenceProblem(e: Partial<Evidence>): void {
-  if (!e.kind || !isEvidenceKind(e.kind)) throw new Error(`evidence is one of ${EVIDENCE_KINDS.map((k) => k.id).join(", ")}`);
-  if (e.on && !/^\d{4}-\d{2}(-\d{2})?$/.test(e.on)) throw new Error("--on is YYYY-MM or YYYY-MM-DD");
-  if (e.kind === "vouched" && !e.by) throw new Error("vouched evidence names who vouches (--by)");
-  if (e.kind !== "said" && !e.link && !e.note) throw new Error(`${e.kind} evidence says where it can be seen (--link or --note)`);
-  if (e.link && /[<>\s]/.test(e.link)) throw new Error("--link has no spaces or angle brackets");
+export type BookChange = { title?: string; authors?: string[]; isbn?: string; status?: BookStatus; subjects?: string[]; on?: string };
+
+/** Keep a book: what it is, how far the person is with it, and the subjects it covers. */
+export async function keepBook(root: string, name: string, change: BookChange, now: Date): Promise<Book> {
+  const id = slugOf(name);
+  if (change.status && !(BOOK_STATUS as readonly string[]).includes(change.status)) throw new Error(`--status is one of ${BOOK_STATUS.join(", ")}`);
+  const isbn = change.isbn ? cleanIsbn(change.isbn) : undefined;
+  if (isbn && !ISBN.test(isbn)) throw new Error("--isbn has 10 or 13 digits");
+  if (change.on && !DAY.test(change.on)) throw new Error("--on is YYYY-MM or YYYY-MM-DD");
+  const rel = join(BOOKS, `${id}.md`);
+  const old = await readRecord(root, rel);
+  const prev: Book = old ? parseBook(id, old) : { id, title: name.trim(), authors: [], status: "want", subjects: [] };
+  const at = now.toISOString();
+  const day = change.on ?? at.slice(0, 10);
+  const b: Book = {
+    ...prev,
+    ...(change.title ? { title: change.title } : {}),
+    ...(change.authors?.length ? { authors: change.authors } : {}),
+    ...(isbn ? { isbn } : {}),
+    ...(change.status ? { status: change.status } : {}),
+    subjects: [...new Set([...prev.subjects, ...(change.subjects ?? []).map(slugOf)])],
+  };
+  if (change.status === "reading" && !b.started) b.started = day;
+  if (change.status === "read") b.finished = day;
+  const lines = old ? body(old).history : [];
+  if (!old || (change.status && change.status !== prev.status)) lines.push(`${day} ${b.status}`);
+  await writeRecord(root, rel, bookText(b, lines), old ? "append" : "create", at);
+  return b;
 }
 
-export type ResourceChange = { kind?: string; title?: string; url?: string; by?: string; platform?: string; topics?: string[]; status?: ResourceStatus };
+export type ResourceChange = { kind?: string; title?: string; url?: string; by?: string; platform?: string; subjects?: string[]; status?: ResourceStatus };
 
-/** Keep a resource: a link the person saved, and how far they are with it. */
+/** Keep a resource: a link the person saved for what they want to learn, and how far they are with it. */
 export async function keepResource(root: string, name: string, change: ResourceChange, now: Date): Promise<Resource> {
   const id = slugOf(name);
   const rel = join(RESOURCES, `${id}.md`);
   const old = await readRecord(root, rel);
+  if (change.kind === "book") throw new Error("a book is kept with: reflect learn book <title>");
   if (!old && !change.kind) throw new Error(`a new resource needs --kind: ${RESOURCE_KINDS.join(", ")}`);
   if (change.kind && !(RESOURCE_KINDS as readonly string[]).includes(change.kind)) throw new Error(`--kind is one of ${RESOURCE_KINDS.join(", ")}`);
   if (change.status && !(RESOURCE_STATUS as readonly string[]).includes(change.status)) throw new Error(`--status is one of ${RESOURCE_STATUS.join(", ")}`);
-  if (change.url && !/^(https?:\/\/\S+|isbn:[0-9X-]+|doi:\S+)$/i.test(change.url)) throw new Error("--url is a link, isbn:<number> or doi:<id>");
+  if (change.url && !/^(https?:\/\/\S+|doi:\S+)$/i.test(change.url)) throw new Error("--url is a link or doi:<id>");
   if (change.platform && !(await platformIds(root)).includes(change.platform)) throw new Error(`no platform ${change.platform}; connect it first: reflect connect ${change.platform} --name <name> --kind platform`);
-  const prev = old ? parseResource(id, old) : { id, kind: change.kind!, title: name.trim(), topics: [], status: "saved" as const };
+  const prev: Resource = old ? parseResource(id, old) : { id, kind: change.kind!, title: name.trim(), subjects: [], status: "saved" };
   const r: Resource = {
     ...prev,
     ...(change.kind ? { kind: change.kind } : {}),
@@ -184,7 +244,7 @@ export async function keepResource(root: string, name: string, change: ResourceC
     ...(change.by ? { by: change.by } : {}),
     ...(change.platform ? { platform: change.platform } : {}),
     ...(change.status ? { status: change.status } : {}),
-    topics: [...new Set([...prev.topics, ...(change.topics ?? []).map(slugOf)])],
+    subjects: [...new Set([...prev.subjects, ...(change.subjects ?? []).map(slugOf)])],
   };
   const at = now.toISOString();
   const lines = old ? body(old).history : [];
@@ -212,35 +272,45 @@ async function platformIds(root: string): Promise<string[]> {
   return out;
 }
 
-export type Standing = "stated" | "shown";
-export type MapRow = { topic: Topic; evidence: Evidence[]; standing?: Standing; resources: Resource[]; blockedBy: string[] };
-export type LearnMap = { learned: MapRow[]; aspire: MapRow[]; need: MapRow[]; possible: MapRow[] };
+export type SubjectRow = { subject: Subject; grasp?: GraspLine; books: Book[]; resources: Resource[]; blockedBy: string[] };
+export type BookRow = { book: Book; unrated: string[] };
+export type LearnMap = { known: SubjectRow[]; aspire: SubjectRow[]; need: SubjectRow[]; possible: SubjectRow[]; books: BookRow[] };
+
+/** The latest grasp the person gave, by the date they gave, then the order kept. */
+export function latestGrasp(grasps: readonly GraspLine[]): GraspLine | undefined {
+  return grasps.map((g, i) => [g, i] as const).sort(([a, i], [b, j]) => a.on.localeCompare(b.on) || i - j).at(-1)?.[0];
+}
 
 /**
- * The person's map: every topic with its evidence, including studying from finished resources. Learned is
- * a topic with evidence; aspire and need are the rest that the person wants; possible is the fringe, a
- * topic they have not learned or asked for whose prerequisites are all learned, and which requires
- * something or is required by something on the map.
+ * The person's map. Known: subjects whose latest grasp is teach, explain or gist. Aspire and need: the
+ * subjects they want and do not know. Possible next: the fringe, a subject on the map they have not asked
+ * for and do not know, whose prerequisites they know, that requires something or is required by something.
+ * Books: every book with the subjects it covers that the person has not rated since reading it.
  */
 export async function learnMap(root: string): Promise<LearnMap> {
+  const books = (await notes(root, BOOKS)).map(([id, t]) => parseBook(id, t));
   const resources = (await notes(root, RESOURCES)).map(([id, t]) => parseResource(id, t));
-  const topics = new Map((await notes(root, TOPICS)).map(([id, t]) => [id, parseTopic(id, t)] as const));
-  for (const t of topics.values()) for (const r of [...t.requires, ...t.part_of]) if (!topics.has(r)) topics.set(r, { id: r, title: r, requires: [], part_of: [], evidence: [] });
-  for (const r of resources) for (const id of r.topics) if (!topics.has(id)) topics.set(id, { id, title: id, requires: [], part_of: [], evidence: [] });
-  const rows = new Map<string, MapRow>();
-  for (const t of topics.values()) {
-    const studied = resources.filter((r) => r.status === "finished" && r.topics.includes(t.id)).map((r): Evidence => ({ on: "", kind: "studied", from: `learn/resources/${r.id}`, ...(r.url ? { link: r.url } : {}) }));
-    const evidence = [...t.evidence, ...studied];
-    const standing: Standing | undefined = evidence.length ? (evidence.some((e) => e.kind !== "said") ? "shown" : "stated") : undefined;
-    rows.set(t.id, { topic: t, evidence, ...(standing ? { standing } : {}), resources: resources.filter((r) => r.topics.includes(t.id)), blockedBy: [] });
+  const subjects = new Map((await notes(root, SUBJECTS)).map(([id, t]) => [id, parseSubject(id, t)] as const));
+  const named = [...[...subjects.values()].flatMap((s) => [...s.requires, ...s.part_of]), ...books.flatMap((b) => b.subjects), ...resources.flatMap((r) => r.subjects)];
+  for (const id of named) if (!subjects.has(id)) subjects.set(id, { id, title: id, requires: [], part_of: [], grasps: [] });
+  const rows = new Map<string, SubjectRow>();
+  for (const s of subjects.values()) {
+    const grasp = latestGrasp(s.grasps);
+    rows.set(s.id, { subject: s, ...(grasp ? { grasp } : {}), books: books.filter((b) => b.subjects.includes(s.id)), resources: resources.filter((r) => r.subjects.includes(s.id)), blockedBy: [] });
   }
-  for (const row of rows.values()) row.blockedBy = row.topic.requires.filter((r) => !rows.get(r)?.standing);
+  const known = (id: string) => knows(rows.get(id)?.grasp?.grasp);
+  for (const row of rows.values()) row.blockedBy = row.subject.requires.filter((r) => !known(r));
   const all = [...rows.values()];
+  const open = all.filter((r) => !known(r.subject.id));
   return {
-    learned: all.filter((r) => r.standing),
-    aspire: all.filter((r) => !r.standing && r.topic.want === "aspire"),
-    need: all.filter((r) => !r.standing && r.topic.want === "need"),
-    possible: all.filter((r) => !r.standing && !r.topic.want && r.blockedBy.length === 0 && (r.topic.requires.length > 0 || all.some((o) => o.topic.requires.includes(r.topic.id)))),
+    known: all.filter((r) => known(r.subject.id)),
+    aspire: open.filter((r) => r.subject.want === "aspire"),
+    need: open.filter((r) => r.subject.want === "need"),
+    possible: open.filter((r) => !r.subject.want && r.blockedBy.length === 0 && (r.subject.requires.length > 0 || all.some((o) => o.subject.requires.includes(r.subject.id)))),
+    books: books.map((b) => ({
+      book: b,
+      unrated: b.status === "read" ? b.subjects.filter((s) => !(subjects.get(s)?.grasps ?? []).some((g) => g.book === b.id || (b.finished !== undefined && g.on >= b.finished))) : [],
+    })),
   };
 }
 
@@ -248,33 +318,47 @@ export async function learnMap(root: string): Promise<LearnMap> {
 export async function learnProblems(root: string): Promise<string[]> {
   const out: string[] = [];
   const platforms = await platformIds(root);
-  for (const [id, text] of await notes(root, TOPICS)) {
-    const f = `learn/topics/${id}.md`;
+  const bookIds = new Set((await notes(root, BOOKS)).map(([id]) => id));
+  const subjectNotes = await notes(root, SUBJECTS);
+  for (const [id, text] of subjectNotes) {
+    const f = `learn/subjects/${id}.md`;
     const { head, history } = body(text);
-    if (head.topic !== id) out.push(`${f}: topic must match the file name`);
+    if (head.subject !== id) out.push(`${f}: subject must match the file name`);
     if (head.want && !(WANTS as readonly string[]).includes(head.want)) out.push(`${f}: want is aspire or need`);
     if (head.want === "need" && !head.for) out.push(`${f}: a need names what it is for`);
-    if (head.same_as && !SAME_AS.test(head.same_as)) out.push(`${f}: same_as is wikidata:Q<number>, esco:<uri> or a link`);
-    for (const l of history) if (/^\S+ evidence /.test(l) && !parseEvidence(l)) out.push(`${f}: evidence line not understood: ${l}`);
+    if (head.same_as && !SAME_AS.test(head.same_as)) out.push(`${f}: same_as is wikidata:Q<number>, lcsh:sh<number>, esco:<uri> or a link`);
+    for (const l of history) {
+      if (!/^\S+ grasp /.test(l)) continue;
+      const g = parseGrasp(l);
+      if (!g) out.push(`${f}: grasp line not understood: ${l}`);
+      else if (g.book && !bookIds.has(g.book)) out.push(`${f}: names a book that is not in learn/books: ${g.book}`);
+    }
   }
-  const topics = new Map((await notes(root, TOPICS)).map(([id, t]) => [id, parseTopic(id, t)] as const));
+  const subjects = new Map(subjectNotes.map(([id, t]) => [id, parseSubject(id, t)] as const));
   const seen = new Set<string>();
   const cycle = (id: string, path: string[]): string | null => {
     if (path.includes(id)) return [...path.slice(path.indexOf(id)), id].join(" requires ");
     if (seen.has(id)) return null;
-    for (const r of topics.get(id)?.requires ?? []) {
+    for (const r of subjects.get(id)?.requires ?? []) {
       const c = cycle(r, [...path, id]);
       if (c) return c;
     }
     seen.add(id);
     return null;
   };
-  for (const id of topics.keys()) {
+  for (const id of subjects.keys()) {
     const c = cycle(id, []);
     if (c) {
-      out.push(`learn/topics: prerequisites go round in a circle: ${c}`);
+      out.push(`learn/subjects: prerequisites go round in a circle: ${c}`);
       break;
     }
+  }
+  for (const [id, text] of await notes(root, BOOKS)) {
+    const f = `learn/books/${id}.md`;
+    const { head } = body(text);
+    if (head.book !== id) out.push(`${f}: book must match the file name`);
+    if (!(BOOK_STATUS as readonly string[]).includes(head.status ?? "")) out.push(`${f}: status is one of ${BOOK_STATUS.join(", ")}`);
+    if (head.isbn && !ISBN.test(head.isbn)) out.push(`${f}: isbn has 10 or 13 digits`);
   }
   for (const [id, text] of await notes(root, RESOURCES)) {
     const f = `learn/resources/${id}.md`;
