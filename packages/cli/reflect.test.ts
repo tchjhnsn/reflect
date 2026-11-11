@@ -205,6 +205,53 @@ describe("reflect CLI", () => {
     expect((await run("check", "--dir", dir)).out).toContain("problem: life/state.json does not match life/passages.jsonl; it is rebuilt from the passages, never edited");
   });
 
+  it("keeps what you have learned, aspire to and need, with learned from evidence and the fringe derived", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "reflect-cli-"));
+    dirs.push(dir);
+    await run("init", "--name", "Tester", "--dir", dir);
+    expect(await readFile(join(dir, "learn", "topics", "README.md"), "utf8")).toContain("same_as");
+    await run("learn", "aspire", "Linear algebra", "--same-as", "wikidata:Q82571", "--dir", dir);
+    await run("learn", "aspire", "Machine learning", "--requires", "linear-algebra,probability", "--dir", dir);
+    await expect(run("learn", "need", "Accounting", "--dir", dir)).rejects.toThrow(/names what it is for/);
+    await run("learn", "need", "Accounting", "--for", "intents/start-a-company", "--dir", dir);
+    await expect(run("learn", "aspire", "Probability", "--same-as", "Q9492", "--dir", dir)).rejects.toThrow(/wikidata:Q/);
+    await expect(run("learn", "evidence", "Probability", "made", "--dir", dir)).rejects.toThrow(/where it can be seen/);
+    await expect(run("learn", "evidence", "Probability", "vouched", "--note", "x", "--dir", dir)).rejects.toThrow(/--by/);
+    await run("learn", "evidence", "Probability", "said", "--dir", dir);
+    await expect(run("learn", "resource", "Fast AI course", "--kind", "course", "--platform", "fanout", "--dir", dir)).rejects.toThrow(/connect it first/);
+    await run("connect", "fanout", "--name", "Fanout", "--kind", "platform", "--dir", dir);
+    await run("learn", "resource", "Essence of linear algebra", "--kind", "video", "--url", "https://www.youtube.com/playlist?list=PLZHQObOWTQDPD3MizzM2xVFitgF8hE_ab", "--by", "3Blue1Brown", "--topics", "linear-algebra", "--dir", dir);
+    await run("learn", "resource", "Inference systems lab", "--kind", "lab", "--platform", "fanout", "--topics", "machine-learning", "--dir", dir);
+
+    let map = (await run("learn", "--dir", dir)).out;
+    expect(map).toContain("  probability  stated: said");
+    expect(map).toContain("  linear-algebra  ready; resources: essence-of-linear-algebra (saved)");
+    expect(map).toContain("  machine-learning  first learn linear-algebra; resources: inference-systems-lab (saved)");
+    expect(map).toContain("  accounting  for intents/start-a-company; ready");
+    expect(map).not.toContain("  probability  a first step toward machine-learning");
+
+    // Finishing a resource counts as studying its topics, which unblocks what requires them.
+    await run("learn", "resource", "Essence of linear algebra", "--status", "finished", "--dir", dir);
+    map = (await run("learn", "--dir", dir)).out;
+    expect(map).toContain("  linear-algebra  shown: studied");
+    expect(map).toContain("  machine-learning  ready; resources: inference-systems-lab (saved)");
+
+    // A topic nobody asked for, whose prerequisites are learned, is possible next.
+    await run("learn", "evidence", "Statistics", "said", "--dir", dir);
+    await writeFile(join(dir, "learn", "topics", "bayesian-inference.md"), "---\ntopic: bayesian-inference\ntitle: \"Bayesian inference\"\nrequires: [[learn/topics/probability]], [[learn/topics/statistics]]\n---\n\n# Bayesian inference\n");
+    map = (await run("learn", "--dir", dir)).out;
+    expect(map).toContain("  bayesian-inference  you have learned what it requires");
+
+    await run("learn", "evidence", "Machine learning", "made", "--link", "https://github.com/example/model", "--note", "a small model", "--dir", dir);
+    const ml = await readFile(join(dir, "learn", "topics", "machine-learning.md"), "utf8");
+    expect(ml).toContain("requires: [[learn/topics/linear-algebra]], [[learn/topics/probability]]");
+    expect(ml).toMatch(/- \S+ want aspire\n- \S+ evidence made <https:\/\/github.com\/example\/model>: a small model\n/);
+    await run("check", "--adopt", "--dir", dir);
+    expect((await run("check", "--dir", dir)).out).toEqual(["ok"]);
+    await writeFile(join(dir, "learn", "topics", "probability.md"), "---\ntopic: probability\nrequires: [[learn/topics/bayesian-inference]]\n---\n");
+    expect((await run("check", "--dir", dir)).out.join("\n")).toContain("prerequisites go round in a circle");
+  });
+
   it("offers legacy prompts and keeps what you write as entries marked to survive you", async () => {
     const dir = await mkdtemp(join(tmpdir(), "reflect-cli-"));
     dirs.push(dir);

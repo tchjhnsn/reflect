@@ -6,6 +6,7 @@ import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { documentProblems } from "./documents.ts";
 import { recordPaths, type Layout } from "./layout.ts";
+import { learnProblems } from "./learning.ts";
 import { LEGACY_TEMPLATES, LIFETIME_FOLDERS, lifetimeProblems } from "./lifetime.ts";
 import { readRecord, writeRecord } from "./record-io.ts";
 import { planProblems, readPlan } from "./release.ts";
@@ -189,6 +190,7 @@ export async function checkInstance(root: string): Promise<CheckResult> {
     } catch {
       problems.push("legacy/release.json is not JSON");
     }
+    problems.push(...(await learnProblems(root)));
   }
   const shas = lastShas(lines);
   const outside: string[] = [];
