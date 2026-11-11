@@ -6,6 +6,7 @@
 import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { listIdeas, targetText } from "./ideas.ts";
+import { journalHome } from "./home.ts";
 import { recordPaths, type Layout } from "./layout.ts";
 import { latestGrasp, learnMap, notes, parseResource, RESOURCES, type SubjectRow } from "./learning.ts";
 import { LIFETIME_FOLDERS } from "./lifetime.ts";
@@ -57,7 +58,12 @@ export async function buildIndex(root: string, layout: Layout, person: string, n
   section("Concepts", (await md(join(root, paths.concepts))).map((n) => `- [[${join(paths.concepts, n.slice(0, -3))}]]`));
   section("Ventures (each a Naive venture)", (await dirs(join(root, paths.person, "work"))).map((d) => `- [[${join(paths.person, "work", d)}]]`));
 
-  const entries = (await md(join(root, paths.journal))).reverse();
+  const home = await journalHome(root);
+  if (home.soul) {
+    const n = (await md(join(home.root, home.paths.journal))).length;
+    section("Journal", [`- kept in my soul vault (${n} moment${n === 1 ? "" : "s"}), not listed here`]);
+  }
+  const entries = home.soul ? [] : (await md(join(root, paths.journal))).reverse();
   if (entries.length) {
     const lines = entries.slice(0, RECENT).map((n) => `- [[${join(paths.journal, n.slice(0, -3))}]] ${n.slice(0, 10)}`);
     if (entries.length > RECENT) lines.push(`- and ${entries.length - RECENT} earlier, in ${paths.journal}/`);

@@ -101,9 +101,10 @@ export async function legacyEntries(root: string, paths: RecordPaths): Promise<s
 }
 
 /** What a release would hand each person, by name: the files, with legacy entries expanded. */
-export async function previewRelease(root: string, paths: RecordPaths, plan: ReleasePlan): Promise<Map<string, string[]>> {
+export async function previewRelease(root: string, paths: RecordPaths, plan: ReleasePlan, home?: { root: string; paths: RecordPaths; soul: boolean }): Promise<Map<string, string[]>> {
   const out = new Map<string, string[]>();
-  const entries = await legacyEntries(root, paths);
+  // With a soul vault, entries marked to survive the person are moments there.
+  const entries = home?.soul ? (await legacyEntries(home.root, home.paths)).map((e) => `soul:${e}`) : await legacyEntries(root, paths);
   for (const g of plan.gifts) {
     if (giftRefusal(g.what)) continue;
     const files = g.what === LEGACY_ENTRIES ? entries : [g.what];

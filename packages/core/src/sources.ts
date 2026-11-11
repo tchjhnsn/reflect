@@ -18,6 +18,7 @@ import { keepIdea } from "./ideas.ts";
 import type { Entry } from "./journal.ts";
 import type { IsoDate } from "./person.ts";
 import { entryFileText, headExtras, POINTER_HEAD, pointerBody } from "./files-journal.ts";
+import { journalHome } from "./home.ts";
 import { recordPaths, type Layout } from "./layout.ts";
 import { keepBook, keepConversation, keepFilm, keepResource, keepSubject, keepTalk, slugOf } from "./learning.ts";
 import { readRecord, writeRecord } from "./record-io.ts";
@@ -336,8 +337,10 @@ export async function keepPlacements(root: string, name: string, numbers: readon
     let target: string | undefined;
     if (p.kind === "entry") {
       if (!TEXT.test(f.path)) throw new Error(`placement ${n} (${p.path}) is not a plain text file; an entry must be text Reflect can read, like .md or .txt`);
-      const journalDir = recordPaths(layout, person).journal;
-      target = join(journalDir, await keepPointerEntry(root, journalDir, name, f, p.date, at));
+      // The journal may be a soul vault's moments: the pointer entry is written there.
+      const home = await journalHome(root);
+      const journalDir = home.paths.journal;
+      target = `${home.soul ? "soul:" : ""}${join(journalDir, await keepPointerEntry(home.root, journalDir, name, f, p.date, at))}`;
     } else if (p.kind === "book") target = `learn/books/${(await keepBook(root, need("the book's title"), { ...(p.authors ? { authors: p.authors } : {}), source: `notes in ${from}` }, now)).id}`;
     else if (p.kind === "film") target = `learn/films/${(await keepFilm(root, need("the film's title"), { source: `notes in ${from}` }, now)).id}`;
     else if (p.kind === "talk") target = `learn/talks/${(await keepTalk(root, need("the talk's title"), { ...(p.speaker ? { speaker: p.speaker } : {}), source: `notes in ${from}` }, now)).id}`;
