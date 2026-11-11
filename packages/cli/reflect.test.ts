@@ -7,13 +7,6 @@ import { main } from "./reflect.ts";
 const dirs: string[] = [];
 afterAll(async () => Promise.all(dirs.map((d) => rm(d, { recursive: true, force: true }))));
 
-/** Confirm elements on an entry the way a person does: a draft with those chosen, then `reflect keep`. */
-async function label(dir: string, reflDir: string, id: string, chosen: string[]): Promise<void> {
-  await mkdir(join(reflDir), { recursive: true });
-  await writeFile(join(reflDir, `${id}.draft.json`), JSON.stringify({ entry: id, read_at: "2026-11-11T00:00:00.000Z", guess_at: 0.5, weights: {}, chosen, self_terms: [] }));
-  await run("keep", id, "--dir", dir);
-}
-
 async function run(...args: string[]): Promise<{ code: number; out: string[] }> {
   const out: string[] = [];
   const code = await main(args, (s) => out.push(s));
@@ -51,36 +44,6 @@ describe("reflect CLI", () => {
     const r = await run("check", "--dir", dir);
     expect(r.code).toBe(1);
     expect(r.out.join("\n")).toMatch(/can never name journal/);
-  });
-
-  it("reads an entry into a draft, and keeps it as the person left it", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "reflect-cli-"));
-    dirs.push(dir);
-    process.env.REFLECT_READER_STUB = "1";
-    try {
-      await run("init", "--name", "Tester", "--dir", dir);
-      const id = (await run("write", "I was always the independent one.", "--dir", dir)).out[0]!;
-      expect((await run("read", "--pending", "--dir", dir)).out).toHaveLength(1);
-      expect((await run("read", "--pending", "--dir", dir)).out).toHaveLength(0);
-      const path = join(dir, "reflections", `${id}.draft.json`);
-      const draft = JSON.parse(await readFile(path, "utf8"));
-      expect(draft.chosen).toEqual(["emotion", "attachment"]);
-      expect(draft.self_terms[0]).toMatchObject({ quote: "the independent one", model_basis: "imagination", basis: "imagination", keep: true });
-      expect((await run("check", "--dir", dir)).out).toEqual(["ok"]);
-      draft.chosen = ["attachment", "will"];
-      draft.self_terms[0].basis = "will";
-      await writeFile(path, JSON.stringify(draft));
-      expect((await run("keep", "--all", "--dir", dir)).out).toEqual([`kept: ${id} (attachment, will)`]);
-      const refl = JSON.parse(await readFile(join(dir, "reflections", `${id}.json`), "utf8"));
-      const decisions = Object.fromEntries(refl.labelings[0].labels.map((l: { element: string; decision: string }) => [l.element, l.decision]));
-      expect(decisions).toMatchObject({ emotion: "rejected", attachment: "confirmed", will: "added", reason: "absent" });
-      expect(refl.labelings[0].terms[0]).toMatchObject({ modelBasis: "imagination", basis: "will", decision: "corrected" });
-      expect((await run("list", "--dir", dir)).out).toHaveLength(1);
-      expect((await run("read", "--pending", "--dir", dir)).out).toHaveLength(0);
-      expect((await run("check", "--dir", dir)).out).toEqual(["ok"]);
-    } finally {
-      delete process.env.REFLECT_READER_STUB;
-    }
   });
 
   it("exports a bundle, imports it into another instance, and refuses writes after moving", async () => {
@@ -410,28 +373,22 @@ describe("reflect CLI", () => {
     const b = (await run("write", "Sam said the bakery could open at five if we split the mornings.", "--date", "2026-11-10", "--dir", dir)).out[0]!;
     const ea = `journal/2026-11-09-${a}`;
     const eb = `journal/2026-11-10-${b}`;
-    await label(dir, join(dir, "reflections"), a, ["will", "self-differentiation"]);
-    await label(dir, join(dir, "reflections"), b, ["will", "self-differentiation", "attachment"]);
     expect((await run("wiki", "--dir", dir)).out[0]).toMatch(/The wiki is off/);
     await expect(run("wiki", "prompt", "--dir", dir)).rejects.toThrow(/wiki is off/);
     expect((await run("wiki", "on", "--dir", dir)).out[0]).toMatch(/the wiki is on/);
     const prompt = (await run("wiki", "prompt", "--dir", dir)).out.join("\n");
     expect(prompt).toContain(`### ${ea} (2026-11-09)`);
     expect(prompt).toContain("I keep building things alone");
-    expect(prompt).toContain("Confirmed elements: will, self-differentiation, attachment");
     const reply = {
       kind: "reflect.wiki",
       version: 1,
       absorbed: [ea, eb, "journal/not-a-real-entry"],
       articles: [
         { path: "people/sam", title: "Sam", type: "person", also: ["Samuel"], related: ["wiki/patterns/building-alone"], body: `Sam bakes with the subject and proposed splitting the mornings so the bakery could open at five [[${eb}]]. They baked bread together more than once [[${ea}]].\n\nSee [[wiki/patterns/building-alone]].` },
-        { path: "patterns/building-alone", title: "Building alone", type: "pattern", elements: ["will", "self-differentiation"], body: `The subject described a cycle: "I keep building things alone" and then wondering why nobody joins [[${ea}]]. Sam's offer to split the mornings is the first counterexample in the entries [[${eb}]].` },
+        { path: "patterns/building-alone", title: "Building alone", type: "pattern", body: `The subject described a cycle: "I keep building things alone" and then wondering why nobody joins [[${ea}]]. Sam's offer to split the mornings is the first counterexample in the entries [[${eb}]].` },
         { path: "places/corner", title: "The corner", type: "place", body: "The bakery would sit on the corner. Nobody cited this." },
         { path: "ideas/bakery", title: "Bakery", type: "idea", body: `The subject wrote "the bakery will make millions by spring" [[${eb}]].` },
         { path: "eras/2026", title: "2026", type: "era", body: `A year of bread \u2014 and of Sam [[${ea}]].` },
-        { path: "tensions/plan-or-make", title: "Plan or make", type: "tension", elements: ["will", "logos"], body: `The subject baked bread with Sam [[${ea}]].` },
-        { path: "patterns/joining", title: "Joining", type: "pattern", elements: ["attachment"], body: `The subject asked why nobody joins [[${ea}]].` },
-        { path: "identities/baker", title: "Baker", type: "identity", body: `The subject bakes bread [[${ea}]].` },
       ],
     };
     await writeFile(join(dir, "wiki-reply.md"), "```json\n" + JSON.stringify(reply) + "\n```");
@@ -440,9 +397,6 @@ describe("reflect CLI", () => {
     expect(draft.join("\n")).toContain("refused: places/corner: a passage cites no note in the record");
     expect(draft.join("\n")).toContain("refused: ideas/bakery: a quote is not in the notes its passage cites");
     expect(draft.join("\n")).toContain("refused: eras/2026: uses an em dash");
-    expect(draft.join("\n")).toContain("refused: tensions/plan-or-make: a tension is the two elements of one category");
-    expect(draft.join("\n")).toContain(`refused: patterns/joining: ${ea} has no confirmed reading showing attachment`);
-    expect(draft.join("\n")).toContain("refused: identities/baker: an identity names its elements");
     const kept = (await run("wiki", "absorb", "--keep", "all", "--dir", dir)).out;
     expect(kept).toEqual(["kept: wiki/people/sam", "kept: wiki/patterns/building-alone (reading: ai)"]);
     const sam = await readFile(join(dir, "wiki/people/sam.md"), "utf8");
@@ -466,122 +420,6 @@ describe("reflect CLI", () => {
     await run("index", "--dir", dir);
     expect(await readFile(join(dir, "index.md"), "utf8")).toContain("[[wiki/_index]]");
     expect(await run("check", "--dir", dir)).toEqual({ code: 0, out: ["ok"] });
-  });
-
-  it("moves the journal into a soul vault of its own, linked one way from the life vault", async () => {
-    const base = await mkdtemp(join(tmpdir(), "reflect-two-"));
-    const notes = await mkdtemp(join(tmpdir(), "reflect-notes-"));
-    dirs.push(base, notes);
-    const life = join(base, "life");
-    const soul = join(base, "soul");
-    await run("init", "--name", "Tester", "--dir", life);
-    const first = (await run("write", "Walked to the bakery at dawn.", "--date", "2026-11-09", "--dir", life)).out[0]!;
-    const kept = (await run("legacy", "hopes", "That you stay brave.", "--date", "2026-11-10", "--dir", life)).out[0]!;
-    await writeFile(join(notes, "2024-03-01.md"), "An old page about the river.\n");
-    await run("source", "add", "notes", notes, "--dir", life);
-    await writeFile(join(life, "reply.md"), JSON.stringify({ kind: "reflect.placements", version: 1, source: "notes", placements: [{ path: "2024-03-01.md", kind: "entry", date: "2024-03-01" }] }));
-    await run("source", "tag", "notes", join(life, "reply.md"), "--dir", life);
-    await run("source", "tag", "notes", "--keep", "1", "--dir", life);
-    expect((await run("soul", "--dir", life)).out[0]).toMatch(/No soul vault yet/);
-
-    await expect(run("soul", "init", join(life, "inner"), "--dir", life)).rejects.toThrow(/folder of its own/);
-    const init = (await run("soul", "init", soul, "--dir", life)).out;
-    expect(init[0]).toBe(`started the soul vault at ${soul}; moved 3 file(s) of the journal into it`);
-    await expect(run("soul", "init", join(base, "other"), "--dir", life)).rejects.toThrow(/already has a soul vault/);
-    expect(await readdir(join(life, "journal"))).toEqual(["README.md"]);
-    expect(await readFile(join(life, "journal", "README.md"), "utf8")).toContain("soul/moments");
-    expect(JSON.parse(await readFile(join(life, "reflect.json"), "utf8")).soul).toBe("../soul");
-    expect(JSON.parse(await readFile(join(soul, "reflect.json"), "utf8"))).toMatchObject({ layout: "soul", life: "../life" });
-    expect(await readFile(join(soul, "moments", `2026-11-09-${first}.md`), "utf8")).toContain("Walked to the bakery");
-
-    // The journal works from either folder, and lands in the soul vault; a pointer entry still reads its file.
-    const fromLife = (await run("list", "--dir", life)).out.join("\n");
-    expect(fromLife).toContain("Walked to the bakery");
-    expect(fromLife).toContain("An old page about the river.");
-    const next = (await run("write", "Bread again.", "--date", "2026-11-11", "--dir", life)).out[0]!;
-    expect(await readFile(join(soul, "moments", `2026-11-11-${next}.md`), "utf8")).toContain("Bread again.");
-    expect((await run("list", "--dir", soul)).out.join("\n")).toContain("Bread again.");
-    // A spark is a moment; its noun is a concept, a thing in shared reality, so its note goes to the life vault.
-    await run("spark", "river", "The river was high.", "--sentence", "--dir", soul);
-    expect(await readFile(join(life, "concepts", "river.md"), "utf8")).toContain("river");
-    await expect(readdir(join(soul, "concepts"))).rejects.toThrow();
-    expect((await run("soul", "--dir", life)).out).toEqual([`soul vault: ${soul}`, "5 moment(s), 0 reading file(s), 0 binding file(s), 0 hold(s), 0 reading(s) of you"]);
-
-    // The life vault's index does not list moments; its release hands on only the moment marked to survive.
-    await run("index", "--dir", life);
-    const index = await readFile(join(life, "index.md"), "utf8");
-    expect(index).toContain("kept in my soul vault (5 moments), not listed here");
-    expect(index).not.toContain("bakery at dawn");
-    await run("release", "give", "legacy-entries", "--to", "Sam", "--contact", "sam@example.test", "--dir", life);
-    expect((await run("release", "--dir", life)).out).toContain(`to Sam: soul:moments/2026-11-10-${kept}.md`);
-
-    // The wiki reads moments and cites them by their path in the soul vault.
-    await run("wiki", "on", "--dir", life);
-    expect((await run("wiki", "prompt", "--dir", life)).out.join("\n")).toContain(`### moments/2026-11-09-${first} (2026-11-09)`);
-    await writeFile(join(life, "w.json"), JSON.stringify({ kind: "reflect.wiki", version: 1, absorbed: [`moments/2026-11-09-${first}`], articles: [{ path: "places/bakery", title: "The bakery", type: "place", body: `The subject walked to the bakery at dawn [[moments/2026-11-09-${first}]].` }] }));
-    expect((await run("wiki", "absorb", join(life, "w.json"), "--dir", life)).out[0]).toBe("1 article(s) to keep, 1 entry absorbed:");
-    await run("wiki", "absorb", "--keep", "all", "--dir", life);
-    expect(await run("check", "--dir", life)).toEqual({ code: 0, out: ["ok"] });
-    expect(await run("check", "--dir", soul)).toEqual({ code: 0, out: ["ok"] });
-
-    // Bindings: a moment names what it was about in the life vault; the life note is never touched.
-    await mkdir(join(life, "work", "bakery"), { recursive: true });
-    await writeFile(join(life, "belonging", "friends", "sam.md"), "# Sam\n");
-    const dawn = `2026-11-09-${first}`;
-    await expect(run("bind", first, "work/nowhere", "--dir", life)).rejects.toThrow(/no note or folder work\/nowhere/);
-    await expect(run("bind", first, "../soul/moments", "--dir", life)).rejects.toThrow(/not a path in your life vault/);
-    await expect(run("bind", first, "work/bakery", "--role", "hero", "--dir", life)).rejects.toThrow(/a role is one of/);
-    expect((await run("bind", first, "work/bakery", "--role", "place", "--dir", life)).out).toEqual([`bound: ${first} to work/bakery (place)`]);
-    expect((await run("bind", dawn, "work/bakery", "--role", "place", "--dir", soul)).out).toEqual([`already bound: ${dawn} to work/bakery`]);
-    await run("bind", next, "work/bakery", "--dir", life);
-    await run("bind", next, "[[belonging/friends/sam]]", "--role", "agent", "--dir", life);
-    expect((await run("bind", next, "--dir", life)).out).toEqual(["work/bakery", "belonging/friends/sam (agent)"]);
-    expect(await readFile(join(life, "belonging", "friends", "sam.md"), "utf8")).toBe("# Sam\n");
-    expect((await readdir(join(soul, "bindings"))).sort()).toEqual(["README.md", `${first}.json`, `${next}.json`].sort());
-
-    // A note's element profile counts only what the person confirmed, on the moments bound to it.
-    expect((await run("soul", "about", "work/bakery", "--dir", life)).out).toEqual(["work/bakery: 2 moment(s) bound, 2 with no confirmed reading yet", "  no confirmed elements yet; reflect on those moments and keep what you confirm"]);
-    await label(life, join(soul, "readings"), first, ["will", "desire", "embodiment"]);
-    await label(life, join(soul, "readings"), next, ["will", "desire"]);
-    expect((await run("soul", "about", "work", "--dir", life)).out).toEqual(["work: 2 moment(s) bound", "  desire 2", "  will 2", "  embodiment 1"]);
-    expect((await run("unbind", next, "work/bakery", "--dir", life)).out).toEqual([`unbound: ${next} from work/bakery`]);
-    expect((await run("soul", "about", "work/bakery", "--dir", life)).out).toEqual(["work/bakery: 1 moment(s) bound", "  desire 1", "  embodiment 1", "  will 1"]);
-
-    // Holds: the person's words, how they hold them, never inferred; stating again adds a line.
-    expect((await run("hold", "--dir", life)).out[0]).toMatch(/No holds yet/);
-    await expect(run("hold", "Bread", "--dir", life)).rejects.toThrow(/--as belief or --as value/);
-    await expect(run("hold", "Bread", "--as", "value", "--held", "fate", "--dir", life)).rejects.toThrow(/--held is one of desire, will, duty, sacred/);
-    expect((await run("hold", "Work is a gift to the people you serve.", "--as", "belief", "--held", "duty", "--name", "work as gift", "--dir", life)).out).toEqual(["kept: holds/work-as-gift.md (belief, held as duty)"]);
-    expect((await run("hold", "Work is a gift to my neighbors.", "--as", "belief", "--held", "sacred", "--name", "work as gift", "--dir", life)).out).toEqual(["kept: holds/work-as-gift.md (belief, held as sacred, stated 2 times)"]);
-    expect((await run("hold", "--dir", soul)).out).toEqual([expect.stringMatching(/^work-as-gift {2}belief, held as sacred \(numinous-sense\) {2}\d{4}-\d{2}-\d{2}: Work is a gift to my neighbors\.$/)]);
-    expect(await readFile(join(soul, "holds", "work-as-gift.md"), "utf8")).toContain("Work is a gift to the people you serve.");
-
-    // Readings of the person go to the soul vault's of-me/, and answer to the element table there too.
-    await writeFile(join(life, "w2.json"), JSON.stringify({ kind: "reflect.wiki", version: 1, absorbed: [], articles: [
-      { path: "tensions/wanting-and-willing", title: "Wanting and willing", type: "tension", elements: ["will", "desire"], body: `The subject walked to the bakery at dawn [[moments/${dawn}]] and baked again two days later [[moments/2026-11-11-${next}]].` },
-      { path: "patterns/body-first", title: "Body first", type: "pattern", elements: ["embodiment"], body: `The subject walked at dawn [[moments/${dawn}]] and baked again [[moments/2026-11-11-${next}]].` },
-    ] }));
-    const d2 = (await run("wiki", "absorb", join(life, "w2.json"), "--dir", life)).out.join("\n");
-    expect(d2).toContain(`refused: patterns/body-first: moments/2026-11-11-${next} has no confirmed reading showing embodiment`);
-    expect((await run("wiki", "absorb", "--keep", "all", "--dir", life)).out).toEqual(["kept: soul:of-me/tensions-wanting-and-willing (reading: ai)"]);
-    await expect(readFile(join(life, "wiki", "tensions", "wanting-and-willing.md"))).rejects.toThrow();
-    const tension = await readFile(join(soul, "of-me", "tensions-wanting-and-willing.md"), "utf8");
-    expect(tension).toContain('elements: ["will", "desire"]');
-    expect(tension).toContain("reading: ai");
-    expect(await readFile(join(life, "wiki", "_index.md"), "utf8")).toContain("kept in my soul vault, in of-me/, not here");
-    await run("soul", "confirm", "tensions-wanting-and-willing", "--dir", life);
-    expect(await readFile(join(soul, "of-me", "tensions-wanting-and-willing.md"), "utf8")).toMatch(/reading: confirmed \d{4}-\d{2}-\d{2}/);
-    expect((await run("soul", "--dir", life)).out[1]).toBe("5 moment(s), 2 reading file(s), 2 binding file(s), 1 hold(s), 1 reading(s) of you");
-    expect(await run("check", "--dir", soul)).toEqual({ code: 0, out: ["ok"] });
-
-    // When a reading no longer answers to the table (the person changed a moment's labels), check says so.
-    await label(life, join(soul, "readings"), next, ["will"]);
-    expect((await run("check", "--dir", soul)).out).toEqual([`problem: of-me/tensions-wanting-and-willing.md: moments/2026-11-11-${next} has no confirmed reading showing desire`]);
-    await expect(run("soul", "confirm", "tensions-wanting-and-willing", "--dir", life)).rejects.toThrow(/does not answer to the element table/);
-    // A binding whose life note left the vault is a problem too.
-    await label(life, join(soul, "readings"), next, ["will", "desire"]);
-    await rm(join(life, "belonging", "friends", "sam.md"));
-    expect((await run("check", "--dir", soul)).out).toEqual([`problem: bindings/${next}.json binds to belonging/friends/sam, which is no longer in the life vault`]);
   });
 
   it("writes index.md, the catalog your own AI starts from, without journal text", async () => {
@@ -843,6 +681,33 @@ describe("reflect CLI", () => {
     expect((await readdir(dir)).includes("ventures")).toBe(false);
     expect((await readdir(dir)).includes("library")).toBe(false);
     expect((await run("check", "--dir", dir)).out).toEqual(["ok"]);
+  });
+
+  it("brings the journal back from a soul vault", async () => {
+    const base = await mkdtemp(join(tmpdir(), "reflect-two-"));
+    dirs.push(base);
+    const life = join(base, "life");
+    const soul = join(base, "soul");
+    await run("init", "--name", "Tester", "--dir", life);
+    const id = (await run("write", "Walked to the bakery at dawn.", "--date", "2026-11-09", "--dir", life)).out[0]!;
+    // Make it look like a vault whose journal went into a soul vault on 2026-11-11.
+    const { mkdir, rename } = await import("node:fs/promises");
+    await mkdir(join(soul, "moments"), { recursive: true });
+    await mkdir(join(soul, "readings"), { recursive: true });
+    await rename(join(life, "journal", `2026-11-09-${id}.md`), join(soul, "moments", `2026-11-09-${id}.md`));
+    await writeFile(join(soul, "moments", "README.md"), "# Moments\n");
+    await writeFile(join(soul, "readings", `${id}.json`), JSON.stringify({ entry: id, reflections: [], labelings: [] }));
+    await writeFile(join(life, "journal", "README.md"), "# Journal\n\nYour journal is in your soul vault now.\n");
+    const cfg = JSON.parse(await readFile(join(life, "reflect.json"), "utf8"));
+    await writeFile(join(life, "reflect.json"), JSON.stringify({ ...cfg, soul: "../soul" }, null, 2));
+    await run("check", "--adopt", "--dir", life);
+    const r = (await run("upgrade", "--dir", life)).out;
+    expect(r).toContain(`moved: journal/2026-11-09-${id}.md`);
+    expect(r).toContain(`moved: reflections/${id}.json`);
+    expect(JSON.parse(await readFile(join(life, "reflect.json"), "utf8")).soul).toBeUndefined();
+    expect(await readFile(join(life, "journal", "README.md"), "utf8")).not.toContain("soul vault");
+    expect((await run("list", "--dir", life)).out[0]).toContain("Walked to the bakery");
+    expect((await run("check", "--dir", life)).out).toEqual(["ok"]);
   });
 
   it("still works on an instance in the older people/<id> layout", async () => {

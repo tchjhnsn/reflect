@@ -4,7 +4,6 @@ import { readFileSync } from "node:fs";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parseBundle } from "../core/src/bundle.ts";
-import { keepDraft, makeDraft, type Draft } from "../core/src/draft.ts";
 import { parseArgs } from "node:util";
 import { filesJournal } from "../core/src/files-journal.ts";
 import { adopt, checkInstance, initInstance, layoutOf, readConfig, upgradeVault } from "../core/src/instance.ts";
@@ -13,10 +12,6 @@ import { BOOK_STATUS, FILM_STATUS, GRASP, keepBook, keepConversation, keepFilm, 
 import { isStance, keepIdea, listIdeas, resolveTarget, STANCES, targetText, type Stance } from "../core/src/ideas.ts";
 import { keepSweep, readSweep, sweepLine, SWEEP_PROMPT, type Sweep } from "../core/src/sweep.ts";
 import { writeIndex } from "../core/src/catalog.ts";
-import { journalHome } from "../core/src/home.ts";
-import { initSoul, soulStatus } from "../core/src/soul.ts";
-import { serve } from "./serve.ts";
-import { bindingsOf, bindMoment, keepHold, listHolds, noteProfile, unbindMoment } from "../core/src/ground.ts";
 import { confirmReading, keepWikiDraft, readWikiDraft, readWikiReply, wikiOn, wikiPrompt, wikiStatus, type WikiDraft } from "../core/src/wiki.ts";
 import { planHandoff, runNaiveCapture, sendIdea } from "../core/src/naive-handoff.ts";
 import { addSource, getSource, indexSource, keepPlacements, placementLine, placementPrompt, readDraft, readPlacements, saveDraft, sourceStatus } from "../core/src/sources.ts";
@@ -29,7 +24,6 @@ import { readLinkedInExport } from "../core/src/linkedin.ts";
 import { recordPaths } from "../core/src/layout.ts";
 import { CUSTODY, DOCUMENT_GROUPS, filesDocuments, isCustody, type ChecklistRow, type Connection } from "../core/src/documents.ts";
 import type { IsoDate } from "../core/src/person.ts";
-import { readSalience } from "../core/src/reader.ts";
 import { cleanNoun, isSparkForm, pickNoun, sparkPrompt, SPARK_FORMS, type SparkForm } from "../core/src/spark.ts";
 
 const USAGE = `reflect <command> [--dir <instance>]
@@ -117,23 +111,6 @@ const USAGE = `reflect <command> [--dir <instance>]
   wiki absorb --keep <1,2 | all>  keep those articles, log the entries absorbed, rebuild wiki/_index.md
   wiki confirm <path>             a pattern, tension, identity or philosophy is the AI's reading until you
                                   confirm it; a rewrite makes it a reading again
-  soul                            your soul vault: moments, readings, bindings, holds, readings of you
-  soul init <folder>              start a soul vault in that folder and move the journal into it (entries
-                                  become moments, reflections become readings); the two vaults name each
-                                  other, and Reflect reads and writes the journal there from either one
-  soul about <note>               a life note's element profile: the elements you confirmed on the moments
-                                  bound to it (or to notes under it), counted now and never stored
-  soul confirm <of-me/path>       confirm a reading of you kept in the soul vault (it must still answer
-                                  to the element table)
-  serve [--port 4500]             screens for your soul vault in your browser, served from this machine
-                                  only: moments, elements, life notes, holds and readings of you
-  bind <moment> [<note>] [--role agent|patient|place|time|manner|cause|goal]
-                                  say what a moment was about: a note or folder in your life vault, by
-                                  its path; with no note, show what the moment is bound to
-  unbind <moment> <note>          that binding no longer counts (the line stays in the record)
-  hold ["<your words>" --as belief|value [--held desire|will|duty|sacred] [--name <name>]]
-                                  keep a belief or value in your words, and how you hold it; stating it
-                                  again adds a line; with nothing, list your holds
   index                           rewrite index.md, the catalog of your notes where your own AI starts
                                   reading: one linked line per note, journal entries by date only
   idea                            your ideas, each with its inputs and recommendations
@@ -161,8 +138,6 @@ const USAGE = `reflect <command> [--dir <instance>]
   add <entry> [text]              add to an entry that is still open
   close <entry>                   close an entry
   list                            the entries, newest first
-  read [entry] [--pending]        ask the reader for its guesses; writes reflections/<entry>.draft.json
-  keep [entry] [--all]            keep a draft as you left it (edit chosen, basis, keep first)
   check [--adopt]                 check the instance; --adopt records hand-written changes in memory
   export [--out <file>] [--moving-to <where>]
                                   the whole journal as a bundle (stdout or a file); --moving-to then
@@ -206,10 +181,6 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
     options: {
       dir: { type: "string", default: "." },
       name: { type: "string" },
-      role: { type: "string" },
-      port: { type: "string" },
-      as: { type: "string" },
-      held: { type: "string" },
       date: { type: "string" },
       adopt: { type: "boolean", default: false },
       pending: { type: "boolean", default: false },
@@ -292,80 +263,8 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
     return 0;
   }
   const config = await readConfig(root);
-  if (cmd === "serve") {
-    const port = Number(values.port ?? 4500);
-    if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error("--port is a number from 1024 to 65535");
-    await serve(root, port);
-    out(`soul vault screens at http://127.0.0.1:${port} (this machine only; Ctrl-C stops them)`);
-    return 0;
-  }
-  if (cmd === "soul") {
-    const [sub, arg] = rest;
-    if (sub === "init") {
-      if (!arg) throw new Error("soul init <folder for the soul vault>");
-      const r = await initSoul(root, arg, new Date());
-      out(`started the soul vault at ${r.soul}; moved ${r.moved.length} file(s) of the journal into it`);
-      out("Reflect now reads and writes your journal there, from either folder.");
-      return 0;
-    }
-    if (sub === "about") {
-      if (!arg) throw new Error("soul about <note in your life vault>");
-      const p = await noteProfile(root, arg);
-      out(`${p.note}: ${p.moments.length} moment(s) bound${p.unread ? `, ${p.unread} with no confirmed reading yet` : ""}`);
-      for (const e of p.elements) out(`  ${e.element} ${e.moments}`);
-      if (p.moments.length && !p.elements.length) out("  no confirmed elements yet; reflect on those moments and keep what you confirm");
-      return 0;
-    }
-    if (sub === "confirm") {
-      if (!arg) throw new Error("soul confirm <of-me/path>");
-      await confirmReading(root, arg.startsWith("of-me/") || arg.startsWith("soul:") ? arg : `of-me/${arg}`, new Date());
-      out(`confirmed: ${arg}`);
-      return 0;
-    }
-    if (sub) throw new Error("soul takes init, about, confirm, or nothing to show the soul vault");
-    const home = await journalHome(root);
-    if (!home.soul) {
-      out("No soul vault yet. Your journal and readings can live in a vault of their own, apart from this one: reflect soul init <folder>");
-      return 0;
-    }
-    const st = await soulStatus(home.root);
-    out(`soul vault: ${st.root}`);
-    out(`${st.moments} moment(s), ${st.readings} reading file(s), ${st.bindings} binding file(s), ${st.holds} hold(s), ${st.ofMe} reading(s) of you`);
-    return 0;
-  }
   const paths = recordPaths(layoutOf(config), config.person);
-  const home = await journalHome(root);
-  const journal = filesJournal(home.root, config.person, { layout: home.layout, lifeRoot: home.lifeRoot });
-  if (cmd === "bind" || cmd === "unbind") {
-    const [moment, note] = rest;
-    if (!moment) throw new Error(`${cmd} <moment> ${cmd === "bind" ? "[<note>]" : "<note>"}`);
-    if (cmd === "unbind") {
-      if (!note) throw new Error("unbind <moment> <note>");
-      out((await unbindMoment(root, moment, note, new Date())) ? `unbound: ${moment} from ${note}` : `${moment} was not bound to ${note}`);
-      return 0;
-    }
-    if (!note) {
-      const bs = await bindingsOf(root, moment);
-      if (!bs.length) out(`${moment} is bound to nothing yet`);
-      for (const b of bs) out(`${b.to}${b.role ? ` (${b.role})` : ""}`);
-      return 0;
-    }
-    const r = await bindMoment(root, moment, note, values.role, new Date());
-    out(r.changed ? `bound: ${moment} to ${r.to}${values.role ? ` (${values.role})` : ""}` : `already bound: ${moment} to ${r.to}`);
-    return 0;
-  }
-  if (cmd === "hold") {
-    if (!rest[0]) {
-      const hs = await listHolds(root);
-      if (!hs.length) out('No holds yet. Keep one in your words: reflect hold "<what you believe or value>" --as belief|value [--held desire|will|duty|sacred]');
-      for (const h of hs) out(`${h.id}  ${h.kind}${h.held ? `, held as ${h.held} (${h.element})` : ""}  ${h.on}: ${h.words}`);
-      return 0;
-    }
-    if (!values.as) throw new Error("hold needs --as belief or --as value");
-    const h = await keepHold(root, rest.join(" "), values.as, values.held, values.name, new Date());
-    out(`kept: holds/${h.id}.md (${h.kind}${h.held ? `, held as ${h.held}` : ""}${h.stated > 1 ? `, stated ${h.stated} times` : ""})`);
-    return 0;
-  }
+  const journal = filesJournal(root, config.person, { layout: layoutOf(config) });
   if (cmd === "list") {
     for (const e of await journal.listEntries()) out(`${e.id}  ${e.localDate}  ${e.closedAt ? "closed" : "open  "}  ${(e.parts[0]?.text ?? "").split("\n")[0]!.slice(0, 60)}`);
     return 0;
@@ -414,46 +313,6 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
     const form = sparkForm(values.minutes, values.sentence);
     const text = textFrom(rest[1]);
     out(await journal.writeSpark(cleanNoun(rest[0]!), form, text, date as IsoDate));
-    return 0;
-  }
-  const reflDir = join(home.root, home.paths.reflections);
-  const draftPath = (entry: string) => join(reflDir, `${entry}.draft.json`);
-  const exists = (p: string) => readFile(p).then(() => true, () => false);
-  if (cmd === "read") {
-    let ids: string[];
-    if (values.pending) {
-      ids = [];
-      for (const e of await journal.listEntries(10_000)) {
-        const refl = await readFile(join(reflDir, `${e.id}.json`), "utf8").then((t) => JSON.parse(t) as { labelings?: unknown[] }, () => null);
-        if (!(refl?.labelings?.length) && !(await exists(draftPath(e.id)))) ids.push(e.id);
-      }
-    } else if (rest[0]) ids = [rest[0]];
-    else throw new Error("read needs an entry or --pending");
-    for (const id of ids) {
-      const text = await journal.entryText(id);
-      if (text === null) throw new Error(`no such entry: ${id}`);
-      const s = await readSalience(text);
-      if (!s) throw new Error("the reader is not set up or did not answer; set AI_GATEWAY_API_KEY or TYPESAFEAI_API_KEY");
-      await writeFile(draftPath(id), `${JSON.stringify(makeDraft(id, s, new Date().toISOString()), null, 2)}\n`);
-      out(`draft: ${join(home.paths.reflections, `${id}.draft.json`)}`);
-    }
-    return 0;
-  }
-  if (cmd === "keep") {
-    let ids: string[];
-    if (values.all) {
-      const { readdir } = await import("node:fs/promises");
-      ids = (await readdir(reflDir).catch(() => [] as string[])).filter((n) => n.endsWith(".draft.json")).map((n) => n.replace(/\.draft\.json$/, ""));
-    } else if (rest[0]) ids = [rest[0]];
-    else throw new Error("keep needs an entry or --all");
-    for (const id of ids) {
-      const draft = JSON.parse(await readFile(draftPath(id), "utf8")) as Draft;
-      if (draft.entry !== id) throw new Error(`${id}.draft.json is for another entry`);
-      const { labels, terms } = keepDraft(draft);
-      await journal.keepLabels(id, labels, terms);
-      await rm(draftPath(id));
-      out(`kept: ${id} (${draft.chosen.join(", ") || "no elements"})`);
-    }
     return 0;
   }
   if (cmd === "upgrade") {
@@ -898,7 +757,7 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
     const plan = await readPlan(root);
     out(`trustees: ${plan.trustees.map((t) => t.name).join(", ") || "none yet"}`);
     out(`a release needs ${plan.confirmations} trustee confirmation(s), then ${plan.wait_days} day(s) of waiting in which you or any trustee can stop it`);
-    for (const [to, files] of await previewRelease(root, paths, plan, home)) out(`to ${to}: ${files.join(", ") || "nothing yet"}`);
+    for (const [to, files] of await previewRelease(root, paths, plan)) out(`to ${to}: ${files.join(", ") || "nothing yet"}`);
     const { problems, notes } = await planProblems(root, plan);
     for (const p of problems) out(`problem: ${p}`);
     for (const n of notes) out(`note: ${n}`);
@@ -934,10 +793,7 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
 
 if (import.meta.main) {
   main(process.argv.slice(2)).then(
-    // A server keeps running after main returns; everything else exits with its code.
-    (code) => {
-      if (!(code === 0 && process.argv[2] === "serve")) process.exit(code);
-    },
+    (code) => process.exit(code),
     (e: unknown) => {
       console.error(`reflect: ${(e as Error).message}`);
       process.exit(1);

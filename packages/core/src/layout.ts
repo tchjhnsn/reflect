@@ -4,10 +4,7 @@
 // records under people/<id>/ with entries/ for the journal; instances made that way still work.
 import { join } from "node:path";
 
-export type Layout = "vault" | "people" | "soul";
-
-/** The soul vault's folders (soul.ts): moments are the journal, readings the reflections and labelings. */
-export const SOUL_DIRS = ["moments", "readings", "bindings", "holds", "of-me", "table"] as const;
+export type Layout = "vault" | "people";
 
 /**
  * The top-level folders of the Ventures of a Lifetime (lifetime.ts). work/ is not walked: each venture
@@ -34,9 +31,6 @@ export type RecordPaths = {
 };
 
 export function recordPaths(layout: Layout, personId: string): RecordPaths {
-  if (layout === "soul") {
-    return { person: "", journal: "moments", reflections: "readings", concepts: "concepts", grants: "grants", documents: "documents", connections: "connections", recordDirs: [...SOUL_DIRS], recordFiles: ["reflect.json", "soul.json"] };
-  }
   const person = layout === "vault" ? "" : join("people", personId);
   const at = (p: string) => (person ? join(person, p) : p);
   const journal = at(layout === "vault" ? "journal" : "entries");

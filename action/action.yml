@@ -1,18 +1,9 @@
 name: Reflect
-description: Check a Reflect instance, keep merged draft reflections, and open a pull request with the reader's guesses for new entries.
+description: Check a Reflect instance and record hand-written changes in its memory.
 inputs:
   github-token:
-    description: A token that can push and open pull requests in the instance repository (github.token with contents and pull-requests write).
+    description: A token that can push to the instance repository (github.token with contents write).
     required: true
-  typesafe-api-key:
-    description: TYPESAFEAI_API_KEY, for Jev directly.
-    required: false
-  ai-gateway-api-key:
-    description: AI_GATEWAY_API_KEY, for Jev and gpt-oss through Vercel AI Gateway.
-    required: false
-  ollama-api-key:
-    description: OLLAMA_API_KEY, for gpt-oss on Ollama Cloud (finds self-terms when there is no gateway key).
-    required: false
 runs:
   using: composite
   steps:
@@ -29,7 +20,7 @@ runs:
     - name: Check
       shell: bash
       run: node "$GITHUB_ACTION_PATH/../packages/cli/reflect.ts" check
-    - name: Keep merged drafts and record hand-written changes
+    - name: Record hand-written changes
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github-token }}
@@ -37,38 +28,9 @@ runs:
         reflect() { node "$GITHUB_ACTION_PATH/../packages/cli/reflect.ts" "$@"; }
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-        reflect keep --all
         reflect check --adopt
         git add -A -- . ":!.github"
         if ! git diff --cached --quiet; then
-          git commit -m "Keep reflections and record hand-written changes"
+          git commit -m "Record hand-written changes"
           git push origin HEAD:${{ github.ref_name }}
-        fi
-    - name: Read new entries into a draft pull request
-      shell: bash
-      env:
-        GH_TOKEN: ${{ inputs.github-token }}
-        TYPESAFEAI_API_KEY: ${{ inputs.typesafe-api-key }}
-        AI_GATEWAY_API_KEY: ${{ inputs.ai-gateway-api-key }}
-        OLLAMA_API_KEY: ${{ inputs.ollama-api-key }}
-      run: |
-        reflect() { node "$GITHUB_ACTION_PATH/../packages/cli/reflect.ts" "$@"; }
-        base=$(git rev-parse --abbrev-ref HEAD)
-        if git ls-remote --exit-code --heads origin reflect/drafts >/dev/null; then
-          git fetch -q origin reflect/drafts
-          git checkout -q -B reflect/drafts origin/reflect/drafts
-          git merge -q --no-edit "$base"
-        else
-          git checkout -q -B reflect/drafts
-        fi
-        reflect read --pending
-        git add -A -- . ":!.github"
-        if git diff --cached --quiet && git diff --quiet "$base" HEAD; then
-          echo "No new entries to read."
-          exit 0
-        fi
-        git diff --cached --quiet || git commit -q -m "Reader's guesses for new entries"
-        git push -q origin reflect/drafts
-        if ! gh pr view reflect/drafts --json state --jq .state 2>/dev/null | grep -q OPEN; then
-          gh pr create --base "$base" --head reflect/drafts --title "Reflect on new entries" --body "The reader's guesses for your new entries are in the \`.draft.json\` files. Edit \`chosen\`, and each self-term's \`basis\` and \`keep\`, then merge to keep them as you left them. Close this to keep nothing."
         fi

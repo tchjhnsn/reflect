@@ -1,5 +1,4 @@
-# Written by `reflect init`. Runs the reader on new entries and keeps what you merge.
-# Add TYPESAFEAI_API_KEY (or AI_GATEWAY_API_KEY), and OLLAMA_API_KEY, as repository secrets.
+# Written by `reflect init`. Checks the vault and records hand-written changes in its memory.
 name: reflect
 on:
   push:
@@ -8,7 +7,6 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
-  pull-requests: write
 concurrency: reflect
 jobs:
   reflect:
@@ -20,6 +18,3 @@ jobs:
       - uses: tchjhnsn/reflect/action@main
         with:
           github-token: ${{ github.token }}
-          typesafe-api-key: ${{ secrets.TYPESAFEAI_API_KEY }}
-          ai-gateway-api-key: ${{ secrets.AI_GATEWAY_API_KEY }}
-          ollama-api-key: ${{ secrets.OLLAMA_API_KEY }}
