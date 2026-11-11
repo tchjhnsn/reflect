@@ -79,7 +79,7 @@ The quote is the term as written, copied exactly, not the people it compares wit
 type Found = { quote: string; term: string; whose: "self" | "other" };
 
 /** gpt-oss through AI Gateway when it is set up, else Ollama Cloud. Returns null when neither is. */
-async function chatJson(system: string, text: string, gateway: string | null): Promise<unknown | null> {
+export async function chatJson(system: string, text: string, gateway: string | null): Promise<unknown | null> {
   const messages = [
     { role: "system", content: system },
     { role: "user", content: text },

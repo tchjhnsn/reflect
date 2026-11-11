@@ -43,7 +43,7 @@ const SAME_AS = /^(wikidata:Q\d+|lcsh:sh\d+|esco:\S+|https?:\/\/\S+)$/;
 const ISBN = /^(97[89])?\d{9}[\dX]$/;
 
 export type GraspLine = { on: string; grasp: Grasp; book?: string; note?: string };
-export type Subject = { id: string; title: string; want?: Want; for?: string; same_as?: string; requires: string[]; part_of: string[]; grasps: GraspLine[] };
+export type Subject = { id: string; title: string; want?: Want; for?: string; same_as?: string; requires: string[]; part_of: string[]; grasps: GraspLine[]; vouches?: number };
 export type Book = { id: string; title: string; authors: string[]; isbn?: string; openlibrary?: string; status: BookStatus; started?: string; finished?: string; subjects: string[] };
 export type Resource = { id: string; kind: string; title: string; url?: string; by?: string; platform?: string; subjects: string[]; status: ResourceStatus };
 
@@ -90,6 +90,7 @@ export function parseSubject(id: string, text: string): Subject {
     requires: links(head.requires, S),
     part_of: links(head.part_of, S),
     grasps: history.map(parseGrasp).filter((g): g is GraspLine => g !== null),
+    vouches: history.filter((l) => / vouched by /.test(l)).length,
   };
 }
 
@@ -275,9 +276,9 @@ async function platformIds(root: string): Promise<string[]> {
   return out;
 }
 
-export type SubjectRow = { subject: Subject; grasp?: GraspLine; books: Book[]; resources: Resource[]; blockedBy: string[] };
+export type SubjectRow = { subject: Subject; grasp?: GraspLine; vouches: number; books: Book[]; resources: Resource[]; blockedBy: string[] };
 export type BookRow = { book: Book; unrated: string[] };
-export type LearnMap = { known: SubjectRow[]; aspire: SubjectRow[]; need: SubjectRow[]; possible: SubjectRow[]; books: BookRow[] };
+export type LearnMap = { known: SubjectRow[]; vouched: SubjectRow[]; aspire: SubjectRow[]; need: SubjectRow[]; possible: SubjectRow[]; books: BookRow[] };
 
 /** The latest grasp the person gave, by the date they gave, then the order kept. */
 export function latestGrasp(grasps: readonly GraspLine[]): GraspLine | undefined {
@@ -299,7 +300,7 @@ export async function learnMap(root: string): Promise<LearnMap> {
   const rows = new Map<string, SubjectRow>();
   for (const s of subjects.values()) {
     const grasp = latestGrasp(s.grasps);
-    rows.set(s.id, { subject: s, ...(grasp ? { grasp } : {}), books: books.filter((b) => b.subjects.includes(s.id)), resources: resources.filter((r) => r.subjects.includes(s.id)), blockedBy: [] });
+    rows.set(s.id, { subject: s, ...(grasp ? { grasp } : {}), vouches: s.vouches ?? 0, books: books.filter((b) => b.subjects.includes(s.id)), resources: resources.filter((r) => r.subjects.includes(s.id)), blockedBy: [] });
   }
   const known = (id: string) => knows(rows.get(id)?.grasp?.grasp);
   for (const row of rows.values()) row.blockedBy = row.subject.requires.filter((r) => !known(r));
@@ -307,6 +308,7 @@ export async function learnMap(root: string): Promise<LearnMap> {
   const open = all.filter((r) => !known(r.subject.id));
   return {
     known: all.filter((r) => known(r.subject.id)),
+    vouched: open.filter((r) => r.vouches > 0 && !r.grasp),
     aspire: open.filter((r) => r.subject.want === "aspire"),
     need: open.filter((r) => r.subject.want === "need"),
     possible: open.filter((r) => !r.subject.want && r.blockedBy.length === 0 && (r.subject.requires.length > 0 || all.some((o) => o.subject.requires.includes(r.subject.id)))),

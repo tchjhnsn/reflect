@@ -6,6 +6,13 @@ import { BOOK_STATUS, type BookStatus } from "@reflect/core/learning";
 import { lookupIsbn } from "@reflect/core/openlibrary";
 import { requireUser } from "@/server/session";
 import { addBook, addSubjects, keepRecall, rateSubject, setBookStatus, getBook } from "@/server/learn-store";
+import { addCredential, getUpload, keepCourses, keepLinkedIn, listCourses, saveUpload } from "@/server/learn-sources-store";
+import { checkBadge } from "@reflect/core/credentials";
+import { readLinkedInExport } from "@reflect/core/linkedin";
+import { draftTranscript, transcriptText } from "@reflect/core/transcript";
+import { chatJson } from "@reflect/core/reader";
+import { getVercelOidcToken } from "@vercel/oidc";
+import { unzipSync } from "fflate";
 
 const list = (v: FormDataEntryValue | null) => String(v ?? "").split(",").map((x) => x.trim()).filter(Boolean);
 const status = (v: FormDataEntryValue | null): BookStatus => ((BOOK_STATUS as readonly string[]).includes(String(v)) ? (String(v) as BookStatus) : "want");
@@ -54,4 +61,73 @@ export async function rateAction(form: FormData): Promise<void> {
   }
   revalidatePath(`/learn/book/${id}`);
   revalidatePath("/learn");
+}
+
+async function gateway(): Promise<string | null> {
+  if (process.env.AI_GATEWAY_API_KEY) return process.env.AI_GATEWAY_API_KEY;
+  return process.env.VERCEL ? ((await getVercelOidcToken().catch(() => undefined)) ?? null) : null;
+}
+
+/** Upload a transcript: its text is read, a model drafts its rows, and nothing is kept as a course yet. */
+export async function uploadTranscriptAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  const file = form.get("file");
+  if (!(file instanceof File) || !file.size) throw new Error("choose your transcript, a PDF or a text file");
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const text = /\.pdf$/i.test(file.name) ? (await (await import("unpdf")).extractText(bytes.slice(), { mergePages: true })).text : transcriptText(bytes, file.name);
+  const token = await gateway();
+  const draft = await draftTranscript(text, (system, t) => chatJson(system, t, token));
+  if (!draft) throw new Error("reading transcripts is not set up here yet");
+  const id = await saveUpload(user.id, "transcript", file.name, draft, bytes);
+  redirect(`/learn/upload/${id}`);
+}
+
+export async function keepCoursesAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  const id = String(form.get("upload") ?? "");
+  await keepCourses(user.id, id, form.getAll("row").map(Number).filter((n) => Number.isInteger(n) && n >= 0));
+  revalidatePath(`/learn/upload/${id}`);
+  revalidatePath("/learn");
+}
+
+/** The person's grasp of courses, by the subject each is linked to. */
+export async function rateCoursesAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  for (const c of await listCourses(user.id)) {
+    const g = form.get(`grasp-${c.id}`);
+    if (g) await rateSubject(user.id, c.subject.name, String(g));
+  }
+  revalidatePath("/learn");
+}
+
+export async function addCredentialAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  const url = String(form.get("url") ?? "").trim();
+  const checked = url && form.get("check") === "on" ? await checkBadge(url, openLibrary) : null;
+  const opt = (k: string) => String(form.get(k) ?? "").trim();
+  await addCredential(user.id, opt("name") || checked?.name || "", { issuer: opt("issuer") || checked?.issuer || "", ...(opt("issued") || checked?.issued ? { issued: opt("issued") || checked!.issued } : {}), ...(url ? { url } : {}), subjects: list(form.get("subjects")), ...(checked ? { checked: { ...checked, at: new Date().toISOString() } } : {}) });
+  revalidatePath("/learn");
+}
+
+/** Upload a LinkedIn export: what it holds is shown first, and kept only when the person says. */
+export async function uploadLinkedInAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  const file = form.get("file");
+  if (!(file instanceof File) || !file.size) throw new Error("choose the zip LinkedIn sent you");
+  if (file.size > 50_000_000) throw new Error("the export is larger than 50 MB");
+  const files = new Map<string, string>();
+  for (const [k, v] of Object.entries(unzipSync(new Uint8Array(await file.arrayBuffer()), { filter: (f) => f.name.toLowerCase().endsWith(".csv") }))) files.set(k, new TextDecoder().decode(v));
+  const id = await saveUpload(user.id, "linkedin", file.name, readLinkedInExport(files));
+  redirect(`/learn/upload/${id}`);
+}
+
+export async function keepLinkedInAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  const id = String(form.get("upload") ?? "");
+  const u = await getUpload(user.id, id);
+  if (!u?.linkedin) throw new Error("no such export");
+  const on = (k: string) => form.get(k) === "on";
+  await keepLinkedIn(user.id, u.linkedin, { endorsements: on("endorsements"), recommendations: on("recommendations"), certifications: on("certifications"), skills: on("skills") });
+  revalidatePath("/learn");
+  redirect("/learn");
 }

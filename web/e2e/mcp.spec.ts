@@ -57,7 +57,7 @@ test("a person's AI connects, writes an entry and keeps only a reading anchored 
   expect(tok.access_token).toBeTruthy();
 
   const tools = await mcpCall(request, tok.access_token, "tools/list", {});
-  expect(tools.msg.result?.tools?.map((t) => t.name)).toEqual(["reflect_guide", "list_entries", "write_entry", "get_entry", "keep_reading", "concept_history", "keep_legacy_plan", "legacy_status", "learning", "add_book", "add_book_subjects", "set_book_status", "recall_check", "rate_subject"]);
+  expect(tools.msg.result?.tools?.map((t) => t.name)).toEqual(["reflect_guide", "list_entries", "write_entry", "get_entry", "keep_reading", "concept_history", "keep_legacy_plan", "legacy_status", "learning", "add_book", "add_book_subjects", "set_book_status", "recall_check", "add_courses", "add_credential", "rate_subject"]);
 
   const today = new Date().toISOString().slice(0, 10);
   const wrote = await mcpCall(request, tok.access_token, "tools/call", { name: "write_entry", arguments: { text: "Dad called. We laughed about the lake.", local_date: today } });

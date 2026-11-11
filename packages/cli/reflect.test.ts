@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
@@ -290,6 +290,72 @@ describe("reflect CLI", () => {
     expect(saved.contents).toEqual(["System structure and behavior", "  The basics"]);
     await expect(main(["learn", "book", "Ghost", "--isbn", "0000000000", "--lookup", "--dir", dir], () => undefined, fetcher)).rejects.toThrow(/no book with isbn/);
     await expect(run("learn", "book", "Ghost", "--lookup", "--dir", dir)).rejects.toThrow(/needs --isbn/);
+    expect((await run("check", "--dir", dir)).out).toEqual(["ok"]);
+  });
+
+  it("drafts a transcript's courses, keeps only rows really in it, and keeps the ones the person confirms", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "reflect-cli-"));
+    dirs.push(dir);
+    await run("init", "--name", "Tester", "--dir", dir);
+    const file = join(dir, "..", `transcript-${Date.now()}.txt`);
+    await writeFile(file, "STATE UNIVERSITY\nFall 2016\nMATH 221  Linear Algebra   3.0  B-\nPHIL 101  Intro to Ethics  3.0  A\nTerm GPA 3.35\n");
+    const chat = async () => ({ institution: "State University", courses: [
+      { term: "Fall 2016", code: "MATH 221", title: "Linear Algebra", credits: 3, grade: "B-" },
+      { term: "Fall 2016", code: "PHIL 101", title: "Intro to Ethics", credits: 3, grade: "A" },
+      { term: "Fall 2016", code: "CS 50", title: "Computer Science", credits: 4, grade: "A" },
+    ] });
+    const out: string[] = [];
+    await main(["learn", "transcript", file, "--dir", dir], (x) => out.push(x), undefined, chat);
+    await rm(file);
+    expect(out).toContain("1. Fall 2016  MATH 221 Linear Algebra, 3 credits, B-");
+    expect(out).toContain("Left out, because they are not in the transcript as written: Computer Science");
+    await run("learn", "transcript", "--keep", "1", "--dir", dir);
+    const course = await readFile(join(dir, "learn", "courses", "fall-2016-math-221.md"), "utf8");
+    expect(course).toContain('grade: "B-"\ninstitution: "State University"\nsubject: "[[learn/subjects/linear-algebra]]"');
+    let map = (await run("learn", "--dir", dir)).out;
+    expect(map).toContain("  Fall 2016  MATH 221 Linear Algebra  grade B-; not yet rated by you");
+    await run("learn", "grasp", "Linear Algebra", "explain", "--note", "better than the grade says", "--dir", dir);
+    map = (await run("learn", "--dir", dir)).out;
+    expect(map).toContain("  Fall 2016  MATH 221 Linear Algebra  grade B-; you say: could explain the key ideas");
+    await expect(run("learn", "transcript", "--keep", "9", "--dir", dir)).rejects.toThrow(/no row 9/);
+    await run("check", "--adopt", "--dir", dir);
+    expect((await run("check", "--dir", dir)).out).toEqual(["ok"]);
+  });
+
+  it("keeps credentials, checks an Open Badges link, and reads a LinkedIn export only when asked to keep it", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "reflect-cli-"));
+    dirs.push(dir);
+    await run("init", "--name", "Tester", "--dir", dir);
+    const fetcher = async (url: string) => ({ ok: true, status: 200, json: async () => (url.endsWith("/badge") ? { name: "AWS Certified Cloud Practitioner", issuer: { name: "Amazon Web Services" } } : { "@context": "https://w3id.org/openbadges/v2", type: "Assertion", badge: "https://badges.example/badge", issuedOn: "2024-05-02T00:00:00Z" }) });
+    const out: string[] = [];
+    await main(["learn", "credential", "Cloud Practitioner", "--url", "https://badges.example/a/1", "--check", "--subjects", "cloud computing", "--dir", dir], (x) => out.push(x), fetcher);
+    expect(out).toContain("The issuer's badge says: AWS Certified Cloud Practitioner, from Amazon Web Services, 2024-05-02");
+    const cred = await readFile(join(dir, "learn", "credentials", "amazon-web-services-cloud-practitioner.md"), "utf8");
+    expect(cred).toContain('issuer: "Amazon Web Services"\nissued: 2024-05-02\nurl: https://badges.example/a/1\nsubjects: [[learn/subjects/cloud-computing]]');
+    await expect(run("learn", "credential", "PMP", "--dir", dir)).rejects.toThrow(/--issuer/);
+
+    const exp = join(dir, "..", `li-${Date.now()}`);
+    await mkdir(exp);
+    await writeFile(join(exp, "Endorsement_Received_Info.csv"), "Endorsement Date,Skill Name,Endorser First Name,Endorser Last Name,Endorser Public Url,Endorsement Status\n2024/03/01 10:00:00 UTC,Systems Thinking,Ana,Lee,https://www.linkedin.com/in/ana,ACCEPTED\n2024/04/01 10:00:00 UTC,Systems Thinking,Ben,Ode,,ACCEPTED\n2024/04/02 10:00:00 UTC,Golf,Cy,Ray,,REJECTED\n");
+    await writeFile(join(exp, "Recommendations_Received.csv"), 'First Name,Last Name,Company,Job Title,Text,Creation Date,Status\nAna,Lee,Acme,CTO,"Torian sees the whole system, ""end to end"".\nA rare skill.",03/05/24,VISIBLE\n');
+    await writeFile(join(exp, "Certifications.csv"), "Name,Url,Authority,Started On,Finished On,License Number\nPMP,,PMI,Mar 2021,,\n");
+    await writeFile(join(exp, "Skills.csv"), "Name\nSystems Thinking\nNegotiation\n");
+    const preview = (await run("learn", "linkedin", exp, "--dir", dir)).out;
+    expect(preview).toContain("Endorsements: 2, on 1 skill(s)");
+    expect(preview).toContain("  Systems Thinking: Ana Lee, Ben Ode");
+    expect(preview).toContain("Recommendations: 1 (from Ana Lee)");
+    await expect(readFile(join(dir, "learn", "subjects", "systems-thinking.md"), "utf8")).rejects.toThrow();
+    expect((await run("learn", "linkedin", exp, "--keep", "all", "--dir", dir)).out[0]).toBe("kept: 2 new vouch(es), 1 recommendation(s), 1 certification(s), 2 skill(s) as subjects for you to rate");
+    expect((await run("learn", "linkedin", exp, "--keep", "endorsements", "--dir", dir)).out[0]).toBe("kept: 0 new vouch(es)");
+    await rm(exp, { recursive: true });
+    expect(await readFile(join(dir, "learn", "subjects", "systems-thinking.md"), "utf8")).toContain("- 2024-03-01 vouched by Ana Lee <https://www.linkedin.com/in/ana> on linkedin\n- 2024-04-01 vouched by Ben Ode on linkedin");
+    expect(await readFile(join(dir, "learn", "vouches", "ana-lee-2024-03-05.md"), "utf8")).toContain('Torian sees the whole system, "end to end".\nA rare skill.');
+    expect(await readFile(join(dir, "learn", "credentials", "pmi-pmp.md"), "utf8")).toContain("issued: 2021-03");
+    const map = (await run("learn", "--dir", dir)).out;
+    expect(map).toContain("  systems-thinking  vouched for by 2");
+    await run("learn", "grasp", "Systems Thinking", "teach", "--dir", dir);
+    expect((await run("learn", "--dir", dir)).out.find((l) => l.startsWith("  systems-thinking"))).toMatch(/could teach it .*; vouched for by 2$/);
+    await run("check", "--adopt", "--dir", dir);
     expect((await run("check", "--dir", dir)).out).toEqual(["ok"]);
   });
 

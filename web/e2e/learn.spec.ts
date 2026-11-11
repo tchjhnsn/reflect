@@ -23,3 +23,27 @@ test("keep a book, name what you remember of it, and rate your grasp; read alone
   await expect(page.getByRole("term").filter({ hasText: "Systems thinking" })).toBeVisible();
   await expect(page.getByText("Not yet rated: Feedback loops")).toBeVisible();
 });
+
+test("keep a credential and a LinkedIn export's vouches, shown first and kept apart from what you know", async ({ page }) => {
+  await signUpAs(page, "Mo");
+  await page.goto("/learn");
+  await page.getByLabel("Name", { exact: true }).fill("PMP");
+  await page.getByLabel("Issuer", { exact: true }).fill("PMI");
+  await page.getByLabel("Subjects it covers", { exact: false }).fill("Project management");
+  await page.getByRole("button", { name: "Keep the credential" }).click();
+  await expect(page.getByText("PMP, PMI. Covers Project management")).toBeVisible();
+
+  const { zipSync, strToU8 } = await import("fflate");
+  const zip = zipSync({
+    "Endorsement_Received_Info.csv": strToU8("Endorsement Date,Skill Name,Endorser First Name,Endorser Last Name,Endorser Public Url,Endorsement Status\n2024/03/01 10:00:00 UTC,Systems Thinking,Ana,Lee,,ACCEPTED\n"),
+    "Recommendations_Received.csv": strToU8('First Name,Last Name,Company,Job Title,Text,Creation Date,Status\nAna,Lee,Acme,CTO,"Sees the whole system.",03/05/24,VISIBLE\n'),
+  });
+  await page.getByLabel("Your LinkedIn data export", { exact: false }).setInputFiles({ name: "export.zip", mimeType: "application/zip", buffer: Buffer.from(zip) });
+  await page.getByRole("button", { name: "Read the export" }).click();
+  await expect(page.getByRole("heading", { name: "Your LinkedIn export" })).toBeVisible();
+  await expect(page.getByText("Systems Thinking: Ana Lee")).toBeVisible();
+  await page.getByRole("button", { name: "Keep what is checked" }).click();
+  await expect(page.getByRole("heading", { name: "Vouched for by others" })).toBeVisible();
+  await expect(page.getByText("Systems Thinking, by 1")).toBeVisible();
+  await expect(page.getByText("Sees the whole system.")).toBeVisible();
+});

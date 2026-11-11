@@ -12,6 +12,7 @@ import { conceptHistory, keepReading, onThisConcept, readings } from "./binding-
 import { closeEntry, createEntry, entryText, listEntries } from "./journal-store";
 import { keepPlan, legacyStatus, type PlanInput } from "./legacy-store";
 import { addBook, addSubjects, getBook, keepRecall, learnView, rateSubject, setBookStatus } from "./learn-store";
+import { addCourses, addCredential, listCourses, listCredentials } from "./learn-sources-store";
 import { BOOK_STATUS, GRASP, type BookStatus } from "@reflect/core/learning";
 import { lookupIsbn, type Fetch } from "@reflect/core/openlibrary";
 import { siteUrl } from "./site";
@@ -96,7 +97,14 @@ export async function toolRecallCheck(userId: string, bookId: string, recalled: 
 
 export async function toolLearning(userId: string) {
   const v = await learnView(userId);
-  return { known: v.known.map((s) => ({ subject: s.name, grasp: s.grasp })), books: v.books.map((b) => ({ id: b.id, title: b.title, authors: b.authors, status: b.status, finished: b.finishedOn, subjects: b.subjects.map((s) => s.name), not_yet_rated: b.unrated })) };
+  const [courses, credentials] = await Promise.all([listCourses(userId), listCredentials(userId)]);
+  return {
+    known: v.known.map((s) => ({ subject: s.name, grasp: s.grasp, vouched_for_by: s.vouches })),
+    vouched_not_rated: v.vouched.map((s) => ({ subject: s.name, vouched_for_by: s.vouches })),
+    courses: courses.map((c) => ({ ...c.row, your_grasp: c.subject.grasp?.grasp ?? null })),
+    credentials: credentials.map((c) => ({ name: c.name, issuer: c.issuer, issued: c.issued ?? null, subjects: c.subjects, checked: c.checked ?? null })),
+    books: v.books.map((b) => ({ id: b.id, title: b.title, authors: b.authors, status: b.status, finished: b.finishedOn, subjects: b.subjects.map((s) => s.name), not_yet_rated: b.unrated })),
+  };
 }
 
 const legacySchema = z.object({
@@ -209,6 +217,18 @@ export function reflectServer(userId: string): McpServer {
     description: "First ask the person, without showing them anything, to name the book's key subjects from memory. Send their words here as they said them. It keeps the recall and returns which of the book's subjects they named, the rest, and the book's contents if known.",
     inputSchema: z.object({ book_id: z.string().uuid(), recalled: z.string().min(1).describe("the person's own words, before seeing any list") }),
   }, async ({ book_id, recalled }) => text(await toolRecallCheck(userId, book_id, recalled)));
+
+  server.registerTool("add_courses", {
+    title: "Keep courses from the person's transcript",
+    description: "Courses read from a transcript the person shared with you. Copy each row exactly as the transcript writes it, show the rows to the person, and send only the ones they confirmed. The grade is the school's; ask the person their own grasp of each and keep it with rate_subject (the course title is the subject).",
+    inputSchema: z.object({ institution: z.string().optional(), courses: z.array(z.object({ term: z.string(), code: z.string().optional(), title: z.string().min(1), credits: z.number().min(0).max(99).optional(), grade: z.string().optional() })).min(1).max(200) }),
+  }, async ({ institution, courses }) => text({ kept: await addCourses(userId, courses.map((c) => ({ ...c, ...(institution ? { institution } : {}) }))) }));
+
+  server.registerTool("add_credential", {
+    title: "Keep a credential",
+    description: "A certificate, license or badge the person holds, as they state it, with the subjects it covers.",
+    inputSchema: z.object({ name: z.string().min(1), issuer: z.string().min(1), issued: z.string().optional().describe("YYYY, YYYY-MM or YYYY-MM-DD"), expires: z.string().optional(), url: z.string().url().optional(), subjects: z.array(z.string().min(1)).max(60).optional() }),
+  }, async ({ name, ...c }) => text({ credential_id: await addCredential(userId, name, c) }));
 
   server.registerTool("rate_subject", {
     title: "Keep the person's grasp of a subject",
