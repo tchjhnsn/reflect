@@ -15,6 +15,7 @@ import { keepSweep, readSweep, sweepLine, SWEEP_PROMPT, type Sweep } from "../co
 import { writeIndex } from "../core/src/catalog.ts";
 import { journalHome } from "../core/src/home.ts";
 import { initSoul, soulStatus } from "../core/src/soul.ts";
+import { bindingsOf, bindMoment, keepHold, listHolds, noteProfile, unbindMoment } from "../core/src/ground.ts";
 import { confirmReading, keepWikiDraft, readWikiDraft, readWikiReply, wikiOn, wikiPrompt, wikiStatus, type WikiDraft } from "../core/src/wiki.ts";
 import { planHandoff, runNaiveCapture, sendIdea } from "../core/src/naive-handoff.ts";
 import { addSource, getSource, indexSource, keepPlacements, placementLine, placementPrompt, readDraft, readPlacements, saveDraft, sourceStatus } from "../core/src/sources.ts";
@@ -119,6 +120,17 @@ const USAGE = `reflect <command> [--dir <instance>]
   soul init <folder>              start a soul vault in that folder and move the journal into it (entries
                                   become moments, reflections become readings); the two vaults name each
                                   other, and Reflect reads and writes the journal there from either one
+  soul about <note>               a life note's element profile: the elements you confirmed on the moments
+                                  bound to it (or to notes under it), counted now and never stored
+  soul confirm <of-me/path>       confirm a reading of you kept in the soul vault (it must still answer
+                                  to the element table)
+  bind <moment> [<note>] [--role agent|patient|place|time|manner|cause|goal]
+                                  say what a moment was about: a note or folder in your life vault, by
+                                  its path; with no note, show what the moment is bound to
+  unbind <moment> <note>          that binding no longer counts (the line stays in the record)
+  hold ["<your words>" --as belief|value [--held desire|will|duty|sacred] [--name <name>]]
+                                  keep a belief or value in your words, and how you hold it; stating it
+                                  again adds a line; with nothing, list your holds
   index                           rewrite index.md, the catalog of your notes where your own AI starts
                                   reading: one linked line per note, journal entries by date only
   idea                            your ideas, each with its inputs and recommendations
@@ -191,6 +203,9 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
     options: {
       dir: { type: "string", default: "." },
       name: { type: "string" },
+      role: { type: "string" },
+      as: { type: "string" },
+      held: { type: "string" },
       date: { type: "string" },
       adopt: { type: "boolean", default: false },
       pending: { type: "boolean", default: false },
@@ -282,7 +297,21 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
       out("Reflect now reads and writes your journal there, from either folder.");
       return 0;
     }
-    if (sub) throw new Error("soul takes init, or nothing to show the soul vault");
+    if (sub === "about") {
+      if (!arg) throw new Error("soul about <note in your life vault>");
+      const p = await noteProfile(root, arg);
+      out(`${p.note}: ${p.moments.length} moment(s) bound${p.unread ? `, ${p.unread} with no confirmed reading yet` : ""}`);
+      for (const e of p.elements) out(`  ${e.element} ${e.moments}`);
+      if (p.moments.length && !p.elements.length) out("  no confirmed elements yet; reflect on those moments and keep what you confirm");
+      return 0;
+    }
+    if (sub === "confirm") {
+      if (!arg) throw new Error("soul confirm <of-me/path>");
+      await confirmReading(root, arg.startsWith("of-me/") || arg.startsWith("soul:") ? arg : `of-me/${arg}`, new Date());
+      out(`confirmed: ${arg}`);
+      return 0;
+    }
+    if (sub) throw new Error("soul takes init, about, confirm, or nothing to show the soul vault");
     const home = await journalHome(root);
     if (!home.soul) {
       out("No soul vault yet. Your journal and readings can live in a vault of their own, apart from this one: reflect soul init <folder>");
@@ -296,6 +325,36 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
   const paths = recordPaths(layoutOf(config), config.person);
   const home = await journalHome(root);
   const journal = filesJournal(home.root, config.person, { layout: home.layout, lifeRoot: home.lifeRoot });
+  if (cmd === "bind" || cmd === "unbind") {
+    const [moment, note] = rest;
+    if (!moment) throw new Error(`${cmd} <moment> ${cmd === "bind" ? "[<note>]" : "<note>"}`);
+    if (cmd === "unbind") {
+      if (!note) throw new Error("unbind <moment> <note>");
+      out((await unbindMoment(root, moment, note, new Date())) ? `unbound: ${moment} from ${note}` : `${moment} was not bound to ${note}`);
+      return 0;
+    }
+    if (!note) {
+      const bs = await bindingsOf(root, moment);
+      if (!bs.length) out(`${moment} is bound to nothing yet`);
+      for (const b of bs) out(`${b.to}${b.role ? ` (${b.role})` : ""}`);
+      return 0;
+    }
+    const r = await bindMoment(root, moment, note, values.role, new Date());
+    out(r.changed ? `bound: ${moment} to ${r.to}${values.role ? ` (${values.role})` : ""}` : `already bound: ${moment} to ${r.to}`);
+    return 0;
+  }
+  if (cmd === "hold") {
+    if (!rest[0]) {
+      const hs = await listHolds(root);
+      if (!hs.length) out('No holds yet. Keep one in your words: reflect hold "<what you believe or value>" --as belief|value [--held desire|will|duty|sacred]');
+      for (const h of hs) out(`${h.id}  ${h.kind}${h.held ? `, held as ${h.held} (${h.element})` : ""}  ${h.on}: ${h.words}`);
+      return 0;
+    }
+    if (!values.as) throw new Error("hold needs --as belief or --as value");
+    const h = await keepHold(root, rest.join(" "), values.as, values.held, values.name, new Date());
+    out(`kept: holds/${h.id}.md (${h.kind}${h.held ? `, held as ${h.held}` : ""}${h.stated > 1 ? `, stated ${h.stated} times` : ""})`);
+    return 0;
+  }
   if (cmd === "list") {
     for (const e of await journal.listEntries()) out(`${e.id}  ${e.localDate}  ${e.closedAt ? "closed" : "open  "}  ${(e.parts[0]?.text ?? "").split("\n")[0]!.slice(0, 60)}`);
     return 0;
