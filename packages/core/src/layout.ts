@@ -34,7 +34,7 @@ export function recordPaths(layout: Layout, personId: string): RecordPaths {
   const person = layout === "vault" ? "" : join("people", personId);
   const at = (p: string) => (person ? join(person, p) : p);
   const journal = at(layout === "vault" ? "journal" : "entries");
-  const dirs = layout === "vault" ? [...LIFETIME_DIRS, "telos", "intents", "ideas"] : ["intents", "telos"];
+  const dirs = layout === "vault" ? [...LIFETIME_DIRS, "telos", "intents", "ideas", "sources"] : ["intents", "telos"];
   return {
     person,
     journal,
@@ -44,6 +44,6 @@ export function recordPaths(layout: Layout, personId: string): RecordPaths {
     documents: at("documents"),
     connections: at("connections"),
     recordDirs: layout === "vault" ? [journal, at("reflections"), at("concepts"), at("grants"), at("documents"), at("connections"), ...dirs.map(at)] : [person],
-    recordFiles: layout === "vault" ? ["person.json", "reflect.json", "work/README.md"] : [at("person.json"), "reflect.json"],
+    recordFiles: layout === "vault" ? ["person.json", "reflect.json", "work/README.md", "sources.json"] : [at("person.json"), "reflect.json"],
   };
 }
