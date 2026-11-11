@@ -101,6 +101,8 @@ export type FilesJournal = Journal & {
   importBundle(b: Bundle): Promise<void>;
   /** Write a spark: an entry on one noun, closed, naming the noun as a concept note (made the first time). Returns the entry id. */
   writeSpark(noun: string, form: SparkForm, text: string, localDate: IsoDate): Promise<string>;
+  /** Write an entry that carries extra front matter (a legacy entry marked to survive the person). */
+  writeWithHead(text: string, localDate: IsoDate, promptId: string | null, extras: readonly string[]): Promise<string>;
 };
 
 export function filesJournal(root: string, personId: string, opts: FilesOptions = {}): FilesJournal {
@@ -196,6 +198,13 @@ export function filesJournal(root: string, personId: string, opts: FilesOptions 
       const id = newId();
       const e: Entry = { id, localDate, createdAt: at, promptId: `spark/${form}`, closedAt: at, parts: [{ seq: 0, text, createdAt: at }] };
       await write(join(entriesDir, `${localDate}-${id}.md`), entryFileText(e, sparkHead(noun, form)), "create");
+      return id;
+    },
+    async writeWithHead(text, localDate, promptId, extras) {
+      const id = newId();
+      const at = now();
+      const e: Entry = { id, localDate, createdAt: at, promptId, closedAt: null, parts: [{ seq: 0, text, createdAt: at }] };
+      await write(join(entriesDir, `${localDate}-${id}.md`), entryFileText(e, extras), "create");
       return id;
     },
     async createEntry(text, localDate, promptId) {

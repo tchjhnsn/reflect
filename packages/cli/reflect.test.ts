@@ -100,12 +100,17 @@ describe("reflect CLI", () => {
     dirs.push(dir);
     await run("init", "--name", "Tester", "--dir", dir);
     expect(JSON.parse(await readFile(join(dir, "reflect.json"), "utf8")).layout).toBe("vault");
-    expect((await readdir(dir)).sort()).toEqual([".github", ".gitignore", "concepts", "documents", "intents", "journal", "library", "memory.jsonl", "person.json", "reflect.json", "reflections", "telos", "ventures"]);
-    expect((await readdir(join(dir, "ventures"))).sort()).toEqual(["community", "friendship", "household", "work"]);
-    expect(await readFile(join(dir, "ventures", "household", "README.md"), "utf8")).toContain("# Household");
+    expect((await readdir(dir)).sort()).toEqual([".github", ".gitignore", "belonging", "community", "concepts", "documents", "household", "intents", "journal", "learn", "legacy", "life", "line", "memory.jsonl", "needs", "person.json", "polis", "reflect.json", "reflections", "telos", "work"]);
+    expect((await readdir(join(dir, "household"))).sort()).toEqual(["members", "home", "money"].sort());
+    expect((await readdir(join(dir, "legacy"))).sort()).toEqual(["README.md", "bucket-list.md", "letters", "wishes.md"]);
+    expect(await readFile(join(dir, "household", "members", "README.md"), "utf8")).toContain("past the threshold");
     // A note the person adds anywhere in the vault's folders is a record written outside reflect.
-    await writeFile(join(dir, "library", "meditations.md"), "# Meditations\n");
-    expect((await run("check", "--dir", dir)).out).toEqual(["written outside reflect: library/meditations.md", "ok"]);
+    await writeFile(join(dir, "learn", "meditations.md"), "# Meditations\n");
+    expect((await run("check", "--dir", dir)).out).toEqual(["written outside reflect: learn/meditations.md", "ok"]);
+    // A Naive venture under work/ keeps its own provenance; Reflect's check leaves it alone.
+    const { mkdir: mk } = await import("node:fs/promises");
+    await mk(join(dir, "work", "bakery"));
+    await writeFile(join(dir, "work", "bakery", "venture.json"), "{}");
     // Obsidian's own settings are not records.
     const { mkdir } = await import("node:fs/promises");
     await mkdir(join(dir, ".obsidian"));
@@ -144,7 +149,7 @@ describe("reflect CLI", () => {
     dirs.push(dir);
     await run("init", "--name", "Tester", "--dir", dir);
     const before = (await run("documents", "--dir", dir)).out;
-    expect(before.at(-1)).toBe("0 of 22 checked");
+    expect(before.at(-1)).toBe("0 of 28 checked");
     expect(before.find((l) => l.includes("social-security-card"))).toMatch(/\[ \] social-security-card  keep the paper safe\. Paper only/);
     expect(before.find((l) => l.includes("transcripts"))).toMatch(/connect the service that holds it, such as Parchment or National Student Clearinghouse/);
 
@@ -163,7 +168,7 @@ describe("reflect CLI", () => {
     expect(card).toMatch(/- \d{4}-\d{2}-\d{2} original: fire safe at home\n- \d{4}-\d{2}-\d{2} original: safe deposit box\n/);
 
     const after = (await run("documents", "--dir", dir)).out;
-    expect(after.at(-1)).toBe("3 of 22 checked");
+    expect(after.at(-1)).toBe("3 of 28 checked");
     expect(after).toContain("  [x] transcripts  connection Parchment");
     expect(after.find((l) => l.includes("diploma"))).toContain("[ ] diploma (held by Parchment)");
     expect((await run("check", "--dir", dir)).out).toEqual(["ok"]);
@@ -173,6 +178,73 @@ describe("reflect CLI", () => {
     const bad = await run("check", "--dir", dir);
     expect(bad.code).toBe(1);
     expect(bad.out).toContain("problem: documents/passport.md: names a connection that does not hold it");
+  });
+
+  it("keeps how each need is met, and passages between states, with state rebuilt from them", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "reflect-cli-"));
+    dirs.push(dir);
+    await run("init", "--name", "Tester", "--dir", dir);
+    await run("need", "food", "supplied", "--provider", "market", "--dir", dir);
+    await expect(run("need", "water", "stocked", "--dir", dir)).rejects.toThrow(/--runway/);
+    await expect(run("need", "wifi", "supplied", "--dir", dir)).rejects.toThrow(/a need is one of/);
+    await run("need", "food", "stocked", "--runway", "6m", "--note", "garden and freezer", "--dir", dir);
+    const food = await readFile(join(dir, "needs", "food.md"), "utf8");
+    expect(food).toContain("state: stocked\nrunway: 6m");
+    expect(food).toMatch(/- \S+ supplied by market\n- \S+ stocked for 6m: garden and freezer\n/);
+
+    await run("passage", "line", "seeking-a-mate", "--on", "2019-03", "--dir", dir);
+    await run("passage", "line", "pair-bond", "--on", "2021-06-12", "--note", "married", "--dir", dir);
+    await run("passage", "provide", "learning", "--on", "2016-08", "--dir", dir);
+    // Kept late, but it happened earlier: state goes by when it happened.
+    await run("passage", "line", "seeking-a-mate", "--on", "2018-01", "--dir", dir);
+    await expect(run("passage", "line", "married", "--dir", dir)).rejects.toThrow(/in line a state is one of/);
+    const state = JSON.parse(await readFile(join(dir, "life", "state.json"), "utf8"));
+    expect(state).toEqual({ provide: { state: "learning", since: "2016-08" }, line: { state: "pair-bond", since: "2021-06-12" } });
+    expect((await run("check", "--dir", dir)).out).toEqual(["ok"]);
+    await writeFile(join(dir, "life", "state.json"), JSON.stringify({ line: { state: "raising-children", since: "2025-01" } }));
+    expect((await run("check", "--dir", dir)).out).toContain("problem: life/state.json does not match life/passages.jsonl; it is rebuilt from the passages, never edited");
+  });
+
+  it("offers legacy prompts and keeps what you write as entries marked to survive you", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "reflect-cli-"));
+    dirs.push(dir);
+    await run("init", "--name", "Tester", "--dir", dir);
+    expect((await run("legacy", "--dir", dir)).out[0]!.split("\n")[1]).toMatch(/^Then keep it: reflect legacy [a-z-]+ < what-you-wrote.txt$/);
+    const id = (await run("legacy", "remembered", "As someone who kept his word.", "--date", "2026-11-10", "--dir", dir)).out[0]!;
+    const file = await readFile(join(dir, "journal", `2026-11-10-${id}.md`), "utf8");
+    expect(file).toContain("prompt_id: legacy/remembered\nlegacy: true\nprompt: \"How do you want the world to remember you?\"");
+    // It stays open: you can come back to it.
+    await run("add", id, "And who made people laugh.", "--dir", dir);
+    expect(await readFile(join(dir, "journal", `2026-11-10-${id}.md`), "utf8")).toContain("legacy: true");
+    await expect(run("legacy", "obituary", "x", "--dir", dir)).rejects.toThrow(/no such prompt/);
+    const docs = (await run("documents", "--dir", dir)).out;
+    expect(docs).toContain("legacy");
+    expect(docs.find((l) => l.includes("life-insurance"))).toContain("connect the service that holds it");
+    expect((await run("check", "--dir", dir)).out).toEqual(["ok"]);
+  });
+
+  it("upgrades a vault made before the lifetime folders", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "reflect-cli-"));
+    dirs.push(dir);
+    await run("init", "--name", "Tester", "--dir", dir);
+    // Make it look like a 2026-11-10 vault: ventures/ and library/ instead of the new folders.
+    const { mkdir, rm: rmf } = await import("node:fs/promises");
+    for (const d of ["belonging", "household", "community", "learn", "work"]) await rmf(join(dir, d), { recursive: true });
+    for (const v of ["household", "work", "community", "friendship"]) {
+      await mkdir(join(dir, "ventures", v), { recursive: true });
+      await writeFile(join(dir, "ventures", v, "README.md"), `# ${v}\n`);
+    }
+    await mkdir(join(dir, "library"));
+    await writeFile(join(dir, "library", "meditations.md"), "# Meditations\n");
+    await writeFile(join(dir, "ventures", "friendship", "sam.md"), "# Sam\n");
+    await run("check", "--adopt", "--dir", dir);
+    const r = (await run("upgrade", "--dir", dir)).out;
+    expect(r).toContain("moved: belonging/friends/sam.md");
+    expect(r).toContain("moved: learn/meditations.md");
+    expect(await readFile(join(dir, "household", "README.md"), "utf8")).toBe("# household\n");
+    expect((await readdir(dir)).includes("ventures")).toBe(false);
+    expect((await readdir(dir)).includes("library")).toBe(false);
+    expect((await run("check", "--dir", dir)).out).toEqual(["ok"]);
   });
 
   it("still works on an instance in the older people/<id> layout", async () => {

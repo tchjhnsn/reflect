@@ -6,8 +6,12 @@ import { join } from "node:path";
 
 export type Layout = "vault" | "people";
 
-/** The ventures of a lifetime, each a folder under ventures/: entering a household, building work, community, friendship. */
-export const VENTURES_OF_A_LIFETIME = ["household", "work", "community", "friendship"] as const;
+/**
+ * The top-level folders of the Ventures of a Lifetime (lifetime.ts). work/ is not walked: each venture
+ * in it is a Naive venture with its own provenance. library/ and ventures/ are where a vault made before
+ * 2026-11-11 keeps the same things until `reflect upgrade` moves them.
+ */
+const LIFETIME_DIRS = ["life", "needs", "learn", "belonging", "line", "household", "community", "polis", "legacy", "library", "ventures"];
 
 export type RecordPaths = {
   /** The person's root: "" in a vault, people/<id> otherwise. */
@@ -30,7 +34,7 @@ export function recordPaths(layout: Layout, personId: string): RecordPaths {
   const person = layout === "vault" ? "" : join("people", personId);
   const at = (p: string) => (person ? join(person, p) : p);
   const journal = at(layout === "vault" ? "journal" : "entries");
-  const dirs = layout === "vault" ? ["library", "ventures", "telos", "intents"] : ["intents", "telos"];
+  const dirs = layout === "vault" ? [...LIFETIME_DIRS, "telos", "intents"] : ["intents", "telos"];
   return {
     person,
     journal,
@@ -40,6 +44,6 @@ export function recordPaths(layout: Layout, personId: string): RecordPaths {
     documents: at("documents"),
     connections: at("connections"),
     recordDirs: layout === "vault" ? [journal, at("reflections"), at("concepts"), at("grants"), at("documents"), at("connections"), ...dirs.map(at)] : [person],
-    recordFiles: [at("person.json"), "reflect.json"],
+    recordFiles: layout === "vault" ? ["person.json", "reflect.json", "work/README.md"] : [at("person.json"), "reflect.json"],
   };
 }

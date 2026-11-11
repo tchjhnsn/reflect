@@ -5,7 +5,10 @@ import { randomBytes } from "node:crypto";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { documentProblems } from "./documents.ts";
-import { recordPaths, VENTURES_OF_A_LIFETIME, type Layout } from "./layout.ts";
+import { recordPaths, type Layout } from "./layout.ts";
+import { LEGACY_TEMPLATES, LIFETIME_FOLDERS, lifetimeProblems } from "./lifetime.ts";
+import { readRecord, writeRecord } from "./record-io.ts";
+import { rename, rmdir } from "node:fs/promises";
 import { lastShas, nextLine, parseMemory, sha256, verifyMemory } from "./memory.ts";
 
 export type InstanceConfig = {
@@ -38,15 +41,62 @@ export const layoutOf = (c: InstanceConfig): Layout => c.layout ?? "people";
 
 const README: Record<string, string> = {
   journal: "# Journal\n\nWhere you arrange your thoughts. One file per entry; a file you write here by hand is an entry too (name it `YYYY-MM-DD-<anything>.md`). Run `reflect spark` for a noun to write about.\n",
-  library: "# Library\n\nWhat you read, listen to and study, with your notes on it. A note per book, talk or course.\n",
   telos: "# Telos\n\nThe ends you are working toward, in your own words.\n",
   documents: "# Documents\n\nA custody checklist for official documents: birth certificate, Social Security card, diplomas, deeds, will and the rest. The documents need not be here. Run `reflect documents` to see the list and check off which you have and where; a card per document lands in this folder.\n",
   intents: "# Intents\n\nWhat you mean to do, and which end each serves.\n",
-  household: "# Household\n\nEntering and keeping a household: partnership, children, home.\n",
-  work: "# Work\n\nThe ventures you build. When a journal entry turns into a venture, its folder goes here.\n",
-  community: "# Community\n\nThe communities you belong to and help build.\n",
-  friendship: "# Friendship\n\nYour friends, and what it means to you to be one.\n",
 };
+
+/** Write each lifetime folder's README and the legacy templates where they are missing; each is logged in memory. */
+async function ensureLifetime(root: string, now: Date): Promise<string[]> {
+  const written: string[] = [];
+  const files: [string, string][] = [
+    ...LIFETIME_FOLDERS.map((f): [string, string] => [join(f.path, "README.md"), `# ${f.title}\n\n${f.guide}\n`]),
+    ...LEGACY_TEMPLATES,
+  ];
+  for (const [rel, bytes] of files) {
+    if ((await readRecord(root, rel)) !== null) continue;
+    await writeRecord(root, rel, bytes, "create", now.toISOString());
+    written.push(rel);
+  }
+  return written;
+}
+
+/** Where a vault made before 2026-11-11 kept things, and where they go now. */
+const MOVES: [string, string][] = [
+  ["ventures/household", "household"],
+  ["ventures/work", "work"],
+  ["ventures/community", "community"],
+  ["ventures/friendship", "belonging/friends"],
+  ["library", "learn"],
+];
+
+/**
+ * Move a vault onto the Ventures of a Lifetime folders: the old folders' files move whole (a file
+ * already at the new path is never overwritten; the old one stays and is reported), then missing
+ * folders get their READMEs. Moved files are adopted in memory at their new paths.
+ */
+export async function upgradeVault(root: string, now = new Date()): Promise<{ moved: string[]; kept: string[]; written: string[] }> {
+  const config = await readConfig(root);
+  if (config.layout !== "vault") throw new Error("upgrade moves a vault; this instance uses the older people/<id> layout");
+  const moved: string[] = [];
+  const kept: string[] = [];
+  for (const [from, to] of MOVES) {
+    for (const rel of await walk(root, from)) {
+      const target = join(to, rel.slice(from.length + 1));
+      if ((await readRecord(root, target)) !== null) {
+        kept.push(rel);
+        continue;
+      }
+      await mkdir(join(root, target, ".."), { recursive: true });
+      await rename(join(root, rel), join(root, target));
+      moved.push(target);
+    }
+  }
+  for (const dir of [...MOVES.map(([from]) => from), "ventures"]) await rmdir(join(root, dir)).catch(() => undefined);
+  if (moved.length) await adopt(root, moved, now);
+  const written = await ensureLifetime(root, now);
+  return { moved, kept, written };
+}
 
 const GITIGNORE = ".obsidian/workspace*.json\n.obsidian/cache\n.trash/\n.DS_Store\n";
 
@@ -63,8 +113,7 @@ export async function initInstance(root: string, name: string, now = new Date())
   const files: [string, string][] = [
     ["reflect.json", `${JSON.stringify(config, null, 2)}\n`],
     [p.recordFiles[0]!, `${JSON.stringify({ id: config.person, name }, null, 2)}\n`],
-    ...(["journal", "library", "documents", "telos", "intents"] as const).map((d): [string, string] => [join(d, "README.md"), README[d]!]),
-    ...VENTURES_OF_A_LIFETIME.map((v): [string, string] => [join("ventures", v, "README.md"), README[v]!]),
+    ...(["journal", "documents", "telos", "intents"] as const).map((d): [string, string] => [join(d, "README.md"), README[d]!]),
   ];
   let last = null;
   const lines = [];
@@ -79,6 +128,7 @@ export async function initInstance(root: string, name: string, now = new Date())
     await writeFile(join(root, dir, ".gitkeep"), "");
   }
   await writeFile(join(root, "memory.jsonl"), `${lines.map((l) => JSON.stringify(l)).join("\n")}\n`);
+  await ensureLifetime(root, now);
   await writeFile(join(root, ".gitignore"), GITIGNORE);
   // The workflow that runs the reader in a GitHub repository. Not a record, so not in memory.
   await mkdir(join(root, ".github", "workflows"), { recursive: true });
@@ -131,7 +181,7 @@ export async function checkInstance(root: string): Promise<CheckResult> {
     const paths = Array.isArray(grant.paths) ? grant.paths : [];
     for (const p of paths) if (typeof p === "string" && /^(journal|entries|reflections|_private)(\/|$)/.test(p)) problems.push(`${g}: a grant can never name ${p}`);
   }
-  problems.push(...(await documentProblems(root, p)));
+  problems.push(...(await documentProblems(root, p)), ...(await lifetimeProblems(root, p)));
   const shas = lastShas(lines);
   const outside: string[] = [];
   const found = (await Promise.all(p.recordDirs.map((d) => walk(root, d)))).flat().filter((r) => !r.endsWith(".draft.json"));
