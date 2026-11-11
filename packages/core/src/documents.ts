@@ -113,14 +113,16 @@ export function parseCard(text: string): { card: Partial<CustodyCard>; history: 
   return { card: card as Partial<CustodyCard>, history };
 }
 
-/** A service that holds records for the person. Credentials never go here. */
-export type Connection = { id: string; name: string; kind: "vault" | "issuer" | "portal"; holds: string[]; created_at: string };
+/** A service that holds records for the person, or a learning platform they use. Credentials never go here. */
+export const CONNECTION_KINDS = ["vault", "issuer", "portal", "platform"] as const;
+export type Connection = { id: string; name: string; kind: (typeof CONNECTION_KINDS)[number]; holds: string[]; created_at: string };
 
 export function connectionProblems(c: Partial<Connection>, file: string): string[] {
   const out: string[] = [];
   if (typeof c.id !== "string" || `${c.id}.json` !== file) out.push(`connections/${file}: id must match the file name`);
   if (typeof c.name !== "string" || !c.name) out.push(`connections/${file}: needs a name`);
-  if (!(c.kind === "vault" || c.kind === "issuer" || c.kind === "portal")) out.push(`connections/${file}: kind is vault, issuer or portal`);
+  if (!(CONNECTION_KINDS as readonly unknown[]).includes(c.kind)) out.push(`connections/${file}: kind is vault, issuer, portal or platform`);
+  if (c.kind === "platform" && Array.isArray(c.holds) && c.holds.length) out.push(`connections/${file}: a learning platform holds no documents`);
   for (const h of Array.isArray(c.holds) ? c.holds : []) if (!documentType(h)) out.push(`connections/${file}: holds an unknown document type ${h}`);
   return out;
 }
