@@ -72,6 +72,10 @@ export async function buildIndex(root: string, layout: Layout, person: string, n
   }
   section("Other folders (pointed at, not moved in)", srcLines);
 
+  if ((await readRecord(root, join("wiki", "_index.md"))) !== null) {
+    section("Wiki (written by my own AI; a view, not the record)", ["- [[wiki/_index]] the wiki's own index: articles by folder, readings of me marked until I confirm them"]);
+  }
+
   const folders: string[] = [];
   for (const f of LIFETIME_FOLDERS) {
     const exists = (await stat(join(root, paths.person, f.path)).catch(() => null))?.isDirectory();
