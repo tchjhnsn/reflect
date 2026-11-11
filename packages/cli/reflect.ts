@@ -12,6 +12,7 @@ import { addGift, addTrustee, LEGACY_ENTRIES, planProblems, previewRelease, read
 import { BOOK_STATUS, FILM_STATUS, GRASP, keepBook, keepConversation, keepFilm, keepRecall, keepTalk, latestGrasp, slugOf, parseSubject, keepResource, keepSubject, learnMap, RESOURCE_STATUS, type BookStatus, type FilmStatus, type Grasp, type ResourceStatus, type SubjectRow } from "../core/src/learning.ts";
 import { isStance, keepIdea, listIdeas, resolveTarget, STANCES, targetText, type Stance } from "../core/src/ideas.ts";
 import { keepSweep, readSweep, sweepLine, SWEEP_PROMPT, type Sweep } from "../core/src/sweep.ts";
+import { writeIndex } from "../core/src/catalog.ts";
 import { planHandoff, runNaiveCapture, sendIdea } from "../core/src/naive-handoff.ts";
 import { addSource, getSource, indexSource, keepPlacements, placementLine, placementPrompt, readDraft, readPlacements, saveDraft, sourceStatus } from "../core/src/sources.ts";
 import { keepNeed, keepPassage, LEGACY_PROMPTS, legacyPrompt } from "../core/src/lifetime.ts";
@@ -102,6 +103,8 @@ const USAGE = `reflect <command> [--dir <instance>]
                                   journal entry that reads its text from the file, so you can reflect
                                   on it without copying it in. A venture maps to its folder under
                                   work/ (never written into), else becomes an idea if it has a statement
+  index                           rewrite index.md, the catalog of your notes where your own AI starts
+                                  reading: one linked line per note, journal entries by date only
   idea                            your ideas, each with its inputs and recommendations
   idea <title> [statement] [--from <input>]... [--maybe <input>]... [--how <text>]
                 [--related <stance>:<thing> --by <who> [--note <text>]]... [--drop <thing>]...
@@ -652,6 +655,11 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
         for (const p of s.missing) out(`  no longer in the folder: ${p}`);
       }
     }
+    return 0;
+  }
+  if (cmd === "index") {
+    if (layoutOf(config) !== "vault") throw new Error("index needs a vault; this instance uses the older people/<id> layout");
+    out((await writeIndex(root, layoutOf(config), config.person, new Date())) ? "wrote index.md" : "index.md is up to date");
     return 0;
   }
   if (cmd === "idea") {
