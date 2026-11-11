@@ -9,9 +9,10 @@ import { parseArgs } from "node:util";
 import { filesJournal } from "../core/src/files-journal.ts";
 import { adopt, checkInstance, initInstance, layoutOf, readConfig, upgradeVault } from "../core/src/instance.ts";
 import { addGift, addTrustee, LEGACY_ENTRIES, planProblems, previewRelease, readPlan, setTerms } from "../core/src/release.ts";
-import { BOOK_STATUS, FILM_STATUS, GRASP, keepBook, keepConversation, keepFilm, keepRecall, keepTalk, latestGrasp, parseSubject, keepResource, keepSubject, learnMap, RESOURCE_STATUS, type BookStatus, type FilmStatus, type Grasp, type ResourceStatus, type SubjectRow } from "../core/src/learning.ts";
+import { BOOK_STATUS, FILM_STATUS, GRASP, keepBook, keepConversation, keepFilm, keepRecall, keepTalk, latestGrasp, slugOf, parseSubject, keepResource, keepSubject, learnMap, RESOURCE_STATUS, type BookStatus, type FilmStatus, type Grasp, type ResourceStatus, type SubjectRow } from "../core/src/learning.ts";
 import { isStance, keepIdea, listIdeas, resolveTarget, STANCES, targetText, type Stance } from "../core/src/ideas.ts";
 import { keepSweep, readSweep, sweepLine, SWEEP_PROMPT, type Sweep } from "../core/src/sweep.ts";
+import { planHandoff, runNaiveCapture, sendIdea } from "../core/src/naive-handoff.ts";
 import { addSource, getSource, indexSource, keepPlacements, placementLine, placementPrompt, readDraft, readPlacements, saveDraft, sourceStatus } from "../core/src/sources.ts";
 import { keepNeed, keepPassage, LEGACY_PROMPTS, legacyPrompt } from "../core/src/lifetime.ts";
 import { lookupIsbn, readCatalogEntry, saveCatalogEntry, searchBooks, type Fetch } from "../core/src/openlibrary.ts";
@@ -107,6 +108,9 @@ const USAGE = `reflect <command> [--dir <instance>]
                                   keep an idea in your words (outputs, apart from learn/). An input is a
                                   note (learn/books/x), a title you kept, or your own words; stance is
                                   supports, extends, parallels, challenges or opposes
+  idea <title> --send naive [--workspace <dir>] [--yes]
+                                  send the idea to Naive with naive capture: shows what goes first, and
+                                  sends only with --yes; the idea gets a line naming where it landed
   write [text] [--date YYYY-MM-DD] write an entry (text from the argument or stdin); prints its id
   spark [--minutes 1|5|10|15 | --sentence]
                                   a noun to write about, and how long
@@ -215,6 +219,9 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
       drop: { type: "string", multiple: true },
       exclude: { type: "string" },
       limit: { type: "string" },
+      send: { type: "string" },
+      workspace: { type: "string" },
+      yes: { type: "boolean", default: false },
       help: { type: "boolean", short: "h" },
     },
   });
@@ -659,6 +666,21 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
         for (const x of i.maybe) out(`  maybe from ${targetText(x)}${x.how ? `: ${x.how}` : ""}`);
         for (const r of i.related) out(`  ${r.stance}: ${targetText(r)}, suggested by ${r.by}${r.note ? `: ${r.note}` : ""}`);
       }
+      return 0;
+    }
+    if (values.send !== undefined) {
+      if (values.send !== "naive") throw new Error("--send takes naive: reflect idea <title> --send naive");
+      const plan = await planHandoff(root, slugOf(title), values.workspace ?? null);
+      for (const x of plan.sent) out(`already sent ${x.on} to ${x.workspace}:${x.raw}`);
+      if (!values.yes) {
+        out(`This goes to the Naive workspace at ${plan.workspace}, through naive capture:`);
+        out("");
+        for (const l of plan.text.split("\n")) out(`  ${l}`);
+        out("");
+        out(`Send it: reflect idea ${JSON.stringify(title)} --send naive${values.workspace ? ` --workspace ${JSON.stringify(values.workspace)}` : ""} --yes`);
+        return 0;
+      }
+      out(`sent: ${await sendIdea(root, plan, runNaiveCapture, new Date())}`);
       return 0;
     }
     const inputs = async (xs: string[] | undefined) => Promise.all((xs ?? []).map(async (x) => ({ target: await resolveTarget(root, x), ...(values.how ? { how: values.how } : {}) })));

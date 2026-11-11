@@ -17,6 +17,8 @@ import { readRecord, writeRecord } from "./record-io.ts";
 export const IDEAS = "ideas";
 /** A pointer to a file in one of the person's own folders (sources.ts); kept on the note, never folded. */
 const POINTER_LINE = /^\d{4}-\d{2}-\d{2} pointer [a-z0-9-]+:.+ #[0-9a-f]{12}$/;
+/** A `sent to naive` line (naive-handoff.ts): where the idea's text landed in a Naive workspace. */
+export const SENT_LINE = /^(\d{4}-\d{2}-\d{2}) sent to naive ([^:\s]+):(raw\/\S+\.md)$/;
 
 /** Where a recommendation sits against the idea, from most aligned to most adversarial. */
 export const STANCES = [
@@ -220,7 +222,7 @@ export async function ideaProblems(root: string): Promise<string[]> {
     const { head, history } = split(await readFile(join(root, IDEAS, n), "utf8"));
     if (head.idea !== id) out.push(`${f}: idea must match the file name`);
     const lines = history.map((l) => [l, parseIdeaLine(l)] as const);
-    for (const [l, p] of lines) if (!p && !POINTER_LINE.test(l)) out.push(`${f}: line not understood: ${l}`);
+    for (const [l, p] of lines) if (!p && !POINTER_LINE.test(l) && !SENT_LINE.test(l)) out.push(`${f}: line not understood: ${l}`);
     if (!lines.some(([, p]) => p?.kind === "stated")) out.push(`${f}: an idea is stated in the person's words (a "stated:" line)`);
     for (const [, p] of lines) {
       const t = p?.kind === "from" || p?.kind === "maybe" ? p.input : p?.kind === "related" ? p.rec : null;
