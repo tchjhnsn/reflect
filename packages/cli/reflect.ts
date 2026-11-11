@@ -9,7 +9,7 @@ import { parseArgs } from "node:util";
 import { filesJournal } from "../core/src/files-journal.ts";
 import { adopt, checkInstance, initInstance, layoutOf, readConfig, upgradeVault } from "../core/src/instance.ts";
 import { addGift, addTrustee, LEGACY_ENTRIES, planProblems, previewRelease, readPlan, setTerms } from "../core/src/release.ts";
-import { EVIDENCE_KINDS, keepResource, keepTopic, learnMap, RESOURCE_STATUS, type MapRow, type ResourceStatus } from "../core/src/learning.ts";
+import { BOOK_STATUS, GRASP, keepBook, keepResource, keepSubject, learnMap, RESOURCE_STATUS, type BookStatus, type Grasp, type ResourceStatus, type SubjectRow } from "../core/src/learning.ts";
 import { keepNeed, keepPassage, LEGACY_PROMPTS, legacyPrompt } from "../core/src/lifetime.ts";
 import { recordPaths } from "../core/src/layout.ts";
 import { CUSTODY, DOCUMENT_GROUPS, filesDocuments, isCustody, type ChecklistRow, type Connection } from "../core/src/documents.ts";
@@ -34,15 +34,17 @@ const USAGE = `reflect <command> [--dir <instance>]
   release trustee <name> --contact <how to reach them>
   release give <legacy/... | legacy-entries> --to <name> --contact <how to reach them>
   release terms [--confirmations N] [--wait <days>]
-  learn                           what you have learned, aspire to learn and need to learn, and what
-                                  you could learn next
-  learn aspire <topic> [--requires a,b] [--part-of x] [--same-as wikidata:Q123]
-  learn need <topic> --for <intent, venture, need or role> [--requires a,b] [--same-as ...]
-  learn evidence <topic> <said|studied|practiced|made|assessed|certified|vouched|taught>
-                [--link <url or record>] [--by <who>] [--note <text>] [--on YYYY-MM[-DD]]
-  learn resource <name> [--kind video|channel|article|book|course|podcast|paper|lab|site]
-                [--url <link | isbn:N | doi:X>] [--topics a,b] [--by <author>] [--platform <id>]
-                [--status saved|started|finished|dropped]
+  learn                           what you know, the books you have read and what of them you have not
+                                  rated, what you aspire to and need to learn, and what you could learn next
+  learn book <title> [--isbn N] [--by <author;author>] [--status want|reading|read|abandoned]
+                [--subjects a,b] [--on YYYY-MM[-DD]]
+  learn grasp <subject> <teach|explain|gist|forgot> [--book <title>] [--note <text>] [--on ...]
+                                  your own grasp of a subject: could teach it, could explain the key
+                                  ideas, remember the gist, or don't remember it
+  learn aspire <subject> [--requires a,b] [--part-of x] [--same-as wikidata:Q123 | lcsh:sh123]
+  learn need <subject> --for <intent, venture, need or role> [--requires a,b] [--same-as ...]
+  learn resource <name> [--kind video|channel|article|course|podcast|paper|lab|site] [--url <link>]
+                [--subjects a,b] [--by <who>] [--platform <id>] [--status saved|started|finished|dropped]
   write [text] [--date YYYY-MM-DD] write an entry (text from the argument or stdin); prints its id
   spark [--minutes 1|5|10|15 | --sentence]
                                   a noun to write about, and how long
@@ -126,10 +128,11 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
       requires: { type: "string" },
       "part-of": { type: "string" },
       "same-as": { type: "string" },
-      link: { type: "string" },
       by: { type: "string" },
       url: { type: "string" },
-      topics: { type: "string" },
+      subjects: { type: "string" },
+      isbn: { type: "string" },
+      book: { type: "string" },
       platform: { type: "string" },
       status: { type: "string" },
       out: { type: "string" },
@@ -267,44 +270,57 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
   }
   if (cmd === "learn") {
     if (layoutOf(config) !== "vault") throw new Error("learn needs a vault; this instance uses the older people/<id> layout");
-    const [sub, name, kind] = rest;
+    const [sub, name, level] = rest;
     const now = new Date();
-    const list = (v: string | undefined) => (v ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+    const list = (v: string | undefined, sep = ",") => (v ?? "").split(sep).map((x) => x.trim()).filter(Boolean);
     const where = { requires: list(values.requires), part_of: list(values["part-of"]), ...(values["same-as"] ? { same_as: values["same-as"] } : {}) };
-    if (sub === "aspire" || sub === "need") {
-      if (!name) throw new Error(`learn ${sub} <topic>`);
-      const t = await keepTopic(root, name, { ...where, want: sub, ...(values.for ? { for: values.for } : {}) }, now);
-      out(`kept: learn/topics/${t.id}.md ${sub}${t.for ? ` for ${t.for}` : ""}`);
+    if (sub === "book") {
+      if (!name) throw new Error("learn book <title> [--isbn N] [--status read]");
+      if (values.status && !(BOOK_STATUS as readonly string[]).includes(values.status)) throw new Error(`--status is one of ${BOOK_STATUS.join(", ")}`);
+      const b = await keepBook(root, name, { ...(values.isbn ? { isbn: values.isbn } : {}), authors: list(values.by, ";"), subjects: list(values.subjects), ...(values.status ? { status: values.status as BookStatus } : {}), ...(values.on ? { on: values.on } : {}) }, now);
+      out(`kept: learn/books/${b.id}.md ${b.status}`);
+      if (b.status === "read" && b.subjects.length) out(`Which of its subjects can you name without looking? Then rate each: reflect learn grasp <subject> <${GRASP.map((g) => g.id).join("|")}> --book "${b.title}"`);
       return 0;
     }
-    if (sub === "evidence") {
-      if (!name || !kind) throw new Error(`learn evidence <topic> <${EVIDENCE_KINDS.map((k) => k.id).join("|")}>`);
-      const t = await keepTopic(root, name, where, now, { kind: kind as MapRow["evidence"][number]["kind"], ...(values.link ? { link: values.link } : {}), ...(values.by ? { by: values.by } : {}), ...(values.note ? { note: values.note } : {}), ...(values.on ? { on: values.on } : {}) });
-      out(`kept: learn/topics/${t.id}.md evidence ${kind}`);
+    if (sub === "grasp") {
+      if (!name || !level) throw new Error(`learn grasp <subject> <${GRASP.map((g) => g.id).join("|")}>`);
+      const s = await keepSubject(root, name, { ...where, grasp: { grasp: level as Grasp, ...(values.book ? { book: values.book } : {}), ...(values.note ? { note: values.note } : {}), ...(values.on ? { on: values.on } : {}) } }, now);
+      out(`kept: learn/subjects/${s.id}.md ${GRASP.find((g) => g.id === level)!.text}`);
+      return 0;
+    }
+    if (sub === "aspire" || sub === "need") {
+      if (!name) throw new Error(`learn ${sub} <subject>`);
+      const s = await keepSubject(root, name, { ...where, want: sub, ...(values.for ? { for: values.for } : {}) }, now);
+      out(`kept: learn/subjects/${s.id}.md ${sub}${s.for ? ` for ${s.for}` : ""}`);
       return 0;
     }
     if (sub === "resource") {
-      if (!name) throw new Error("learn resource <name> --kind <kind> [--url <link>] [--topics a,b]");
+      if (!name) throw new Error("learn resource <name> --kind <kind> [--url <link>] [--subjects a,b]");
       if (values.status && !(RESOURCE_STATUS as readonly string[]).includes(values.status)) throw new Error(`--status is one of ${RESOURCE_STATUS.join(", ")}`);
-      const r = await keepResource(root, name, { ...(values.kind ? { kind: values.kind } : {}), ...(values.url ? { url: values.url } : {}), ...(values.by ? { by: values.by } : {}), ...(values.platform ? { platform: values.platform } : {}), topics: list(values.topics), ...(values.status ? { status: values.status as ResourceStatus } : {}) }, now);
+      const r = await keepResource(root, name, { ...(values.kind ? { kind: values.kind } : {}), ...(values.url ? { url: values.url } : {}), ...(values.by ? { by: values.by } : {}), ...(values.platform ? { platform: values.platform } : {}), subjects: list(values.subjects), ...(values.status ? { status: values.status as ResourceStatus } : {}) }, now);
       out(`kept: learn/resources/${r.id}.md ${r.status}`);
       return 0;
     }
-    if (sub) throw new Error("learn takes aspire, need, evidence or resource");
+    if (sub) throw new Error("learn takes book, grasp, aspire, need or resource");
     const m = await learnMap(root);
-    const res = (r: MapRow) => (r.resources.length ? `; resources: ${r.resources.map((x) => `${x.id} (${x.status})`).join(", ")}` : "");
-    const ready = (r: MapRow) => (r.blockedBy.length ? `first learn ${r.blockedBy.join(", ")}` : "ready");
-    out("Learned");
-    for (const r of m.learned) out(`  ${r.topic.id}  ${r.standing}: ${[...new Set(r.evidence.map((e) => e.kind))].join(", ")}`);
-    if (!m.learned.length) out("  nothing yet; add evidence: reflect learn evidence <topic> <kind>");
+    const text = (g: Grasp) => GRASP.find((x) => x.id === g)!.text;
+    const from = (r: SubjectRow) => [...r.books.map((b) => b.id), ...r.resources.map((x) => `${x.id} (${x.status})`)];
+    const ready = (r: SubjectRow) => (r.blockedBy.length ? `first learn ${r.blockedBy.join(", ")}` : "ready");
+    const via = (r: SubjectRow) => (from(r).length ? `; from ${from(r).join(", ")}` : "");
+    out("Known");
+    for (const r of m.known) out(`  ${r.subject.id}  ${text(r.grasp!.grasp)} (${r.grasp!.on})${r.grasp!.book ? `, from ${r.grasp!.book}` : ""}`);
+    if (!m.known.length) out("  nothing rated yet: reflect learn grasp <subject> <level>");
+    out("Books");
+    for (const { book: b, unrated } of m.books) out(`  ${b.id}  ${b.status}${b.finished ? ` ${b.finished}` : ""}${unrated.length ? `; not yet rated: ${unrated.join(", ")}` : ""}`);
+    if (!m.books.length) out("  none yet: reflect learn book <title> --status read");
     out("Aspire");
-    for (const r of m.aspire) out(`  ${r.topic.id}  ${ready(r)}${res(r)}`);
-    if (!m.aspire.length) out("  nothing yet: reflect learn aspire <topic>");
+    for (const r of m.aspire) out(`  ${r.subject.id}  ${ready(r)}${via(r)}`);
+    if (!m.aspire.length) out("  nothing yet: reflect learn aspire <subject>");
     out("Need");
-    for (const r of m.need) out(`  ${r.topic.id}  for ${r.topic.for}; ${ready(r)}${res(r)}`);
-    if (!m.need.length) out("  nothing yet: reflect learn need <topic> --for <what needs it>");
+    for (const r of m.need) out(`  ${r.subject.id}  for ${r.subject.for}; ${ready(r)}${via(r)}`);
+    if (!m.need.length) out("  nothing yet: reflect learn need <subject> --for <what needs it>");
     out("Possible next");
-    for (const r of m.possible) out(`  ${r.topic.id}  ${r.topic.requires.length ? "you have learned what it requires" : `a first step toward ${m.aspire.concat(m.need).filter((w) => w.topic.requires.includes(r.topic.id)).map((w) => w.topic.id).join(", ") || "what needs it"}`}`);
+    for (const r of m.possible) out(`  ${r.subject.id}  ${r.subject.requires.length ? "you know what it requires" : `a first step toward ${[...m.aspire, ...m.need].filter((w) => w.subject.requires.includes(r.subject.id)).map((w) => w.subject.id).join(", ") || "what needs it"}`}`);
     if (!m.possible.length) out("  nothing your map names yet; the rest is the whole internet");
     return 0;
   }

@@ -205,51 +205,53 @@ describe("reflect CLI", () => {
     expect((await run("check", "--dir", dir)).out).toContain("problem: life/state.json does not match life/passages.jsonl; it is rebuilt from the passages, never edited");
   });
 
-  it("keeps what you have learned, aspire to and need, with learned from evidence and the fringe derived", async () => {
+  it("models what you know from the books you read and your own grasp of their subjects", async () => {
     const dir = await mkdtemp(join(tmpdir(), "reflect-cli-"));
     dirs.push(dir);
     await run("init", "--name", "Tester", "--dir", dir);
-    expect(await readFile(join(dir, "learn", "topics", "README.md"), "utf8")).toContain("same_as");
-    await run("learn", "aspire", "Linear algebra", "--same-as", "wikidata:Q82571", "--dir", dir);
-    await run("learn", "aspire", "Machine learning", "--requires", "linear-algebra,probability", "--dir", dir);
+    expect(await readFile(join(dir, "learn", "books", "README.md"), "utf8")).toContain("without looking");
+    const kept = await run("learn", "book", "Thinking in Systems", "--isbn", "978-1-60358-055-7", "--by", "Donella Meadows", "--subjects", "systems thinking,feedback loops", "--status", "read", "--on", "2025-06-01", "--dir", dir);
+    expect(kept.out[1]).toContain("name without looking");
+    const book = await readFile(join(dir, "learn", "books", "thinking-in-systems.md"), "utf8");
+    expect(book).toContain('authors: "Donella Meadows"\nisbn: 9781603580557\nstatus: read\nfinished: 2025-06-01\nsubjects: [[learn/subjects/systems-thinking]], [[learn/subjects/feedback-loops]]');
+    await expect(run("learn", "book", "Bad", "--isbn", "123", "--dir", dir)).rejects.toThrow(/10 or 13 digits/);
+
+    // Read but not rated is read, not known.
+    let map = (await run("learn", "--dir", dir)).out;
+    expect(map).toContain("  thinking-in-systems  read 2025-06-01; not yet rated: systems-thinking, feedback-loops");
+    expect(map).toContain("  nothing rated yet: reflect learn grasp <subject> <level>");
+
+    await expect(run("learn", "grasp", "systems thinking", "knows", "--dir", dir)).rejects.toThrow(/grasp is one of/);
+    await expect(run("learn", "grasp", "systems thinking", "teach", "--book", "Nope", "--dir", dir)).rejects.toThrow(/no book Nope/);
+    await run("learn", "grasp", "systems thinking", "explain", "--book", "Thinking in Systems", "--dir", dir);
+    await run("learn", "grasp", "feedback loops", "forgot", "--book", "Thinking in Systems", "--note", "only the bathtub", "--dir", dir);
+    map = (await run("learn", "--dir", dir)).out;
+    expect(map.find((l) => l.startsWith("  systems-thinking"))).toMatch(/could explain the key ideas \(\S+\), from thinking-in-systems$/);
+    expect(map).not.toContain(expect.stringMatching(/^ {2}feedback-loops {2}don't/));
+    expect(map).toContain("  thinking-in-systems  read 2025-06-01");
+
+    // Grasp changes over time; the latest by date counts.
+    await run("learn", "grasp", "feedback loops", "gist", "--dir", dir);
+    map = (await run("learn", "--dir", dir)).out;
+    expect(map.find((l) => l.startsWith("  feedback-loops"))).toMatch(/remember the gist/);
+
+    await run("learn", "aspire", "Control theory", "--requires", "feedback loops,linear algebra", "--same-as", "wikidata:Q842015", "--dir", dir);
     await expect(run("learn", "need", "Accounting", "--dir", dir)).rejects.toThrow(/names what it is for/);
     await run("learn", "need", "Accounting", "--for", "intents/start-a-company", "--dir", dir);
-    await expect(run("learn", "aspire", "Probability", "--same-as", "Q9492", "--dir", dir)).rejects.toThrow(/wikidata:Q/);
-    await expect(run("learn", "evidence", "Probability", "made", "--dir", dir)).rejects.toThrow(/where it can be seen/);
-    await expect(run("learn", "evidence", "Probability", "vouched", "--note", "x", "--dir", dir)).rejects.toThrow(/--by/);
-    await run("learn", "evidence", "Probability", "said", "--dir", dir);
-    await expect(run("learn", "resource", "Fast AI course", "--kind", "course", "--platform", "fanout", "--dir", dir)).rejects.toThrow(/connect it first/);
     await run("connect", "fanout", "--name", "Fanout", "--kind", "platform", "--dir", dir);
-    await run("learn", "resource", "Essence of linear algebra", "--kind", "video", "--url", "https://www.youtube.com/playlist?list=PLZHQObOWTQDPD3MizzM2xVFitgF8hE_ab", "--by", "3Blue1Brown", "--topics", "linear-algebra", "--dir", dir);
-    await run("learn", "resource", "Inference systems lab", "--kind", "lab", "--platform", "fanout", "--topics", "machine-learning", "--dir", dir);
-
-    let map = (await run("learn", "--dir", dir)).out;
-    expect(map).toContain("  probability  stated: said");
-    expect(map).toContain("  linear-algebra  ready; resources: essence-of-linear-algebra (saved)");
-    expect(map).toContain("  machine-learning  first learn linear-algebra; resources: inference-systems-lab (saved)");
+    await expect(run("learn", "resource", "Some book", "--kind", "book", "--dir", dir)).rejects.toThrow(/reflect learn book/);
+    await run("learn", "resource", "Control bootcamp", "--kind", "video", "--url", "https://www.youtube.com/@Eigensteve", "--subjects", "control theory", "--dir", dir);
+    map = (await run("learn", "--dir", dir)).out;
+    expect(map).toContain("  control-theory  first learn linear-algebra; from control-bootcamp (saved)");
     expect(map).toContain("  accounting  for intents/start-a-company; ready");
-    expect(map).not.toContain("  probability  a first step toward machine-learning");
+    expect(map).toContain("  linear-algebra  a first step toward control-theory");
 
-    // Finishing a resource counts as studying its topics, which unblocks what requires them.
-    await run("learn", "resource", "Essence of linear algebra", "--status", "finished", "--dir", dir);
-    map = (await run("learn", "--dir", dir)).out;
-    expect(map).toContain("  linear-algebra  shown: studied");
-    expect(map).toContain("  machine-learning  ready; resources: inference-systems-lab (saved)");
-
-    // A topic nobody asked for, whose prerequisites are learned, is possible next.
-    await run("learn", "evidence", "Statistics", "said", "--dir", dir);
-    await writeFile(join(dir, "learn", "topics", "bayesian-inference.md"), "---\ntopic: bayesian-inference\ntitle: \"Bayesian inference\"\nrequires: [[learn/topics/probability]], [[learn/topics/statistics]]\n---\n\n# Bayesian inference\n");
-    map = (await run("learn", "--dir", dir)).out;
-    expect(map).toContain("  bayesian-inference  you have learned what it requires");
-
-    await run("learn", "evidence", "Machine learning", "made", "--link", "https://github.com/example/model", "--note", "a small model", "--dir", dir);
-    const ml = await readFile(join(dir, "learn", "topics", "machine-learning.md"), "utf8");
-    expect(ml).toContain("requires: [[learn/topics/linear-algebra]], [[learn/topics/probability]]");
-    expect(ml).toMatch(/- \S+ want aspire\n- \S+ evidence made <https:\/\/github.com\/example\/model>: a small model\n/);
     await run("check", "--adopt", "--dir", dir);
     expect((await run("check", "--dir", dir)).out).toEqual(["ok"]);
-    await writeFile(join(dir, "learn", "topics", "probability.md"), "---\ntopic: probability\nrequires: [[learn/topics/bayesian-inference]]\n---\n");
-    expect((await run("check", "--dir", dir)).out.join("\n")).toContain("prerequisites go round in a circle");
+    await writeFile(join(dir, "learn", "subjects", "linear-algebra.md"), "---\nsubject: linear-algebra\nrequires: [[learn/subjects/control-theory]]\n---\n\n- 2026-01-01 grasp teach [[learn/books/missing]]\n");
+    const problems = (await run("check", "--dir", dir)).out.join("\n");
+    expect(problems).toContain("prerequisites go round in a circle");
+    expect(problems).toContain("names a book that is not in learn/books: missing");
   });
 
   it("offers legacy prompts and keeps what you write as entries marked to survive you", async () => {
