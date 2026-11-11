@@ -431,6 +431,69 @@ describe("reflect CLI", () => {
     expect(await run("check", "--dir", dir)).toEqual({ code: 0, out: ["ok"] });
   });
 
+  it("points at a folder outside the vault, keeps the placements the person chose, and notices drift", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "reflect-cli-"));
+    const notes = await mkdtemp(join(tmpdir(), "reflect-notes-"));
+    dirs.push(dir, notes);
+    await run("init", "--name", "Tester", "--dir", dir);
+    await mkdir(join(notes, "Reading"), { recursive: true });
+    await mkdir(join(notes, ".git"), { recursive: true });
+    await mkdir(join(notes, "Private"), { recursive: true });
+    await writeFile(join(notes, "Reading", "Politics.md"), "# Politics, Aristotle\n\nBook III: correct and corrupt constitutions.\n");
+    await writeFile(join(notes, "cities.md"), "A city is correct when it serves the common good.\n");
+    await writeFile(join(notes, "2024-03-01.md"), "Walked downtown today.\n");
+    await writeFile(join(notes, "diploma.pdf"), "%PDF-1.4 fake");
+    await writeFile(join(notes, ".env"), "SHOULD_NOT_BE_SEEN=1\n");
+    await writeFile(join(notes, "api_token.txt"), "nope\n");
+    await writeFile(join(notes, "Private", "diary.md"), "private\n");
+    await writeFile(join(notes, ".git", "config"), "x");
+
+    await expect(run("source", "add", "Notes", notes, "--dir", dir)).rejects.toThrow(/lowercase/);
+    await expect(run("source", "add", "inside", join(dir, "learn"), "--dir", dir)).rejects.toThrow(/inside the vault/);
+    const added = (await run("source", "add", "notes", notes, "--exclude", "Private", "--dir", dir)).out;
+    expect(added[0]).toContain("4 file(s) indexed");
+    const prompt = (await run("source", "prompt", "notes", "--dir", dir)).out.join("\n");
+    expect(prompt).toContain('"source": "notes"');
+    expect(prompt).toContain("- Reading/Politics.md");
+    expect(prompt).not.toMatch(/\.env|api_token|diary|\.git/);
+
+    const reply = {
+      kind: "reflect.placements",
+      version: 1,
+      source: "notes",
+      placements: [
+        { path: "Reading/Politics.md", kind: "book", name: "Politics", authors: ["Aristotle"], why: "notes on Book III", confidence: "high" },
+        { path: "cities.md", kind: "idea", name: "Corrupt and correct cities", statement: "A city is correct when it serves the common good.", confidence: "medium" },
+        { path: "2024-03-01.md", kind: "entry", date: "2024-03-01", confidence: "high" },
+        { path: "diploma.pdf", kind: "document", name: "diploma", confidence: "medium" },
+        { path: ".env", kind: "none" },
+        { path: "made-up.md", kind: "book", name: "Nothing" },
+      ],
+    };
+    await writeFile(join(dir, "reply.md"), "```json\n" + JSON.stringify(reply) + "\n```");
+    const draft = (await run("source", "tag", "notes", join(dir, "reply.md"), "--dir", dir)).out;
+    expect(draft[0]).toBe("4 placement(s) for files in notes:");
+    await run("source", "tag", "notes", "--keep", "1,2,3,4", "--dir", dir);
+    const book = await readFile(join(dir, "learn/books/politics.md"), "utf8");
+    expect(book).toMatch(/pointer notes:Reading\/Politics\.md #[0-9a-f]{12}/);
+    expect(await readFile(join(dir, "ideas/corrupt-and-correct-cities.md"), "utf8")).toMatch(/pointer notes:cities\.md #/);
+    const map = await readFile(join(dir, "sources/notes.md"), "utf8");
+    expect(map).toContain('placed "2024-03-01.md"');
+    expect(map).toContain("as entry");
+    expect(map).toContain("[[documents/diploma]]");
+    expect(await readFile(join(notes, "Reading", "Politics.md"), "utf8")).toContain("Book III");
+    expect(await run("check", "--dir", dir)).toEqual({ code: 0, out: ["ok"] });
+    expect((await run("source", "--dir", dir)).out[1]).toBe("  4 file(s): 4 placed, 0 open");
+
+    await writeFile(join(notes, "Reading", "Politics.md"), "# Politics\n\nRewritten.\n");
+    await rm(join(notes, "cities.md"));
+    const status = (await run("source", "notes", "--dir", dir)).out.join("\n");
+    expect(status).toContain("changed since placed: Reading/Politics.md");
+    expect(status).toContain("no longer in the folder: cities.md");
+    const check = await run("check", "--dir", dir);
+    expect(check.code).not.toBe(0);
+  });
+
   it("offers legacy prompts and keeps what you write as entries marked to survive you", async () => {
     const dir = await mkdtemp(join(tmpdir(), "reflect-cli-"));
     dirs.push(dir);

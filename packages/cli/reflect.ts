@@ -12,6 +12,7 @@ import { addGift, addTrustee, LEGACY_ENTRIES, planProblems, previewRelease, read
 import { BOOK_STATUS, FILM_STATUS, GRASP, keepBook, keepConversation, keepFilm, keepRecall, keepTalk, latestGrasp, parseSubject, keepResource, keepSubject, learnMap, RESOURCE_STATUS, type BookStatus, type FilmStatus, type Grasp, type ResourceStatus, type SubjectRow } from "../core/src/learning.ts";
 import { isStance, keepIdea, listIdeas, resolveTarget, STANCES, targetText, type Stance } from "../core/src/ideas.ts";
 import { keepSweep, readSweep, sweepLine, SWEEP_PROMPT, type Sweep } from "../core/src/sweep.ts";
+import { addSource, getSource, indexSource, keepPlacements, placementLine, placementPrompt, readDraft, readPlacements, saveDraft, sourceStatus } from "../core/src/sources.ts";
 import { keepNeed, keepPassage, LEGACY_PROMPTS, legacyPrompt } from "../core/src/lifetime.ts";
 import { lookupIsbn, readCatalogEntry, saveCatalogEntry, searchBooks, type Fetch } from "../core/src/openlibrary.ts";
 import { draftTranscript, keepCourse, listCourses, transcriptText, type Chat, type TranscriptDraft } from "../core/src/transcript.ts";
@@ -82,6 +83,21 @@ const USAGE = `reflect <command> [--dir <instance>]
   learn sweep --keep <1,2,5 | all>
                                   keep those items; an idea's inputs your AI only inferred are kept as
                                   maybe from, and nothing sets your grasp
+  source                          your other folders, pointed at instead of moved in: each with how many
+                                  files are placed, still open, changed or missing since
+  source add <name> <folder> [--exclude <path,*.ext>]
+                                  name a folder outside the vault as a source; nothing in it is moved,
+                                  edited or copied
+  source index <name>             fingerprint its files (hidden folders, dependencies and anything that
+                                  looks like a secret are left out)
+  source prompt <name> [--limit 200]
+                                  the prompt for your own AI: it reads the files and says where each
+                                  belongs (a book, film, talk, link, conversation, subject, idea, entry,
+                                  venture, document, or nowhere)
+  source tag <name> <reply file>  read your AI's reply into a draft and list each placement
+  source tag <name> --keep <1,2,5 | all>
+                                  keep those: each becomes a pointer on its note and a line in
+                                  sources/<name>.md; the file stays where it is
   idea                            your ideas, each with its inputs and recommendations
   idea <title> [statement] [--from <input>]... [--maybe <input>]... [--how <text>]
                 [--related <stance>:<thing> --by <who> [--note <text>]]... [--drop <thing>]...
@@ -194,6 +210,8 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
       maybe: { type: "string", multiple: true },
       related: { type: "string", multiple: true },
       drop: { type: "string", multiple: true },
+      exclude: { type: "string" },
+      limit: { type: "string" },
       help: { type: "boolean", short: "h" },
     },
   });
@@ -567,6 +585,63 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
     out("Possible next");
     for (const r of m.possible) out(`  ${r.subject.id}  ${r.subject.requires.length ? "you know what it requires" : `a first step toward ${[...m.aspire, ...m.need].filter((w) => w.subject.requires.includes(r.subject.id)).map((w) => w.subject.id).join(", ") || "what needs it"}`}`);
     if (!m.possible.length) out("  nothing your map names yet; the rest is the whole internet");
+    return 0;
+  }
+  if (cmd === "source") {
+    if (layoutOf(config) !== "vault") throw new Error("source needs a vault; this instance uses the older people/<id> layout");
+    const [sub, name, arg] = rest;
+    const now = new Date();
+    if (sub === "add") {
+      if (!name || !arg) throw new Error("source add <name> <folder>");
+      const s = await addSource(root, name, arg, { exclude: (values.exclude ?? "").split(",") }, now);
+      const { files, skipped } = await indexSource(root, s.name);
+      out(`kept: ${s.name} -> ${s.path}; ${files.length} file(s) indexed, ${skipped} left out`);
+      out(`Next: reflect source prompt ${s.name}, and give it to your AI`);
+      return 0;
+    }
+    if (sub === "index") {
+      if (!name) throw new Error("source index <name>");
+      const { files, skipped } = await indexSource(root, name);
+      out(`${name}: ${files.length} file(s) indexed, ${skipped} left out`);
+      return 0;
+    }
+    if (sub === "prompt") {
+      if (!name) throw new Error("source prompt <name>");
+      const p = await placementPrompt(root, name, values.limit ? Number(values.limit) : 200);
+      out(p.text.trimEnd());
+      if (p.remaining) out(`(${p.remaining} more after these; keep this batch, then ask again)`);
+      return 0;
+    }
+    if (sub === "tag") {
+      if (!name) throw new Error("source tag <name> <reply file>, or --keep <numbers>");
+      if (values.keep) {
+        const draft = await readDraft(root, name);
+        const nums = values.keep === "all" ? draft.map((_, i) => i + 1) : values.keep.split(",").map((x) => Number(x.trim()));
+        if (nums.some((n) => !Number.isInteger(n) || n < 1)) throw new Error("--keep takes all or numbers like 1,2,5");
+        for (const k of await keepPlacements(root, name, nums, config.person, now)) out(`kept: ${k}`);
+        return 0;
+      }
+      if (!arg) throw new Error("source tag <name> <reply file>");
+      await getSource(root, name);
+      const ps = await readPlacements(root, name, await readFile(arg, "utf8"));
+      await saveDraft(root, name, ps);
+      out(`${ps.length} placement(s) for files in ${name}:`);
+      ps.forEach((p, i) => out(`  ${i + 1}. ${placementLine(p)}`));
+      out(`Check each, then keep the right ones: reflect source tag ${name} --keep 1,2,3 (or all)`);
+      return 0;
+    }
+    const all = await sourceStatus(root);
+    const shown = sub ? all.filter((s) => s.source.name === sub) : all;
+    if (sub && !shown.length) throw new Error(`no source named ${sub}`);
+    if (!all.length) out("No sources yet: reflect source add <name> <folder>");
+    for (const s of shown) {
+      out(`${s.source.name}  ${s.source.path}${s.reachable ? "" : "  (not reachable here)"}`);
+      if (s.reachable) out(`  ${s.files} file(s): ${s.placed} placed, ${s.open} open${s.changed.length ? `, ${s.changed.length} changed` : ""}${s.missing.length ? `, ${s.missing.length} missing` : ""}`);
+      if (sub) {
+        for (const p of s.changed) out(`  changed since placed: ${p}`);
+        for (const p of s.missing) out(`  no longer in the folder: ${p}`);
+      }
+    }
     return 0;
   }
   if (cmd === "idea") {

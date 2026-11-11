@@ -8,6 +8,7 @@ import { documentProblems } from "./documents.ts";
 import { recordPaths, type Layout } from "./layout.ts";
 import { learnProblems } from "./learning.ts";
 import { ideaProblems } from "./ideas.ts";
+import { sourceProblems } from "./sources.ts";
 import { LEGACY_TEMPLATES, LIFETIME_FOLDERS, lifetimeProblems } from "./lifetime.ts";
 import { readRecord, writeRecord } from "./record-io.ts";
 import { planProblems, readPlan } from "./release.ts";
@@ -101,7 +102,7 @@ export async function upgradeVault(root: string, now = new Date()): Promise<{ mo
   return { moved, kept, written };
 }
 
-const GITIGNORE = ".obsidian/workspace*.json\n.obsidian/cache\n.trash/\n.DS_Store\n";
+const GITIGNORE = ".obsidian/workspace*.json\n.obsidian/cache\n.trash/\n.DS_Store\n.reflect/\n";
 
 /** Start an instance in an empty folder (or one with no reflect.json). */
 export async function initInstance(root: string, name: string, now = new Date()): Promise<InstanceConfig> {
@@ -191,7 +192,7 @@ export async function checkInstance(root: string): Promise<CheckResult> {
     } catch {
       problems.push("legacy/release.json is not JSON");
     }
-    problems.push(...(await learnProblems(root)), ...(await ideaProblems(root)));
+    problems.push(...(await learnProblems(root)), ...(await ideaProblems(root)), ...(await sourceProblems(root)));
   }
   const shas = lastShas(lines);
   const outside: string[] = [];
