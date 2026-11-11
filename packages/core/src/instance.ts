@@ -3,7 +3,7 @@
 // owns and can open in Obsidian or any editor.
 import { randomBytes } from "node:crypto";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
-import { join, relative } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { documentProblems } from "./documents.ts";
 import { recordPaths, type Layout } from "./layout.ts";
 import { learnProblems } from "./learning.ts";
@@ -85,6 +85,31 @@ export async function upgradeVault(root: string, now = new Date()): Promise<{ mo
   if (config.layout !== "vault") throw new Error("upgrade moves a vault; this instance uses the older people/<id> layout");
   const moved: string[] = [];
   const kept: string[] = [];
+  // A vault whose journal was moved into a soul vault (a short-lived layout) gets it back: moments return to
+  // journal/, readings to reflections/, and reflect.json stops naming the soul vault. The soul vault's other
+  // folders stay where they are, for the person to keep or remove.
+  const raw = JSON.parse((await readRecord(root, "reflect.json"))!) as Record<string, unknown>;
+  if (typeof raw.soul === "string") {
+    const soul = resolve(root, raw.soul);
+    for (const [from, to] of [["moments", "journal"], ["readings", "reflections"]] as const) {
+      for (const rel of await walk(soul, from)) {
+        const name = rel.slice(from.length + 1);
+        if (name === "README.md" || name === ".gitkeep") continue;
+        const target = join(to, name);
+        if ((await readRecord(root, target)) !== null) {
+          kept.push(join(soul, rel));
+          continue;
+        }
+        await mkdir(join(root, target, ".."), { recursive: true });
+        await rename(join(soul, rel), join(root, target));
+        moved.push(target);
+      }
+    }
+    const { soul: _soul, ...rest } = raw;
+    await writeRecord(root, "reflect.json", `${JSON.stringify(rest, null, 2)}\n`, "append", now.toISOString());
+    const readme = (await readRecord(root, join("journal", "README.md"))) ?? "";
+    if (readme.includes("soul vault")) await writeRecord(root, join("journal", "README.md"), README.journal!, "append", now.toISOString());
+  }
   for (const [from, to] of MOVES) {
     for (const rel of await walk(root, from)) {
       const target = join(to, rel.slice(from.length + 1));

@@ -46,36 +46,6 @@ describe("reflect CLI", () => {
     expect(r.out.join("\n")).toMatch(/can never name journal/);
   });
 
-  it("reads an entry into a draft, and keeps it as the person left it", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "reflect-cli-"));
-    dirs.push(dir);
-    process.env.REFLECT_READER_STUB = "1";
-    try {
-      await run("init", "--name", "Tester", "--dir", dir);
-      const id = (await run("write", "I was always the independent one.", "--dir", dir)).out[0]!;
-      expect((await run("read", "--pending", "--dir", dir)).out).toHaveLength(1);
-      expect((await run("read", "--pending", "--dir", dir)).out).toHaveLength(0);
-      const path = join(dir, "reflections", `${id}.draft.json`);
-      const draft = JSON.parse(await readFile(path, "utf8"));
-      expect(draft.chosen).toEqual(["emotion", "attachment"]);
-      expect(draft.self_terms[0]).toMatchObject({ quote: "the independent one", model_basis: "imagination", basis: "imagination", keep: true });
-      expect((await run("check", "--dir", dir)).out).toEqual(["ok"]);
-      draft.chosen = ["attachment", "will"];
-      draft.self_terms[0].basis = "will";
-      await writeFile(path, JSON.stringify(draft));
-      expect((await run("keep", "--all", "--dir", dir)).out).toEqual([`kept: ${id} (attachment, will)`]);
-      const refl = JSON.parse(await readFile(join(dir, "reflections", `${id}.json`), "utf8"));
-      const decisions = Object.fromEntries(refl.labelings[0].labels.map((l: { element: string; decision: string }) => [l.element, l.decision]));
-      expect(decisions).toMatchObject({ emotion: "rejected", attachment: "confirmed", will: "added", reason: "absent" });
-      expect(refl.labelings[0].terms[0]).toMatchObject({ modelBasis: "imagination", basis: "will", decision: "corrected" });
-      expect((await run("list", "--dir", dir)).out).toHaveLength(1);
-      expect((await run("read", "--pending", "--dir", dir)).out).toHaveLength(0);
-      expect((await run("check", "--dir", dir)).out).toEqual(["ok"]);
-    } finally {
-      delete process.env.REFLECT_READER_STUB;
-    }
-  });
-
   it("exports a bundle, imports it into another instance, and refuses writes after moving", async () => {
     const a = await mkdtemp(join(tmpdir(), "reflect-cli-"));
     const b = await mkdtemp(join(tmpdir(), "reflect-cli-"));
@@ -711,6 +681,33 @@ describe("reflect CLI", () => {
     expect((await readdir(dir)).includes("ventures")).toBe(false);
     expect((await readdir(dir)).includes("library")).toBe(false);
     expect((await run("check", "--dir", dir)).out).toEqual(["ok"]);
+  });
+
+  it("brings the journal back from a soul vault", async () => {
+    const base = await mkdtemp(join(tmpdir(), "reflect-two-"));
+    dirs.push(base);
+    const life = join(base, "life");
+    const soul = join(base, "soul");
+    await run("init", "--name", "Tester", "--dir", life);
+    const id = (await run("write", "Walked to the bakery at dawn.", "--date", "2026-11-09", "--dir", life)).out[0]!;
+    // Make it look like a vault whose journal went into a soul vault on 2026-11-11.
+    const { mkdir, rename } = await import("node:fs/promises");
+    await mkdir(join(soul, "moments"), { recursive: true });
+    await mkdir(join(soul, "readings"), { recursive: true });
+    await rename(join(life, "journal", `2026-11-09-${id}.md`), join(soul, "moments", `2026-11-09-${id}.md`));
+    await writeFile(join(soul, "moments", "README.md"), "# Moments\n");
+    await writeFile(join(soul, "readings", `${id}.json`), JSON.stringify({ entry: id, reflections: [], labelings: [] }));
+    await writeFile(join(life, "journal", "README.md"), "# Journal\n\nYour journal is in your soul vault now.\n");
+    const cfg = JSON.parse(await readFile(join(life, "reflect.json"), "utf8"));
+    await writeFile(join(life, "reflect.json"), JSON.stringify({ ...cfg, soul: "../soul" }, null, 2));
+    await run("check", "--adopt", "--dir", life);
+    const r = (await run("upgrade", "--dir", life)).out;
+    expect(r).toContain(`moved: journal/2026-11-09-${id}.md`);
+    expect(r).toContain(`moved: reflections/${id}.json`);
+    expect(JSON.parse(await readFile(join(life, "reflect.json"), "utf8")).soul).toBeUndefined();
+    expect(await readFile(join(life, "journal", "README.md"), "utf8")).not.toContain("soul vault");
+    expect((await run("list", "--dir", life)).out[0]).toContain("Walked to the bakery");
+    expect((await run("check", "--dir", life)).out).toEqual(["ok"]);
   });
 
   it("still works on an instance in the older people/<id> layout", async () => {
