@@ -11,6 +11,7 @@ import { adopt, checkInstance, initInstance, layoutOf, readConfig, upgradeVault 
 import { addGift, addTrustee, LEGACY_ENTRIES, planProblems, previewRelease, readPlan, setTerms } from "../core/src/release.ts";
 import { BOOK_STATUS, GRASP, keepBook, keepResource, keepSubject, learnMap, RESOURCE_STATUS, type BookStatus, type Grasp, type ResourceStatus, type SubjectRow } from "../core/src/learning.ts";
 import { keepNeed, keepPassage, LEGACY_PROMPTS, legacyPrompt } from "../core/src/lifetime.ts";
+import { lookupIsbn, saveCatalogEntry, searchBooks, type Fetch } from "../core/src/openlibrary.ts";
 import { recordPaths } from "../core/src/layout.ts";
 import { CUSTODY, DOCUMENT_GROUPS, filesDocuments, isCustody, type ChecklistRow, type Connection } from "../core/src/documents.ts";
 import type { IsoDate } from "../core/src/person.ts";
@@ -36,8 +37,11 @@ const USAGE = `reflect <command> [--dir <instance>]
   release terms [--confirmations N] [--wait <days>]
   learn                           what you know, the books you have read and what of them you have not
                                   rated, what you aspire to and need to learn, and what you could learn next
-  learn book <title> [--isbn N] [--by <author;author>] [--status want|reading|read|abandoned]
+  learn find <title or author>     look a book up in Open Library: title, authors, year, ISBN
+  learn book <title> [--isbn N [--lookup]] [--by <author;author>] [--status want|reading|read|abandoned]
                 [--subjects a,b] [--on YYYY-MM[-DD]]
+                                  --lookup fills authors from Open Library and shows its subjects and
+                                  contents; you keep the subjects that fit with --subjects
   learn grasp <subject> <teach|explain|gist|forgot> [--book <title>] [--note <text>] [--on ...]
                                   your own grasp of a subject: could teach it, could explain the key
                                   ideas, remember the gist, or don't remember it
@@ -99,7 +103,7 @@ function sparkForm(minutes: string | undefined, sentence: boolean): SparkForm {
   return form;
 }
 
-export async function main(argv: string[], out: (s: string) => void = console.log): Promise<number> {
+export async function main(argv: string[], out: (s: string) => void = console.log, fetcher: Fetch = (url) => fetch(url, { headers: { "user-agent": "reflect-cli" } })): Promise<number> {
   const { values, positionals } = parseArgs({
     args: argv,
     allowPositionals: true,
@@ -132,6 +136,7 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
       url: { type: "string" },
       subjects: { type: "string" },
       isbn: { type: "string" },
+      lookup: { type: "boolean", default: false },
       book: { type: "string" },
       platform: { type: "string" },
       status: { type: "string" },
@@ -274,11 +279,29 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
     const now = new Date();
     const list = (v: string | undefined, sep = ",") => (v ?? "").split(sep).map((x) => x.trim()).filter(Boolean);
     const where = { requires: list(values.requires), part_of: list(values["part-of"]), ...(values["same-as"] ? { same_as: values["same-as"] } : {}) };
+    if (sub === "find") {
+      if (!name) throw new Error("learn find <title or author>");
+      const found = await searchBooks(rest.slice(1).join(" "), fetcher);
+      for (const e of found) out(`${e.title}, ${e.authors.join(", ") || "author unknown"}${e.year ? ` (${e.year})` : ""}${e.isbn ? `  isbn ${e.isbn}` : ""}`);
+      if (!found.length) out("Open Library has nothing by that name");
+      else out('Keep one: reflect learn book "<title>" --isbn <isbn> --lookup');
+      return 0;
+    }
     if (sub === "book") {
       if (!name) throw new Error("learn book <title> [--isbn N] [--status read]");
       if (values.status && !(BOOK_STATUS as readonly string[]).includes(values.status)) throw new Error(`--status is one of ${BOOK_STATUS.join(", ")}`);
-      const b = await keepBook(root, name, { ...(values.isbn ? { isbn: values.isbn } : {}), authors: list(values.by, ";"), subjects: list(values.subjects), ...(values.status ? { status: values.status as BookStatus } : {}), ...(values.on ? { on: values.on } : {}) }, now);
+      if (values.lookup && !values.isbn) throw new Error("--lookup needs --isbn; find it with: reflect learn find <title>");
+      const entry = values.lookup ? await lookupIsbn(values.isbn!, fetcher) : null;
+      if (values.lookup && !entry) throw new Error(`Open Library has no book with isbn ${values.isbn}`);
+      const authors = list(values.by, ";");
+      const b = await keepBook(root, name, { ...(values.isbn ? { isbn: values.isbn } : {}), ...(entry ? { openlibrary: entry.work } : {}), authors: authors.length ? authors : (entry?.authors ?? []), subjects: list(values.subjects), ...(values.status ? { status: values.status as BookStatus } : {}), ...(values.on ? { on: values.on } : {}) }, now);
       out(`kept: learn/books/${b.id}.md ${b.status}`);
+      if (entry) {
+        await saveCatalogEntry(root, b.id, entry, now);
+        if (entry.title && entry.title.toLowerCase() !== b.title.toLowerCase()) out(`Open Library calls it "${entry.title}"`);
+        if (entry.subjects.length) out(`Open Library lists these subjects: ${entry.subjects.join("; ")}. Keep the ones that fit: --subjects a,b`);
+        if (entry.contents.length) out(`Contents:\n${entry.contents.map((c) => `  ${c}`).join("\n")}`);
+      }
       if (b.status === "read" && b.subjects.length) out(`Which of its subjects can you name without looking? Then rate each: reflect learn grasp <subject> <${GRASP.map((g) => g.id).join("|")}> --book "${b.title}"`);
       return 0;
     }

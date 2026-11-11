@@ -254,6 +254,38 @@ describe("reflect CLI", () => {
     expect(problems).toContain("names a book that is not in learn/books: missing");
   });
 
+  it("looks a book up in Open Library and keeps only what the person says", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "reflect-cli-"));
+    dirs.push(dir);
+    await run("init", "--name", "Tester", "--dir", dir);
+    const asked: string[] = [];
+    const doc = { key: "/works/OL3737036W", title: "Thinking in systems", author_name: ["Donella H. Meadows", "Diana Wright"], first_publish_year: 2008, isbn: ["1603580557", "9781603580557"], subject: ["systems thinking", "Accessible book", "System analysis", "systems thinking", "Decision making"] };
+    const fetcher = async (url: string) => {
+      asked.push(url);
+      const body = url.includes("/search.json") ? { docs: url.includes("isbn:0000000000") ? [] : [doc] } : { title: "Thinking in systems : a primer", table_of_contents: [{ title: "System structure and behavior", level: 0 }, { title: "The basics", level: 1 }] };
+      return { ok: true, status: 200, json: async () => body };
+    };
+    const out: string[] = [];
+    await main(["learn", "find", "thinking", "in", "systems", "--dir", dir], (x) => out.push(x), fetcher);
+    expect(out[0]).toBe("Thinking in systems, Donella H. Meadows, Diana Wright (2008)  isbn 9781603580557");
+    expect(asked[0]).toContain("q=thinking%20in%20systems");
+
+    out.length = 0;
+    await main(["learn", "book", "Thinking in Systems", "--isbn", "9781603580557", "--lookup", "--dir", dir], (x) => out.push(x), fetcher);
+    expect(out).not.toContain(expect.stringMatching(/calls it/));
+    expect(out).toContain("Open Library lists these subjects: systems thinking; System analysis; Decision making. Keep the ones that fit: --subjects a,b");
+    expect(out).toContain("Contents:\n  System structure and behavior\n    The basics");
+    const note = await readFile(join(dir, "learn", "books", "thinking-in-systems.md"), "utf8");
+    expect(note).toContain('authors: "Donella H. Meadows; Diana Wright"\nisbn: 9781603580557\nopenlibrary: OL3737036W\nstatus: want');
+    expect(note).not.toContain("subjects:");
+    const saved = JSON.parse(await readFile(join(dir, "learn", "books", "thinking-in-systems.openlibrary.json"), "utf8"));
+    expect(saved.source).toBe("https://openlibrary.org/works/OL3737036W");
+    expect(saved.contents).toEqual(["System structure and behavior", "  The basics"]);
+    await expect(main(["learn", "book", "Ghost", "--isbn", "0000000000", "--lookup", "--dir", dir], () => undefined, fetcher)).rejects.toThrow(/no book with isbn/);
+    await expect(run("learn", "book", "Ghost", "--lookup", "--dir", dir)).rejects.toThrow(/needs --isbn/);
+    expect((await run("check", "--dir", dir)).out).toEqual(["ok"]);
+  });
+
   it("offers legacy prompts and keeps what you write as entries marked to survive you", async () => {
     const dir = await mkdtemp(join(tmpdir(), "reflect-cli-"));
     dirs.push(dir);

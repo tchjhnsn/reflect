@@ -44,7 +44,7 @@ const ISBN = /^(97[89])?\d{9}[\dX]$/;
 
 export type GraspLine = { on: string; grasp: Grasp; book?: string; note?: string };
 export type Subject = { id: string; title: string; want?: Want; for?: string; same_as?: string; requires: string[]; part_of: string[]; grasps: GraspLine[] };
-export type Book = { id: string; title: string; authors: string[]; isbn?: string; status: BookStatus; started?: string; finished?: string; subjects: string[] };
+export type Book = { id: string; title: string; authors: string[]; isbn?: string; openlibrary?: string; status: BookStatus; started?: string; finished?: string; subjects: string[] };
 export type Resource = { id: string; kind: string; title: string; url?: string; by?: string; platform?: string; subjects: string[]; status: ResourceStatus };
 
 export function slugOf(name: string): string {
@@ -110,6 +110,7 @@ export function parseBook(id: string, text: string): Book {
     title: head.title ?? id,
     authors: (head.authors ?? "").split(";").map((a) => a.trim()).filter(Boolean),
     ...(head.isbn ? { isbn: head.isbn } : {}),
+    ...(head.openlibrary ? { openlibrary: head.openlibrary } : {}),
     status: (BOOK_STATUS as readonly string[]).includes(head.status ?? "") ? (head.status as BookStatus) : "want",
     ...(head.started ? { started: head.started } : {}),
     ...(head.finished ? { finished: head.finished } : {}),
@@ -121,6 +122,7 @@ function bookText(b: Book, lines: readonly string[]): string {
   const head = [`book: ${b.id}`, `title: ${q(b.title)}`];
   if (b.authors.length) head.push(`authors: ${q(b.authors.join("; "))}`);
   if (b.isbn) head.push(`isbn: ${b.isbn}`);
+  if (b.openlibrary) head.push(`openlibrary: ${b.openlibrary}`);
   head.push(`status: ${b.status}`);
   if (b.started) head.push(`started: ${b.started}`);
   if (b.finished) head.push(`finished: ${b.finished}`);
@@ -192,7 +194,7 @@ export async function keepSubject(root: string, name: string, change: SubjectCha
   return s;
 }
 
-export type BookChange = { title?: string; authors?: string[]; isbn?: string; status?: BookStatus; subjects?: string[]; on?: string };
+export type BookChange = { title?: string; authors?: string[]; isbn?: string; openlibrary?: string; status?: BookStatus; subjects?: string[]; on?: string };
 
 /** Keep a book: what it is, how far the person is with it, and the subjects it covers. */
 export async function keepBook(root: string, name: string, change: BookChange, now: Date): Promise<Book> {
@@ -211,6 +213,7 @@ export async function keepBook(root: string, name: string, change: BookChange, n
     ...(change.title ? { title: change.title } : {}),
     ...(change.authors?.length ? { authors: change.authors } : {}),
     ...(isbn ? { isbn } : {}),
+    ...(change.openlibrary ? { openlibrary: change.openlibrary } : {}),
     ...(change.status ? { status: change.status } : {}),
     subjects: [...new Set([...prev.subjects, ...(change.subjects ?? []).map(slugOf)])],
   };
@@ -359,6 +362,7 @@ export async function learnProblems(root: string): Promise<string[]> {
     if (head.book !== id) out.push(`${f}: book must match the file name`);
     if (!(BOOK_STATUS as readonly string[]).includes(head.status ?? "")) out.push(`${f}: status is one of ${BOOK_STATUS.join(", ")}`);
     if (head.isbn && !ISBN.test(head.isbn)) out.push(`${f}: isbn has 10 or 13 digits`);
+    if (head.openlibrary && !/^OL\d+W$/.test(head.openlibrary)) out.push(`${f}: openlibrary is a work id like OL3737036W`);
   }
   for (const [id, text] of await notes(root, RESOURCES)) {
     const f = `learn/resources/${id}.md`;
