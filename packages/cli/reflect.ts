@@ -7,7 +7,8 @@ import { parseBundle } from "../core/src/bundle.ts";
 import { keepDraft, makeDraft, type Draft } from "../core/src/draft.ts";
 import { parseArgs } from "node:util";
 import { filesJournal } from "../core/src/files-journal.ts";
-import { adopt, checkInstance, initInstance, layoutOf, readConfig } from "../core/src/instance.ts";
+import { adopt, checkInstance, initInstance, layoutOf, readConfig, upgradeVault } from "../core/src/instance.ts";
+import { keepNeed, keepPassage, LEGACY_PROMPTS, legacyPrompt } from "../core/src/lifetime.ts";
 import { recordPaths } from "../core/src/layout.ts";
 import { CUSTODY, DOCUMENT_GROUPS, filesDocuments, isCustody, type ChecklistRow, type Connection } from "../core/src/documents.ts";
 import type { IsoDate } from "../core/src/person.ts";
@@ -16,8 +17,16 @@ import { cleanNoun, isSparkForm, pickNoun, sparkPrompt, SPARK_FORMS, type SparkF
 
 const USAGE = `reflect <command> [--dir <instance>]
 
-  init --name <name>              start a vault in the folder: journal, library, ventures of a
-                                  lifetime (household, work, community, friendship), telos, intents
+  init --name <name>              start a vault in the folder: the Ventures of a Lifetime (life, needs,
+                                  learn, work, belonging, line, household, community, polis, legacy),
+                                  with journal, telos, intents and documents
+  upgrade                         move a vault made before 2026-11-11 onto those folders
+  need <need> <how> [--provider <who>] [--runway 30d] [--note <text>]
+                                  keep how a need is met: self-provided, stocked, supplied, cared-for
+  passage <region> <state> [--on YYYY-MM[-DD]] [--note <text>]
+                                  keep a move in your life: provide, belonging or line
+  legacy [prompt] [text]          a prompt for what you want to survive you; with text, keep it as a
+                                  journal entry marked to survive you
   write [text] [--date YYYY-MM-DD] write an entry (text from the argument or stdin); prints its id
   spark [--minutes 1|5|10|15 | --sentence]
                                   a noun to write about, and how long
@@ -88,6 +97,10 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
       connection: { type: "string" },
       kind: { type: "string" },
       holds: { type: "string" },
+      provider: { type: "string" },
+      runway: { type: "string" },
+      note: { type: "string" },
+      on: { type: "string" },
       out: { type: "string" },
       "moving-to": { type: "string" },
       help: { type: "boolean", short: "h" },
@@ -150,6 +163,12 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
     out(`${rows.length - open} of ${rows.length} checked`);
     return 0;
   }
+  if (cmd === "legacy" && !rest[0]) {
+    const p = LEGACY_PROMPTS[Math.floor(Math.random() * LEGACY_PROMPTS.length)]!;
+    out(`${p.text}\nThen keep it: reflect legacy ${p.id} < what-you-wrote.txt`);
+    out(`Other prompts: ${LEGACY_PROMPTS.filter((x) => x.id !== p.id).map((x) => x.id).join(", ")}`);
+    return 0;
+  }
   if (config.moved_to) throw new Error(`this instance moved to ${config.moved_to}; write there`);
   if (cmd === "import" && rest[0]) {
     await journal.importBundle(parseBundle(await readFile(rest[0], "utf8")));
@@ -206,6 +225,29 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
       await rm(draftPath(id));
       out(`kept: ${id} (${draft.chosen.join(", ") || "no elements"})`);
     }
+    return 0;
+  }
+  if (cmd === "upgrade") {
+    const r = await upgradeVault(root);
+    for (const m of r.moved) out(`moved: ${m}`);
+    for (const k of r.kept) out(`left in place, because the new path is taken: ${k}`);
+    out(`added ${r.written.length} folder guide(s) and template(s)`);
+    return 0;
+  }
+  if ((cmd === "need" || cmd === "passage") && layoutOf(config) !== "vault") throw new Error(`${cmd} needs a vault; this instance uses the older people/<id> layout`);
+  if (cmd === "need" && rest[0]) {
+    out(`kept: ${await keepNeed(root, rest[0], rest[1] ?? "", { provider: values.provider, runway: values.runway, note: values.note }, new Date())}`);
+    return 0;
+  }
+  if (cmd === "passage" && rest[0]) {
+    const p = await keepPassage(root, rest[0], rest[1] ?? "", values.on ?? today(), values.note, new Date());
+    out(`kept: ${p.region} ${p.to} since ${p.on}`);
+    return 0;
+  }
+  if (cmd === "legacy") {
+    const p = legacyPrompt(rest[0]!);
+    if (!p) throw new Error(`no such prompt; one of ${LEGACY_PROMPTS.map((x) => x.id).join(", ")}`);
+    out(await journal.writeWithHead(textFrom(rest[1]), date as IsoDate, `legacy/${p.id}`, ["legacy: true", `prompt: ${JSON.stringify(p.text)}`]));
     return 0;
   }
   if (cmd === "documents") {

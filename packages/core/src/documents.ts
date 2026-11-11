@@ -9,7 +9,7 @@ import { join } from "node:path";
 import type { RecordPaths } from "./layout.ts";
 import { readRecord, writeRecord } from "./record-io.ts";
 
-export const DOCUMENT_GROUPS = ["identity", "education", "household", "money", "health", "legal"] as const;
+export const DOCUMENT_GROUPS = ["identity", "education", "household", "money", "health", "legal", "legacy"] as const;
 export type DocumentGroup = (typeof DOCUMENT_GROUPS)[number];
 
 /** How a kind of document is normally kept today. */
@@ -53,9 +53,15 @@ export const DOCUMENT_TYPES: readonly DocumentType[] = [
   { id: "medical-records", name: "Medical records", group: "health", kept: "digital", recommend: "connect", norm: "Held in each provider's patient portal; phones can gather them in one place.", services: ["patient portal (MyChart)", "phone health records"] },
   { id: "immunization-record", name: "Immunization record", group: "health", kept: "digital", recommend: "connect", norm: "Kept in your state's immunization registry and your provider's portal.", services: ["state immunization registry", "patient portal"] },
   { id: "health-insurance-card", name: "Health insurance card", group: "health", kept: "both", recommend: "store-digital", norm: "A plastic card, with a digital card in the insurer's app.", services: ["insurer app"] },
-  { id: "will", name: "Will", group: "legal", kept: "paper", recommend: "keep-paper-safe", norm: "A signed paper original; a few states also allow electronic wills. Tell your executor where it is." },
+  { id: "will", name: "Will", group: "legacy", kept: "paper", recommend: "keep-paper-safe", norm: "A signed paper original; a few states also allow electronic wills. Tell your executor where it is." },
   { id: "power-of-attorney", name: "Power of attorney", group: "legal", kept: "paper", recommend: "keep-paper-safe", norm: "Signed and usually notarized on paper; give copies to the people named." },
   { id: "advance-directive", name: "Advance directive", group: "legal", kept: "paper", recommend: "store-digital", norm: "Signed on paper; keep a digital copy where doctors and family can reach it, and some states keep a registry." },
+  { id: "life-insurance", name: "Life insurance", group: "legacy", kept: "digital", recommend: "connect", norm: "Held in the insurer's portal or your employer's benefits site; the people named need to know it exists and who the insurer is.", services: ["insurer portal", "employer benefits site"] },
+  { id: "beneficiary-designations", name: "Beneficiary designations", group: "legacy", kept: "digital", recommend: "connect", norm: "Set on each retirement account, insurance policy and bank account, and they pass outside the will, so they need checking whenever life changes.", services: ["each account's online settings"] },
+  { id: "trust", name: "Trust", group: "legacy", kept: "paper", recommend: "keep-paper-safe", norm: "A signed trust document, usually kept by you and the attorney who drafted it." },
+  { id: "funeral-plan", name: "Funeral plan", group: "legacy", kept: "paper", recommend: "keep-paper-safe", norm: "A prepaid contract with a funeral home if you have one; your wishes themselves go in legacy/wishes.md." },
+  { id: "organ-donor-registration", name: "Organ donor registration", group: "legacy", kept: "digital", recommend: "store-digital", norm: "Recorded in your state's donor registry, often when you get a license, and shown on the license.", services: ["state donor registry"] },
+  { id: "digital-legacy", name: "Digital legacy contacts", group: "legacy", kept: "digital", recommend: "store-digital", norm: "Set inside each service: Apple's Legacy Contact, Google's Inactive Account Manager, Facebook's legacy contact. Name who may reach your accounts; never write passwords here.", services: ["Apple Legacy Contact", "Google Inactive Account Manager"] },
 ];
 
 export const documentType = (id: string): DocumentType | undefined => DOCUMENT_TYPES.find((d) => d.id === id);

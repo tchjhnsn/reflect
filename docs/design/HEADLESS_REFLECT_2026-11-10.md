@@ -28,18 +28,21 @@ One difference matters. A Naive record belongs to exactly one function, so ventu
 Since 2026-11-10 (Torian chose "plain vault, any editor"), `reflect init` writes a **vault**: the records sit at the folder's root as markdown, so the person opens the folder as is in Obsidian, VS Code or any editor. Reflect is the entryway to the ventures of a lifetime, so the vault has a folder for each, and the journal serves executing on what the person writes rather than being the end.
 
 ```
-reflect.json                 host, person id, "layout": "vault"
-memory.jsonl                 Memory: every write, hash-chained
-person.json                  Image: name and stated facts
-journal/<date>-<id>.md       the journal (a hand-written YYYY-MM-DD-*.md is an entry too)
-reflections/<entry>.json     labels and self-terms; drafts beside them
-concepts/<noun>.md           a concept note, made by `reflect spark`; backlinks gather every entry on it
-library/                     what the person reads, listens to and studies
-documents/<type>.md          custody card for an official document (the document itself need not be here)
-connections/<id>.json        a service that holds records for the person, and which types
-ventures/household|work|community|friendship/
-telos/  intents/  grants/
+reflect.json  memory.jsonl  person.json
+journal/ reflections/ concepts/ telos/ intents/ documents/ connections/ grants/
+life/            passages.jsonl (dated moves between states) and state.json (rebuilt from them)
+needs/<need>.md  food water shelter health transport income knowledge safety: how each is met
+learn/           Learn: what the person reads, listens to and studies
+work/<venture>/  Work and provide: each a full Naive venture
+belonging/       friends/ groups/ standing/
+line/            partner.md
+household/       members/<id>/ home/ money/
+community/       the village
+polis/           civic life; Polity reads it only with a grant
+legacy/          wishes.md bucket-list.md letters/
 ```
+
+Folders are the Ventures of a Lifetime statechart's regions and the body politic's associations; states are never folders (Torian, 2026-11-11). Death, the one final state, is prepared for in `legacy/` and on the documents checklist's legacy group (will, life insurance, beneficiary designations, trust, funeral plan, organ donor registration, digital legacy contacts). Legacy writing is journaling the person wants to survive them: `reflect legacy` offers prompts after the Dignity Therapy questions (Chochinov et al. 2005) and the ethical will, and marks the entry `legacy: true`. Not built yet: releasing letters and legacy entries after death to the people named, which needs a person to confirm the death, and children's folders becoming vaults of their own.
 
 `reflect spark` is object writing (Pat Pattison): one concrete noun, written about for 1, 5, 10 or 15 minutes or in one sentence, through the senses. The entry is kept closed with `concept: "[[noun]]"` in its front matter. Front matter the person adds (tags, aliases) is kept on every later write. Not built yet: the reader proposing concepts from an entry, the library's listening, and turning a journal entry into a venture under `ventures/work/` with Naive.
 
