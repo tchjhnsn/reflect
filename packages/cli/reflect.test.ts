@@ -395,6 +395,29 @@ describe("reflect CLI", () => {
     expect(map).toContain("with Dad: whether a city can be corrupt");
   });
 
+  it("writes index.md, the catalog your own AI starts from, without journal text", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "reflect-cli-"));
+    dirs.push(dir);
+    await run("init", "--name", "Tester", "--dir", dir);
+    await run("learn", "book", "Politics", "--by", "Aristotle", "--status", "read", "--dir", dir);
+    await run("learn", "film", "Metropolis", "--status", "watched", "--dir", dir);
+    await run("learn", "aspire", "Urban design", "--dir", dir);
+    await run("idea", "Corner bakery", "A bakery on my corner that opens at five.", "--from", "Politics", "--dir", dir);
+    await run("write", "A private thought about Sam.", "--date", "2026-11-10", "--dir", dir);
+    await mkdir(join(dir, "work", "acme"), { recursive: true });
+    expect((await run("index", "--dir", dir)).out).toEqual(["wrote index.md"]);
+    const index = await readFile(join(dir, "index.md"), "utf8");
+    expect(index).toContain("- [[ideas/corner-bakery]] Corner bakery: A bakery on my corner that opens at five. (from [[learn/books/politics]])");
+    expect(index).toContain("- [[learn/books/politics]] Politics, Aristotle: read");
+    expect(index).toContain("- [[learn/films/metropolis]] Metropolis: watched");
+    expect(index).toContain("- [[learn/subjects/urban-design]] Urban design: aspire");
+    expect(index).toContain("- [[work/acme]]");
+    expect(index).toMatch(/- \[\[journal\/2026-11-10-[^\]]+\]\] 2026-11-10/);
+    expect(index).not.toContain("Sam");
+    expect((await run("index", "--dir", dir)).out).toEqual(["index.md is up to date"]);
+    expect(await run("check", "--dir", dir)).toEqual({ code: 0, out: ["ok"] });
+  });
+
   it("sends an idea to Naive only when told to, and links the two both ways", async () => {
     const ws = await mkdtemp(join(tmpdir(), "reflect-ws-"));
     const bin = await mkdtemp(join(tmpdir(), "reflect-bin-"));
