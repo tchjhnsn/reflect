@@ -31,7 +31,7 @@ export function journalContract(make: () => Promise<Journal>): void {
     expect(await j.entryText("00000000-0000-0000-0000-000000000000")).toBeNull();
   });
 
-  it("keeps answers with the frame's own question, and the latest labeling's elements", async () => {
+  it("keeps answers with the frame's own question", async () => {
     const j = await make();
     const id = await j.createEntry("Called Dad.", DAY, null);
     const frame = FRAMES[0]!;
@@ -39,17 +39,7 @@ export function journalContract(make: () => Promise<Journal>): void {
     const r = await j.startReflection(id, frame.id);
     await j.keepAnswer(r, 0, "I felt close to him.");
     await expect(j.keepAnswer(r, 99, "x")).rejects.toThrow(/no such question/);
-    await j.keepLabels(id, [{ element: "emotion", weight: 0.95, decision: "confirmed" }, { element: "will", weight: 0.2, decision: "absent" }], []);
-    await j.keepLabels(
-      id,
-      [
-        { element: "emotion", weight: 0.95, decision: "rejected" },
-        { element: "attachment", weight: null, decision: "added" },
-      ],
-      [{ quote: "Dad", term: "Dad", whose: "other", modelBasis: null, basis: "attachment", decision: "confirmed" }],
-    );
     const [e] = await j.listEntries();
     expect(e?.reflections?.[0]?.answers[0]).toMatchObject({ seq: 0, question: frame.questions[0]!.text, text: "I felt close to him." });
-    expect(e?.labels).toEqual(["attachment"]);
   });
 }

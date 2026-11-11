@@ -3,8 +3,8 @@ import { db } from "@/db/pool";
 import type { Entry, Reflection } from "@reflect/core/journal";
 import { frameById } from "@reflect/core/reflect";
 import type { IsoDate } from "@reflect/core/person";
-import type { Journal, LabelRow, SelfTermRow } from "@reflect/core/store";
-import { makeBundle, type Bundle, type Labeling } from "@reflect/core/bundle";
+import type { Journal } from "@reflect/core/store";
+import { makeBundle, type Bundle } from "@reflect/core/bundle";
 import { open, seal } from "./crypto";
 
 type EntryRow = { id: string; local_date: Date | string; prompt_id: string | null; created_at: Date; closed_at: Date | null };
@@ -59,7 +59,7 @@ export async function listEntries(userId: string, limit = 200): Promise<Entry[]>
     list.push({ seq: p.seq, text: open(userId, p.text_ct), createdAt: p.created_at.toISOString() });
     byEntry.set(p.entry_id, list);
   }
-  const [refl, labels] = await Promise.all([reflectionsFor(userId, entries.map((e) => e.id)), labelsFor(userId, entries.map((e) => e.id))]);
+  const refl = await reflectionsFor(userId, entries.map((e) => e.id));
   return entries.map((e) => ({
     id: e.id,
     localDate: iso(e.local_date),
@@ -68,7 +68,6 @@ export async function listEntries(userId: string, limit = 200): Promise<Entry[]>
     closedAt: e.closed_at ? e.closed_at.toISOString() : null,
     parts: byEntry.get(e.id) ?? [],
     reflections: refl.get(e.id) ?? [],
-    labels: labels.get(e.id) ?? [],
   }));
 }
 
@@ -133,52 +132,6 @@ export async function entryText(userId: string, entryId: string): Promise<string
   return (r.rows as { text_ct: string }[]).map((x) => open(userId, x.text_ct)).join("\n\n");
 }
 
-export type { LabelRow, SelfTermRow };
-
-/** Keep one labeling of an entry: every element's decision beside the model's weight, and each self-term. */
-export async function keepLabels(userId: string, entryId: string, labels: LabelRow[], terms: SelfTermRow[]): Promise<void> {
-  const client = await db().connect();
-  try {
-    await client.query("BEGIN");
-    const own = await client.query("SELECT 1 FROM journal_entry WHERE id = $1 AND user_id = $2", [entryId, userId]);
-    if (own.rowCount === 0) throw new Error("no such entry");
-    for (const l of labels) {
-      await client.query("INSERT INTO entry_label (entry_id, user_id, element, model_weight, decision) VALUES ($1, $2, $3, $4, $5)", [entryId, userId, l.element, l.weight, l.decision]);
-    }
-    for (const t of terms) {
-      await client.query(
-        "INSERT INTO entry_self_term (entry_id, user_id, quote_ct, term_ct, whose, model_basis, basis, decision) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-        [entryId, userId, seal(userId, t.quote), seal(userId, t.term), t.whose, t.modelBasis, t.basis, t.decision],
-      );
-    }
-    await client.query("COMMIT");
-  } catch (e) {
-    await client.query("ROLLBACK");
-    throw e;
-  } finally {
-    client.release();
-  }
-}
-
-/** The elements the person labeled for each entry, from their latest labeling. */
-export async function labelsFor(userId: string, entryIds: string[]): Promise<Map<string, string[]>> {
-  const out = new Map<string, string[]>();
-  if (entryIds.length === 0) return out;
-  const r = await db().query(
-    `SELECT entry_id, element FROM entry_label l
-     WHERE user_id = $1 AND entry_id = ANY($2::uuid[]) AND decision IN ('confirmed', 'added')
-       AND created_at = (SELECT max(created_at) FROM entry_label m WHERE m.entry_id = l.entry_id)
-     ORDER BY id`,
-    [userId, entryIds],
-  );
-  for (const row of r.rows as { entry_id: string; element: string }[]) {
-    const list = out.get(row.entry_id) ?? [];
-    list.push(row.element);
-    out.set(row.entry_id, list);
-  }
-  return out;
-}
-
 export async function researchAllowed(userId: string): Promise<boolean> {
   const r = await db().query("SELECT allowed FROM research_consent WHERE user_id = $1 ORDER BY id DESC LIMIT 1", [userId]);
   return (r.rows[0] as { allowed: boolean } | undefined)?.allowed ?? false;
@@ -198,43 +151,18 @@ export function postgresJournal(userId: string): Journal {
     entryText: (entryId) => entryText(userId, entryId),
     startReflection: (entryId, frame) => startReflection(userId, entryId, frame),
     keepAnswer: (reflectionId, seq, text) => keepAnswer(userId, reflectionId, seq, text),
-    keepLabels: (entryId, labels, terms) => keepLabels(userId, entryId, labels, terms),
   };
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
-/** Every labeling of the person's entries, grouped by the time it was kept, oldest first. */
-async function allLabelings(userId: string): Promise<Labeling[]> {
-  const labels = (await db().query(
-    "SELECT entry_id, element, model_weight, decision, created_at FROM entry_label WHERE user_id = $1 ORDER BY created_at, id",
-    [userId],
-  )).rows as { entry_id: string; element: string; model_weight: number | null; decision: LabelRow["decision"]; created_at: Date }[];
-  const terms = (await db().query(
-    "SELECT entry_id, quote_ct, term_ct, whose, model_basis, basis, decision, created_at FROM entry_self_term WHERE user_id = $1 ORDER BY created_at, id",
-    [userId],
-  )).rows as { entry_id: string; quote_ct: string; term_ct: string; whose: "self" | "other"; model_basis: string | null; basis: string | null; decision: SelfTermRow["decision"]; created_at: Date }[];
-  const out = new Map<string, Labeling>();
-  const get = (entry: string, at: Date) => {
-    const k = `${entry} ${at.toISOString()}`;
-    let l = out.get(k);
-    if (!l) out.set(k, (l = { entry, at: at.toISOString(), labels: [], terms: [] }));
-    return l;
-  };
-  for (const r of labels) get(r.entry_id, r.created_at).labels.push({ element: r.element, weight: r.model_weight, decision: r.decision });
-  for (const r of terms) {
-    get(r.entry_id, r.created_at).terms.push({ quote: open(userId, r.quote_ct), term: open(userId, r.term_ct), whose: r.whose, modelBasis: r.model_basis, basis: r.basis, decision: r.decision });
-  }
-  return [...out.values()];
-}
-
 /** The person's whole journal as a bundle, to move it to another host. */
 export async function exportJournal(userId: string): Promise<Bundle> {
-  return makeBundle(await listEntries(userId, 100_000), await allLabelings(userId), new Date().toISOString());
+  return makeBundle(await listEntries(userId, 100_000), new Date().toISOString());
 }
 
 /**
- * Import a bundle into a person's empty journal, keeping its times and decisions. An id that is not a
+ * Import a bundle into a person's empty journal, keeping its times. An id that is not a
  * uuid (a hand-written entry's file name) gets a new one. One transaction: all or nothing.
  */
 export async function importJournal(userId: string, b: Bundle): Promise<void> {
@@ -261,18 +189,6 @@ export async function importJournal(userId: string, b: Bundle): Promise<void> {
             [rid, a.seq, a.facet, a.stance, a.question, seal(userId, a.text), r.createdAt],
           );
         }
-      }
-    }
-    for (const l of b.labelings) {
-      const id = ids.get(l.entry);
-      for (const x of l.labels) {
-        await client.query("INSERT INTO entry_label (entry_id, user_id, element, model_weight, decision, created_at) VALUES ($1, $2, $3, $4, $5, $6)", [id, userId, x.element, x.weight, x.decision, l.at]);
-      }
-      for (const t of l.terms) {
-        await client.query(
-          "INSERT INTO entry_self_term (entry_id, user_id, quote_ct, term_ct, whose, model_basis, basis, decision, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
-          [id, userId, seal(userId, t.quote), seal(userId, t.term), t.whose, t.modelBasis, t.basis, t.decision, l.at],
-        );
       }
     }
     await client.query("COMMIT");

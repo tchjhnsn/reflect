@@ -23,7 +23,7 @@ describe("journal in a folder", () => {
     const j = filesJournal(root, "p-test");
     const id = await j.createEntry("one", "2026-11-10" as never, null);
     await j.addPart(id, "two");
-    await j.keepLabels(id, [{ element: "emotion", weight: 0.9, decision: "confirmed" }], []);
+    await j.startReflection(id, "feeling");
     const lines = parseMemory(await readFile(join(root, "memory.jsonl"), "utf8"));
     expect(lines.map((l) => l.op)).toEqual(["create", "append", "create"]);
     expect(verifyMemory(lines)).toEqual([]);

@@ -1,7 +1,6 @@
 // Reflecting on an entry: the person picks a frame, then answers fixed, open questions one at a time.
-// The decision frame follows the Lean will_order (structure.json). Stance comes from the facet: conscience is
-// normative, everything else descriptive (lean/NTS/Frames.lean). No model chooses or writes these questions.
-import raw from "./structure.json" with { type: "json" };
+// Each question carries a short tag for what it asks about and whether it is about how things were
+// (descriptive) or how the person felt they ought to be (normative). No model chooses or writes these questions.
 
 export type Stance = "descriptive" | "normative";
 export type Question = { facet: string; stance: Stance; text: string };
@@ -10,7 +9,7 @@ export type Frame = { id: FrameId; root: string; title: string; about: string; q
 
 const stanceOf = (facet: string): Stance => (facet === "conscience" ? "normative" : "descriptive");
 
-// Generic wording for the decision frame, one per facet in the Lean will_order.
+// Wording for the decision frame, one question per facet, asked in DECISION_ORDER.
 const DECISION: Record<string, string> = {
   voluntary_involuntary: "Was this something you chose, something that happened without your choosing, or something you felt forced into?",
   desire: "How much did you want it, if at all?",
@@ -31,16 +30,28 @@ const DECISION: Record<string, string> = {
   will: "How firmly did you hold to the decision once you made it?",
 };
 
-type WillStep = { facet: { axis?: string; prime?: string }; stance: Stance };
-const willOrder = (raw as { will_order: WillStep[] }).will_order;
+const DECISION_ORDER: readonly [string, Stance][] = [
+  ["voluntary_involuntary", "descriptive"],
+  ["desire", "descriptive"],
+  ["attachment", "descriptive"],
+  ["imagination", "descriptive"],
+  ["reason", "descriptive"],
+  ["conscience", "normative"],
+  ["temporality", "descriptive"],
+  ["emotion", "descriptive"],
+  ["embodiment", "descriptive"],
+  ["intuition", "descriptive"],
+  ["self-differentiation", "descriptive"],
+  ["attention", "descriptive"],
+  ["awareness", "descriptive"],
+  ["logos", "descriptive"],
+  ["aesthetic-sense", "descriptive"],
+  ["numinous-sense", "descriptive"],
+  ["will", "descriptive"],
+];
 
 function decisionQuestions(): Question[] {
-  return willOrder.map((s) => {
-    const facet = s.facet.axis ?? s.facet.prime ?? "";
-    const text = DECISION[facet];
-    if (!text) throw new Error(`no decision question for facet ${facet}`);
-    return { facet, stance: s.stance, text };
-  });
+  return DECISION_ORDER.map(([facet, stance]) => ({ facet, stance, text: DECISION[facet]! }));
 }
 
 const q = (facet: string, text: string): Question => ({ facet, stance: stanceOf(facet), text });
@@ -104,7 +115,7 @@ export function frameById(id: string): Frame | null {
 
 const LEADING = /\b(weren'?t|didn'?t|don'?t|wasn'?t|isn'?t) you\b|\byou (must|should|will|would|probably)\b|\bshould you\b/i;
 
-/** The same rule as thrivesight_core/nts/investigate.py: open questions only, never leading or prescriptive. */
+/** Open questions only, never leading or prescriptive. */
 export function isOpenQuestion(text: string): boolean {
   return text.trim().endsWith("?") && !LEADING.test(text);
 }

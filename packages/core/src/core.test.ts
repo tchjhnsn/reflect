@@ -29,7 +29,6 @@ describe("onboarding", () => {
     expect(p.holds.map((h) => [h.subject, h.value])).toEqual([["partnership", "duty,desire; my family"], ["children", "sacred"]]);
     expect(p.facts.some((f) => f.key.startsWith("hold"))).toBe(false);
     expect(HOLDS.find((h) => h.id === "duty")?.stance).toBe("normative");
-    expect(HOLDS.find((h) => h.id === "sacred")?.prime).toBe("numinous-sense");
   });
 
   it("refuses answers outside the choices", () => {

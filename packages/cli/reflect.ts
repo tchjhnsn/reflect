@@ -18,7 +18,7 @@ import { addSource, getSource, indexSource, keepPlacements, placementLine, place
 import { keepNeed, keepPassage, LEGACY_PROMPTS, legacyPrompt } from "../core/src/lifetime.ts";
 import { lookupIsbn, readCatalogEntry, saveCatalogEntry, searchBooks, type Fetch } from "../core/src/openlibrary.ts";
 import { draftTranscript, keepCourse, listCourses, transcriptText, type Chat, type TranscriptDraft } from "../core/src/transcript.ts";
-import { chatJson } from "../core/src/reader.ts";
+import { chatJson } from "../core/src/chat.ts";
 import { checkBadge, keepCredential, keepRecommendation, keepVouches } from "../core/src/credentials.ts";
 import { readLinkedInExport } from "../core/src/linkedin.ts";
 import { recordPaths } from "../core/src/layout.ts";

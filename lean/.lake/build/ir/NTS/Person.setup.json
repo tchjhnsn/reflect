@@ -1,0 +1,13 @@
+{"plugins": [],
+ "package": "reflect-nts",
+ "options": {},
+ "name": "NTS.Person",
+ "isModule": false,
+ "importArts":
+ {"NTS.Scope":
+  [["/home/user/reflect/lean/.lake/build/lib/lean/NTS/Scope.olean"]],
+  "NTS.Output":
+  [["/home/user/reflect/lean/.lake/build/lib/lean/NTS/Output.olean"]],
+  "NTS.Elements":
+  [["/home/user/reflect/lean/.lake/build/lib/lean/NTS/Elements.olean"]]},
+ "dynlibs": []}

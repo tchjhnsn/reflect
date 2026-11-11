@@ -57,28 +57,14 @@ test("a person's AI connects, writes an entry and keeps only a reading anchored 
   expect(tok.access_token).toBeTruthy();
 
   const tools = await mcpCall(request, tok.access_token, "tools/list", {});
-  expect(tools.msg.result?.tools?.map((t) => t.name)).toEqual(["reflect_guide", "list_entries", "write_entry", "get_entry", "keep_reading", "concept_history", "keep_legacy_plan", "legacy_status", "learning", "add_book", "add_book_subjects", "set_book_status", "recall_check", "add_courses", "add_credential", "rate_subject", "add_input", "mark_subject", "ideas", "keep_idea"]);
+  expect(tools.msg.result?.tools?.map((t) => t.name)).toEqual(["reflect_guide", "list_entries", "write_entry", "get_entry", "keep_legacy_plan", "legacy_status", "learning", "add_book", "add_book_subjects", "set_book_status", "recall_check", "add_courses", "add_credential", "rate_subject", "add_input", "mark_subject", "ideas", "keep_idea"]);
 
   const today = new Date().toISOString().slice(0, 10);
   const wrote = await mcpCall(request, tok.access_token, "tools/call", { name: "write_entry", arguments: { text: "Dad called. We laughed about the lake.", local_date: today } });
   const id = JSON.parse(wrote.msg.result!.content![0]!.text).id as string;
 
-  const kept = await mcpCall(request, tok.access_token, "tools/call", {
-    name: "keep_reading",
-    arguments: { entry_id: id, bindings: [{ element: "emotion", weight: 0.8, on: [{ concept: { kind: "entity", name: "Dad", sort: "person" }, words: "Dad", role: "agent" }, { concept: { kind: "event", name: "laugh" }, words: "laughed" }] }] },
-  });
-  expect(kept.msg.result?.isError).toBeFalsy();
-
-  const refused = await mcpCall(request, tok.access_token, "tools/call", {
-    name: "keep_reading",
-    arguments: { entry_id: id, bindings: [{ element: "emotion", weight: 0.5, on: [{ concept: { kind: "quality", name: "sad" }, words: "sad" }] }] },
-  });
-  expect(refused.msg.result?.isError).toBe(true);
-  expect(refused.msg.result?.content?.[0]?.text).toContain("not in the entry");
-
   const got = await mcpCall(request, tok.access_token, "tools/call", { name: "get_entry", arguments: { entry_id: id } });
-  const entry = JSON.parse(got.msg.result!.content![0]!.text) as { readings: { bindings: unknown[] }[] };
-  expect(entry.readings).toHaveLength(1);
+  expect((JSON.parse(got.msg.result!.content![0]!.text) as { text: string }).text).toBe("Dad called. We laughed about the lake.");
 
   // The person's AI keeps their legacy plan; a trustee confirms; the recipient then sees their letter.
   const legacy = await mcpCall(request, tok.access_token, "tools/call", {

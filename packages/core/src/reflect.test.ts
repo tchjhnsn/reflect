@@ -1,18 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { FRAMES, answer, current, frameById, isOpenQuestion, split, type ReflectState } from "./reflect.ts";
-import raw from "./structure.json" with { type: "json" };
 
 describe("reflecting on an entry", () => {
-  it("every frame starts at its root element and asks only open questions", () => {
-    const roots = Object.fromEntries((raw as { frames: { id: string; root: string }[] }).frames.map((f) => [f.id, f.root]));
+  it("every frame asks only open questions", () => {
     for (const f of FRAMES) {
-      expect(f.root).toBe(roots[f.id]);
       expect(f.questions.length).toBeGreaterThan(5);
       for (const q of f.questions) expect(isOpenQuestion(q.text)).toBe(true);
     }
   });
 
-  it("the decision frame follows the Lean will order, with conscience normative", () => {
+  it("the decision frame asks whether it was chosen first and how firmly it was held last, with one normative question", () => {
     const d = frameById("decision")!;
     expect(d.questions[0]?.facet).toBe("voluntary_involuntary");
     expect(d.questions.at(-1)?.facet).toBe("will");

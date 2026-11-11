@@ -12,7 +12,7 @@ import type { IsoDate } from "./person.ts";
 import { recordPaths, type Layout } from "./layout.ts";
 import { frameById } from "./reflect.ts";
 import { conceptNote, sparkHead, type SparkForm } from "./spark.ts";
-import { kept, type Journal, type LabelRow, type SelfTermRow } from "./store.ts";
+import type { Journal } from "./store.ts";
 
 const PART = /^<!-- part (\d+) at (\S+) -->$/;
 const DATE = /^(\d{4}-\d{2}-\d{2})/;
@@ -129,7 +129,8 @@ export function entryFileText(e: Entry, extras: readonly string[] = []): string 
 export type ReflectionFile = {
   entry: string;
   reflections: Reflection[];
-  labelings: { at: string; labels: LabelRow[]; terms: SelfTermRow[] }[];
+  /** Element labelings kept before the soul theory left Reflect (2026-11-11): carried along unread, never written. */
+  labelings?: unknown[];
 };
 
 export type FilesOptions = { now?: () => Date; id?: () => string; layout?: Layout };
@@ -200,7 +201,7 @@ export function filesJournal(root: string, personId: string, opts: FilesOptions 
 
   async function reflFile(entryId: string): Promise<ReflectionFile> {
     const t = await read(join(reflDir, `${entryId}.json`));
-    return t ? (JSON.parse(t) as ReflectionFile) : { entry: entryId, reflections: [], labelings: [] };
+    return t ? (JSON.parse(t) as ReflectionFile) : { entry: entryId, reflections: [] };
   }
 
   async function saveRefl(f: ReflectionFile, op: MemoryLine["op"]): Promise<void> {
@@ -225,22 +226,16 @@ export function filesJournal(root: string, personId: string, opts: FilesOptions 
   return {
     async exportBundle() {
       const entries = (await entryFiles()).map((f) => f.entry);
-      const labelings = [];
       const out: Entry[] = [];
-      for (const e of entries) {
-        const f = await reflFile(e.id);
-        out.push({ ...e, reflections: f.reflections });
-        labelings.push(...f.labelings.map((l) => ({ entry: e.id, ...l })));
-      }
-      return makeBundle(out, labelings, now());
+      for (const e of entries) out.push({ ...e, reflections: (await reflFile(e.id)).reflections });
+      return makeBundle(out, now());
     },
     async importBundle(b) {
       if ((await entryFiles()).length) throw new Error("this journal already has entries; import goes only into an empty one");
       for (const e of b.entries) {
-        const { reflections, labels: _labels, ...entry } = e;
+        const { reflections, ...entry } = e;
         await write(join(entriesDir, `${e.id.startsWith(e.localDate) ? e.id : `${e.localDate}-${e.id}`}.md`), entryFileText(entry), "create");
-        const labelings = b.labelings.filter((l) => l.entry === e.id).map(({ entry: _e, ...l }) => l);
-        if (reflections?.length || labelings.length) await saveRefl({ entry: e.id, reflections: [...(reflections ?? [])], labelings }, "create");
+        if (reflections?.length) await saveRefl({ entry: e.id, reflections: [...reflections] }, "create");
       }
     },
     async writeSpark(noun, form, text, localDate) {
@@ -281,9 +276,7 @@ export function filesJournal(root: string, personId: string, opts: FilesOptions 
       const all = (await entryFiles()).map((f) => f.entry).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit);
       return Promise.all(
         all.map(async (e) => {
-          const f = await reflFile(e.id);
-          const last = f.labelings.at(-1);
-          return { ...e, reflections: f.reflections, labels: last ? kept(last.labels) : [] };
+          return { ...e, reflections: (await reflFile(e.id)).reflections };
         }),
       );
     },
@@ -296,7 +289,7 @@ export function filesJournal(root: string, personId: string, opts: FilesOptions 
       await find(entryId);
       const f = await reflFile(entryId);
       const id = newId();
-      await saveRefl({ ...f, reflections: [...f.reflections, { id, frame, createdAt: now(), answers: [] }] }, f.reflections.length || f.labelings.length ? "append" : "create");
+      await saveRefl({ ...f, reflections: [...f.reflections, { id, frame, createdAt: now(), answers: [] }] }, f.reflections.length || f.labelings?.length ? "append" : "create");
       return id;
     },
     async keepAnswer(reflectionId, seq, text) {
@@ -307,11 +300,6 @@ export function filesJournal(root: string, personId: string, opts: FilesOptions 
       const answer = { seq, facet: q.facet, stance: q.stance, question: q.text, text };
       const reflections = file.reflections.map((x) => (x.id === reflectionId ? { ...x, answers: [...x.answers, answer] } : x));
       await saveRefl({ ...file, reflections }, "append");
-    },
-    async keepLabels(entryId, labels, terms) {
-      await find(entryId);
-      const f = await reflFile(entryId);
-      await saveRefl({ ...f, labelings: [...f.labelings, { at: now(), labels, terms }] }, f.reflections.length || f.labelings.length ? "append" : "create");
     },
   };
 }

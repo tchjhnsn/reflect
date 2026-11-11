@@ -1,0 +1,17 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs": "f6c29388eacb0ee3.o",
+ "log":
+ [{"message":
+   ".> /root/.elan/toolchains/leanprover--lean4---v4.33.1/bin/clang -c -o /home/user/reflect/lean/.lake/build/ir/NTS/Output.c.o.export /home/user/reflect/lean/.lake/build/ir/NTS/Output.c -I /root/.elan/toolchains/leanprover--lean4---v4.33.1/include -fstack-clash-protection -ffp-contract=off -fdata-sections -ffunction-sections -fPIC -fvisibility=hidden -Wno-unused-command-line-argument --sysroot /root/.elan/toolchains/leanprover--lean4---v4.33.1 -nostdinc -isystem /root/.elan/toolchains/leanprover--lean4---v4.33.1/include/clang -O3 -DNDEBUG -DLEAN_EXPORTING",
+   "level": "trace"}],
+ "inputs":
+ [["NTS.Output:c",
+   [["/home/user/reflect/lean/.lake/build/ir/NTS/Output.c", "8a383a07539d4bfb"],
+    ["Lean 4.33.1, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6",
+     "0051240b7c23c453"]]],
+  ["Lean 4.33.1, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6",
+   "0051240b7c23c453"],
+  ["traceArgs: #[-O3, -DNDEBUG, -DLEAN_EXPORTING]", "c1efb66122fb2b9a"],
+  ["x86_64-unknown-linux-gnu", "53a0e8937c307c28"]],
+ "depHash": "e7ecbd46556b002c"}

@@ -13,7 +13,7 @@ import { addCredential, getUpload, keepCourses, keepLinkedIn, listCourses, saveU
 import { checkBadge } from "@reflect/core/credentials";
 import { readLinkedInExport } from "@reflect/core/linkedin";
 import { draftTranscript, transcriptText } from "@reflect/core/transcript";
-import { chatJson } from "@reflect/core/reader";
+import { chatJson } from "@reflect/core/chat";
 import { getVercelOidcToken } from "@vercel/oidc";
 import { unzipSync } from "fflate";
 
