@@ -9,6 +9,7 @@ import { parseArgs } from "node:util";
 import { filesJournal } from "../core/src/files-journal.ts";
 import { adopt, checkInstance, initInstance, layoutOf, readConfig } from "../core/src/instance.ts";
 import { recordPaths } from "../core/src/layout.ts";
+import { CUSTODY, DOCUMENT_GROUPS, filesDocuments, isCustody, type ChecklistRow, type Connection } from "../core/src/documents.ts";
 import type { IsoDate } from "../core/src/person.ts";
 import { readSalience } from "../core/src/reader.ts";
 import { cleanNoun, isSparkForm, pickNoun, sparkPrompt, SPARK_FORMS, type SparkForm } from "../core/src/spark.ts";
@@ -23,6 +24,12 @@ const USAGE = `reflect <command> [--dir <instance>]
   spark <noun> [text] [--minutes N | --sentence] [--date YYYY-MM-DD]
                                   keep what you wrote on that noun (text from the argument or stdin);
                                   the noun becomes a concept note in concepts/
+  documents                       the custody checklist for official documents, with what we recommend
+  documents <type> <custody> [--where <text>] [--connection <id>]
+                                  check one off; custody is original, digital-copy, connection,
+                                  missing or not-applicable
+  connect <id> --name <name> --kind vault|issuer|portal --holds <type,type>
+                                  record a service that holds documents for you (no credentials)
   add <entry> [text]              add to an entry that is still open
   close <entry>                   close an entry
   list                            the entries, newest first
@@ -42,6 +49,18 @@ function textFrom(arg: string | undefined): string {
   const t = (arg ?? readFileSync(0, "utf8")).replace(/\r\n/g, "\n").trim();
   if (!t) throw new Error("nothing to write");
   return t;
+}
+
+const ADVICE = { "keep-paper-safe": "keep the paper safe", "store-digital": "store it digitally", connect: "connect the service that holds it" } as const;
+
+function checklistLine(r: ChecklistRow, names: Map<string, string>): string {
+  const held = r.heldBy.length ? ` (held by ${r.heldBy.map((h) => names.get(h) ?? h).join(", ")})` : "";
+  if (r.custody) {
+    const at = r.custody === "connection" ? ` ${names.get(r.connection ?? "") ?? r.connection}` : r.where ? `: ${r.where}` : "";
+    return `[x] ${r.type.id}  ${r.custody}${at}`;
+  }
+  const services = r.type.recommend === "connect" && r.type.services ? `, such as ${r.type.services.join(" or ")}` : "";
+  return `[ ] ${r.type.id}${held}  ${ADVICE[r.type.recommend]}${services}. ${r.type.norm}`;
 }
 
 function sparkForm(minutes: string | undefined, sentence: boolean): SparkForm {
@@ -65,6 +84,10 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
       all: { type: "boolean", default: false },
       minutes: { type: "string" },
       sentence: { type: "boolean", default: false },
+      where: { type: "string" },
+      connection: { type: "string" },
+      kind: { type: "string" },
+      holds: { type: "string" },
       out: { type: "string" },
       "moving-to": { type: "string" },
       help: { type: "boolean", short: "h" },
@@ -113,6 +136,18 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
       await writeFile(join(root, "reflect.json"), `${JSON.stringify({ ...config, moved_to: values["moving-to"] }, null, 2)}\n`);
       await adopt(root, ["reflect.json"]);
     }
+    return 0;
+  }
+  const docs = filesDocuments(root, paths);
+  if (cmd === "documents" && !rest[0]) {
+    const rows = await docs.checklist();
+    const names = new Map((await docs.connections()).map((k) => [k.id, k.name]));
+    for (const g of DOCUMENT_GROUPS) {
+      out(g);
+      for (const r of rows.filter((x) => x.type.group === g)) out(`  ${checklistLine(r, names)}`);
+    }
+    const open = rows.filter((r) => r.custody === null).length;
+    out(`${rows.length - open} of ${rows.length} checked`);
     return 0;
   }
   if (config.moved_to) throw new Error(`this instance moved to ${config.moved_to}; write there`);
@@ -171,6 +206,22 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
       await rm(draftPath(id));
       out(`kept: ${id} (${draft.chosen.join(", ") || "no elements"})`);
     }
+    return 0;
+  }
+  if (cmd === "documents") {
+    const [type, custody] = rest;
+    if (!custody || !isCustody(custody)) throw new Error(`custody is one of ${CUSTODY.join(", ")}`);
+    const c = await docs.check(type!, custody, { where: values.where, connection: values.connection });
+    out(`checked: ${c.type} ${c.custody}`);
+    return 0;
+  }
+  if (cmd === "connect" && rest[0]) {
+    if (!values.name) throw new Error("connect needs --name");
+    const kind = values.kind ?? "vault";
+    if (!(kind === "vault" || kind === "issuer" || kind === "portal")) throw new Error("--kind is vault, issuer or portal");
+    const holds = (values.holds ?? "").split(",").map((h) => h.trim()).filter(Boolean);
+    const c = await docs.connect(rest[0], values.name, kind as Connection["kind"], holds);
+    out(`connected: ${c.name} holds ${c.holds.join(", ") || "nothing yet"}`);
     return 0;
   }
   if (cmd === "add" && rest[0]) {
