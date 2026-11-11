@@ -2,8 +2,8 @@
 // the death. The plan is a record the person keeps in legacy/release.json. A hard rule holds whatever it
 // says: only what the person made to survive them can be given, which is the files under legacy/ and the
 // journal entries marked `legacy: true`. The rest of the journal, reflections and everything else is
-// never released. What triggers a release (a hosted confirmation, keys held by trustees, a repository
-// successor) is not built; `previewRelease` is what any of them would hand each person.
+// never released. The Reflect app carries a release out (web/src/server/legacy-store.ts); `previewRelease`
+// is what it is sent for each person.
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { headExtras } from "./files-journal.ts";

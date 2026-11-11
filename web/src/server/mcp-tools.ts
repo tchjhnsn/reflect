@@ -10,6 +10,8 @@ import { SALIENCE_PROMPT } from "@reflect/core/salience-prompt";
 import { PRIMES } from "@reflect/core/state";
 import { conceptHistory, keepReading, onThisConcept, readings } from "./binding-store";
 import { closeEntry, createEntry, entryText, listEntries } from "./journal-store";
+import { keepPlan, legacyStatus, type PlanInput } from "./legacy-store";
+import { siteUrl } from "./site";
 
 /** The elements, from the reader's own description, so an outside AI uses the same words. */
 const ELEMENTS = SALIENCE_PROMPT.slice(SALIENCE_PROMPT.indexOf("The 16 elements"), SALIENCE_PROMPT.indexOf("\n\nRules")).trim();
@@ -61,6 +63,28 @@ export async function toolConceptHistory(userId: string, concept: Concept, now =
   const points = await conceptHistory(userId, concept);
   return { entries: await onThisConcept(userId, concept), points, now: presentMeaning(points, now.toISOString()) };
 }
+
+/** Keep the person's legacy release plan, as they stated it. Returns each trustee's link for the person to hand over. */
+export async function toolKeepLegacyPlan(userId: string, plan: PlanInput) {
+  const r = await keepPlan(userId, plan);
+  return { trustees: r.trustees.map((t) => ({ name: t.name, link: `${siteUrl()}/legacy/trustee/${t.token}` })), gifts: r.gifts, see: `${siteUrl()}/legacy` };
+}
+
+export async function toolLegacyStatus(userId: string) {
+  const s = await legacyStatus(userId);
+  return { plan: s.plan, trustees: s.trustees.map((t) => ({ name: t.name, contact: t.contact })), gifts: s.gifts, release: s.release };
+}
+
+const legacySchema = z.object({
+  confirmations: z.number().int().min(1).describe("how many trustees must confirm the death"),
+  wait_days: z.number().int().min(0).max(365).describe("days after enough confirmations in which the person or any trustee can stop the release"),
+  trustees: z.array(z.object({ name: z.string().min(1), contact: z.string().min(1) })).min(1),
+  gifts: z.array(z.object({
+    to: z.string().min(1),
+    contact: z.string().min(1),
+    items: z.array(z.object({ title: z.string().min(1), text: z.string() })).min(1).describe("only letters and writing the person made to survive them, word for word"),
+  })),
+});
 
 const conceptSchema = z.object({
   kind: z.enum(KINDS as [string, ...string[]]).describe("entity (noun), event (verb), quality (adjective or adverb), time"),
@@ -119,6 +143,18 @@ export function reflectServer(userId: string): McpServer {
     inputSchema: z.object({ concept: conceptSchema }),
     annotations: { readOnlyHint: true },
   }, async ({ concept }) => text(await toolConceptHistory(userId, concept as Concept)));
+
+  server.registerTool("keep_legacy_plan", {
+    title: "Keep the person's legacy release plan",
+    description: "Send the release plan the person wrote (in their vault, legacy/release.json and what it gives) to Reflect, which carries it out after their death: trustees confirm, a wait passes in which they or any trustee can stop it, then each person receives their part. Send only the legacy letters and entries marked to survive them, word for word, and only after the person says yes. A new plan replaces the old one and revokes its links. Give the person the trustee links it returns.",
+    inputSchema: legacySchema,
+  }, async ({ confirmations, wait_days, trustees, gifts }) => text(await toolKeepLegacyPlan(userId, { confirmations, waitDays: wait_days, trustees, gifts })));
+
+  server.registerTool("legacy_status", {
+    title: "The legacy release plan and any release",
+    description: "Who the trustees are, who receives something (not what), and whether a release is under way.",
+    annotations: { readOnlyHint: true },
+  }, async () => text(await toolLegacyStatus(userId)));
 
   return server;
 }

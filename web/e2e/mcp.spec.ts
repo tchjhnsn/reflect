@@ -57,7 +57,7 @@ test("a person's AI connects, writes an entry and keeps only a reading anchored 
   expect(tok.access_token).toBeTruthy();
 
   const tools = await mcpCall(request, tok.access_token, "tools/list", {});
-  expect(tools.msg.result?.tools?.map((t) => t.name)).toEqual(["reflect_guide", "list_entries", "write_entry", "get_entry", "keep_reading", "concept_history"]);
+  expect(tools.msg.result?.tools?.map((t) => t.name)).toEqual(["reflect_guide", "list_entries", "write_entry", "get_entry", "keep_reading", "concept_history", "keep_legacy_plan", "legacy_status"]);
 
   const today = new Date().toISOString().slice(0, 10);
   const wrote = await mcpCall(request, tok.access_token, "tools/call", { name: "write_entry", arguments: { text: "Dad called. We laughed about the lake.", local_date: today } });
@@ -79,4 +79,21 @@ test("a person's AI connects, writes an entry and keeps only a reading anchored 
   const got = await mcpCall(request, tok.access_token, "tools/call", { name: "get_entry", arguments: { entry_id: id } });
   const entry = JSON.parse(got.msg.result!.content![0]!.text) as { readings: { bindings: unknown[] }[] };
   expect(entry.readings).toHaveLength(1);
+
+  // The person's AI keeps their legacy plan; a trustee confirms; the recipient then sees their letter.
+  const legacy = await mcpCall(request, tok.access_token, "tools/call", {
+    name: "keep_legacy_plan",
+    arguments: { confirmations: 1, wait_days: 0, trustees: [{ name: "Ana", contact: "ana@example.test" }], gifts: [{ to: "Sam", contact: "sam@example.test", items: [{ title: "Dear Sam", text: "Stay brave." }] }] },
+  });
+  expect(legacy.msg.result?.isError).toBeFalsy();
+  const trusteeLink = (JSON.parse(legacy.msg.result!.content![0]!.text) as { trustees: { link: string }[] }).trustees[0]!.link;
+  await page.goto(new URL(trusteeLink).pathname);
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("named you, Ana, a trustee");
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "Confirm", exact: true }).click();
+  await expect(page.getByText("The release happened on")).toBeVisible();
+  const receiveLink = await page.locator("code").first().textContent();
+  await page.goto(new URL(receiveLink!).pathname);
+  await expect(page.getByRole("heading", { name: "Dear Sam" })).toBeVisible();
+  await expect(page.getByText("Stay brave.")).toBeVisible();
 });
