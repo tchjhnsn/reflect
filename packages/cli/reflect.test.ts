@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
@@ -393,6 +393,44 @@ describe("reflect CLI", () => {
     expect(map).toContain("Films\n  metropolis  film, watched");
     expect(map).toContain("Talks\n  strong-towns  Chuck Marohn, 2025-04");
     expect(map).toContain("with Dad: whether a city can be corrupt");
+  });
+
+  it("sends an idea to Naive only when told to, and links the two both ways", async () => {
+    const ws = await mkdtemp(join(tmpdir(), "reflect-ws-"));
+    const bin = await mkdtemp(join(tmpdir(), "reflect-bin-"));
+    dirs.push(ws, bin);
+    const dir = join(ws, "vault");
+    await run("init", "--name", "Tester", "--dir", dir);
+    await run("learn", "book", "Politics", "--dir", dir);
+    await run("idea", "Corner bakery", "A bakery on my corner that opens at five.", "--from", "Politics", "--how", "the household provides", "--dir", dir);
+    await run("idea", "Corner bakery", "--maybe", "a friend's hunch", "--dir", dir);
+    await expect(run("idea", "Corner bakery", "--send", "naive", "--dir", dir)).rejects.toThrow(/no Naive workspace/);
+    await writeFile(join(ws, "naive-workspace.json"), "{}\n");
+    // A stand-in for naive capture: keeps the text in raw/ and prints what Naive prints.
+    const fake = join(bin, "naive");
+    await writeFile(fake, `#!/usr/bin/env node\nconst fs = require("fs");\nfs.mkdirSync("raw", { recursive: true });\nfs.writeFileSync("raw/20261111-0530-ab12.md", process.argv[3]);\nconsole.log("kept raw/20261111-0530-ab12.md");\n`);
+    await chmod(fake, 0o755);
+    const before = process.env.NAIVE_BIN;
+    process.env.NAIVE_BIN = fake;
+    try {
+      const preview = (await run("idea", "Corner bakery", "--send", "naive", "--dir", dir)).out.join("\n");
+      expect(preview).toContain("A bakery on my corner that opens at five.");
+      expect(preview).toContain("- [[learn/books/politics]]: the household provides");
+      expect(preview).not.toContain("hunch");
+      expect(preview).toContain("--send naive --yes");
+      await expect(readdir(join(ws, "raw"))).rejects.toThrow();
+      const sent = (await run("idea", "Corner bakery", "--send", "naive", "--yes", "--dir", dir)).out;
+      expect(sent).toEqual([`sent: ${ws.split("/").pop()}:raw/20261111-0530-ab12.md`]);
+      expect(await readFile(join(ws, "raw/20261111-0530-ab12.md"), "utf8")).toContain("Sent from Reflect: ideas/corner-bakery.md");
+      expect(await readFile(join(dir, "ideas/corner-bakery.md"), "utf8")).toMatch(/- \d{4}-\d{2}-\d{2} sent to naive \S+:raw\/20261111-0530-ab12\.md\n$/);
+      expect((await run("idea", "Corner bakery", "--send", "naive", "--dir", dir)).out[0]).toMatch(/^already sent/);
+      await run("idea", "Corner bakery", "--from", "a walk downtown", "--dir", dir);
+      expect(await readFile(join(dir, "ideas/corner-bakery.md"), "utf8")).toContain("sent to naive");
+      expect(await run("check", "--dir", dir)).toEqual({ code: 0, out: ["ok"] });
+    } finally {
+      if (before === undefined) delete process.env.NAIVE_BIN;
+      else process.env.NAIVE_BIN = before;
+    }
   });
 
   it("reads a memory sweep from your AI and keeps only what you choose, inputs apart from ideas", async () => {
