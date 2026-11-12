@@ -6,6 +6,7 @@ import { Segmented } from "@/components/segmented";
 import { cn } from "@/lib/utils";
 import { requireUser } from "@/server/session";
 import { learnView } from "@/server/learn-store";
+import { listEntries } from "@/server/journal-store";
 import { GLYPHS, hrefOf, MINE, OURS, toneOf, type Facts, type Tone } from "./home-tiles";
 
 export const metadata: Metadata = { title: "Reflect" };
@@ -19,8 +20,11 @@ const SAY: Record<Tone, string> = { action: "in action", thought: "in thought", 
 export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const user = await requireUser();
   const ours = (await searchParams).view === "ours";
-  const learn = await learnView(user.id);
-  const facts: Facts = { learn: { underway: learn.books.some((b) => b.status === "reading"), stated: learn.books.length > 0 || learn.known.length > 0 } };
+  const [learn, recent] = await Promise.all([learnView(user.id), listEntries(user.id, 20)]);
+  const facts: Facts = {
+    learn: { underway: learn.books.some((b) => b.status === "reading"), stated: learn.books.length > 0 || learn.known.length > 0 },
+    journal: { stated: recent.length > 0, open: recent.some((e) => !e.closedAt) },
+  };
   const tiles = ours ? OURS : MINE;
   return (
     <main className="mx-auto flex min-h-screen max-w-5xl flex-col px-6 py-6">
@@ -29,8 +33,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
           <Link href="/chat"><PlusIcon /></Link>
         </Button>
         <Segmented label="Whose" items={[{ label: "Mine", href: "/", on: !ours }, { label: "Ours", href: "/?view=ours", on: ours }]} />
-        <Button variant="ghost" size="icon" disabled aria-label="Your journal, not built yet in this design" title="Journal: not built yet">
-          <FolderIcon />
+        <Button asChild variant="ghost" size="icon" aria-label="Your journal" title="Journal">
+          <Link href="/journal"><FolderIcon /></Link>
         </Button>
       </header>
       {ours ? <p className="text-muted-foreground mt-6 text-center text-sm">Shared spaces (a marriage, a household, a village) are not built yet.</p> : null}

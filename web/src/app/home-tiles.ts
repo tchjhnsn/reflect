@@ -63,17 +63,17 @@ export const OURS: readonly Tile[] = [
   { id: "village", label: "Village", app: "village" },
 ];
 
-/** Where a tile goes. Ideas has its own page; every other tile goes to its app, when the app exists. */
+/** Where a tile goes: its app, when the app is built in the current design. Ideas and Journal open the journal. */
 export function hrefOf(t: Tile): string | null {
-  // Only apps built in the new design open. The old journal, ideas and legacy pages are archived.
-  return t.app === "learn" ? "/learn" : null;
+  return t.app === "learn" ? "/learn" : t.app === "journal" ? "/journal" : null;
 }
 
 export type Tone = "action" | "thought" | "unstated";
-export type Facts = { learn: { underway: boolean; stated: boolean } };
+export type Facts = { learn: { underway: boolean; stated: boolean }; journal: { stated: boolean; open: boolean } };
 
 /** A tile's tone from what the person has, never from a guess. */
 export function toneOf(t: Tile, f: Facts): Tone {
   if (t.app === "learn") return f.learn.underway ? "action" : f.learn.stated ? "thought" : "unstated";
+  if (t.id === "journal") return f.journal.open ? "action" : f.journal.stated ? "thought" : "unstated";
   return "unstated";
 }
