@@ -264,10 +264,10 @@ Beliefs, telos and plans fall under reasoning.
 
 ### Pair bond
 
-**Decided.** A couple has a joint vault: a shared space for what is truly joint (the household plan, their agreements, the jointly intended household). Each person keeps their own private vault and journal beside it.
+**Decided.** A couple has a joint vault: a shared space for the marriage itself (their agreements, the health of the relationship). Each person keeps their own private vault and journal beside it. The household has its own shared space (see Household), so the marriage is not coupled to running the home.
 
 **Proposed.**
-- Observed (stated): stage (committed, engaged, married), shared ideals, agreements, time together. Connected: a shared calendar, joint accounts. The intended household moves from each person's vault into the joint vault.
+- Observed (stated): stage (committed, engaged, married), shared ideals, agreements, time together. Connected: a shared calendar. The intended household moves from each person's vault into the household vault.
 - Telos: a lasting marriage building the jointly intended household.
 - Origins, enumerated: nature (the union), reasoning (the vow), appetite (companionship, sex, children), habit (routines together), compulsion (in-laws, obligations), chance (illness, job loss, a move).
 - States: committed, engaged, married; a child opens raise children; if the bond ends, back to seek a mate.
@@ -276,7 +276,7 @@ Beliefs, telos and plans fall under reasoning.
 
 ### Raise children
 
-**Decided.** A child's records live in the parents' joint vault while the child is in their care. At the threshold the child gets their own vault, and the parents hand over what is the child's.
+**Decided.** A child's records live in a shared space of the parents while the child is in their care (proposed: the household vault, since the joint vault now holds only the marriage). At the threshold the child gets their own vault, and the parents hand over what is the child's.
 
 **Proposed.**
 - Observed: each child's age and stage, health and growth, learning and schooling, character and habits; who provides care and teaching (a parent, someone paid, someone who gives it). Connected: pediatric records, school portals, childcare bills. Development is read against a standard (CDC milestones by age), not against other children.
@@ -297,6 +297,18 @@ Beliefs, telos and plans fall under reasoning.
 - States: independent, needs some help, needs regular care, in full care, died. Death opens legacy and estate questions.
 - Examine: is the care right for them and sustainable for the person's household.
 - Plan: make-or-buy (care at home, in-home help, assisted living, nursing home), weighed by cost, income given up and what the person holds.
+
+### Household
+
+**Decided.** The household has its own shared vault, separate from the couple's joint vault, so the marriage and the health of the relationship are not coupled directly with the household.
+
+**Proposed.**
+- Observed: who lives in the home and their roles; the home (owned or rented, size, upkeep); the household budget; chores and who does them; the rule of the house (customs, agreements). Connected: joint accounts, mortgage or lease, utilities. Holds the intended household that income reads.
+- Telos: a well-ordered home that meets daily needs, run for living well and not only living (*Politics* I).
+- Origins, enumerated: nature (the first community), reasoning (the rule set for the house), appetite (comfort, a home of one's own), habit (routines), compulsion (lease, HOA, codes), chance (a flood, a move).
+- States: living with others, own place alone, couple's home, family home, multigenerational home.
+- Examine: does the home's order serve the people in it; are its customs held or only inherited.
+- Plan: housing (rent or buy, sized for the intended household, HUD 30% from needs), the budget, the division of household work (provided by a member, bought or given).
 
 ## Plans in phases
 
