@@ -67,3 +67,9 @@ The apps follow Aristotle's three kinds of goods: of the body (Body, Home), exte
 - Subjects are arranged on shelves by the Library of Congress Classification's 21 main classes (public domain). Dewey is not used (OCLC owns it).
 - Claims sit under the subject they are about.
 - Only shelves with something on them show; a quiet "browse all" opens the rest.
+
+## 8. Built so far
+
+- `/`: the home screen, MINE with 18 tiles and tones from the person's records; Learn, Journal, Ideas and Legacy link to their pages. OURS and the chat are not built.
+- `/learn`: shelves by Library of Congress class.
+- `/learn/browse`: the library from Open Library, by search or class, with add to shelves.

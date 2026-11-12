@@ -1,11 +1,12 @@
 import Link from "next/link";
 
-/** The header on app pages: an eyebrow on the left; the journal, what you know, your ideas, and your initial on the right. */
+/** The header on app pages: an eyebrow on the left; home, the journal, what you know, your ideas, and your initial on the right. */
 export function Nav({ current, eyebrow, initial }: { current: "journal" | "learn" | "ideas" | "me"; eyebrow: string; initial: string }) {
   return (
     <nav className="top" aria-label="Main">
       <span className="eyebrow">{eyebrow}</span>
       <div className="top-links">
+        <Link href="/">Home</Link>
         <Link href="/journal" aria-current={current === "journal" ? "page" : undefined}>
           Journal
         </Link>

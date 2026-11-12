@@ -299,3 +299,24 @@ button:disabled { opacity: 0.5; cursor: default; }
 .learn-grasp { border: 0; padding: 12px 0; margin: 0; border-bottom: 1px solid var(--rule); }
 .learn-grasp legend { font: 500 15px var(--sans); margin-bottom: 8px; }
 .learn-grasp .chip input, .add .chip input { margin-right: 4px; }
+
+/* Home: your life as objects (docs/design/REFLECT_UI_2026-11-12.md). Its own plain look in every theme. */
+.home { --home-ink: #111111; --home-action: #111111; --home-thought: #8a8a8a; --home-unstated: #dadada; min-height: 100vh; background: #ffffff; color: var(--home-ink); display: flex; flex-direction: column; }
+.home-bar { height: 22px; background: #111111; }
+.home-top { display: flex; align-items: center; justify-content: space-between; padding: 18px 28px; }
+.home-icon { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: var(--home-ink); }
+.home-toggle { display: flex; gap: 22px; font-size: 18px; letter-spacing: 0.06em; }
+.home-toggle a { color: #9a9a9a; text-decoration: none; padding: 10px 2px; }
+.home-toggle a[aria-current="page"] { color: var(--home-ink); }
+.home-note { text-align: center; color: #555555; font-size: 14px; margin: 0 16px; }
+.home-grid { list-style: none; margin: 0; padding: 32px 72px 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 56px 24px; flex-grow: 1; align-content: start; }
+.home-tile { display: flex; flex-direction: column; align-items: center; gap: 22px; color: var(--home-ink); text-decoration: none; padding: 8px 0; }
+.home-tile svg { width: min(150px, 100%); aspect-ratio: 1; }
+.home-label { font-size: 16px; letter-spacing: 0.08em; }
+a.home-tile:hover .home-label, a.home-tile:focus-visible .home-label { text-decoration: underline; }
+.home-tile.is-off { cursor: default; }
+.home-foot { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 16px 40px; padding: 28px 16px 34px; font-size: 13px; letter-spacing: 0.08em; color: #555555; }
+.home-foot span { display: flex; align-items: center; gap: 10px; }
+.home-foot i { width: 12px; height: 12px; display: inline-block; }
+.home-foot a { color: #555555; text-decoration: none; }
+@media (max-width: 900px) { .home-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 24px 16px 0; gap: 36px 12px; } .home-label { font-size: 13px; } }
