@@ -29,6 +29,50 @@ From the Ventures of a Lifetime chart and the Life State Machine (both earlier w
 - **The body politic** encloses the life: union, household, village, polis (Aristotle, *Politics* I.2).
 - **Death** is the single final state. Legacy is prepared for it.
 
+```mermaid
+stateDiagram-v2
+  state "Body politic: union, household, village, polis" as BodyPolitic {
+    state "One life" as OneLife {
+      [*] --> InOthersCare
+      InOthersCare --> AdultLife : faculties reach the threshold the community sets
+      state AdultLife {
+        state "Self-preservation" as SelfPreservation {
+          [*] --> Learn
+          Learn --> WorkAndProvide : first work
+          WorkAndProvide --> WorkAndProvide : new venture, job, move
+          --
+          state "Eight needs: food, water, shelter, health, transport, income, knowledge, safety" as Needs {
+            [*] --> Supplied
+            Supplied --> SelfProvided
+            SelfProvided --> Stocked
+            Stocked --> Supplied
+            Supplied --> CaredFor
+            CaredFor --> Supplied
+          }
+        }
+        --
+        state "Belonging and standing" as Belonging {
+          [*] --> Affiliate
+          Affiliate --> GainStatus : seek rank
+          GainStatus --> Affiliate : lose rank
+        }
+        --
+        state "Continue the line" as Line {
+          [*] --> SeekAMate
+          SeekAMate --> PairBond : bond
+          PairBond --> SeekAMate : bond ends
+          PairBond --> RaiseChildren : child
+          RaiseChildren --> CareForKin : children grown
+        }
+      }
+      AdultLife --> Death
+      Death --> [*]
+    }
+  }
+```
+
+The needs region shows its four ways of being met, not a fixed order; a need moves between them as life changes. Each child starts a new life inside the same body politic.
+
 The vault Reflect writes today (`reflect init`) already lays these out as folders: life, needs, learn, ideas, work, belonging, line, household, community, polis, legacy.
 
 ## The pipeline
@@ -72,15 +116,15 @@ stateDiagram-v2
   Examining --> Reflected : needs another look
   Examining --> Planned
   Reflected --> Planned
-  Planned --> Acting
-  state Acting {
-    Scheduled --> InProgress
-    InProgress --> Done
-    InProgress --> FellShort
-  }
-  Acting --> Observed : fell short, observe why
-  Acting --> [*] : done
+  Planned --> Scheduled
+  Scheduled --> InProgress : act begins
+  InProgress --> Done
+  InProgress --> FellShort
+  FellShort --> Observed : observe why, go round again
+  Done --> [*]
 ```
+
+Scheduled, in progress, done and fell short are the statuses of Act. Only done leaves the cycle; fell short always goes back to Observe.
 
 - **Unstated** is a hole, not a record: a question the domain expects answered that has no answer yet.
 - Reflect's outcomes: held, revised, unsure, dropped. A dropped item leaves the pipeline and stays in the record.
