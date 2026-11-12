@@ -138,7 +138,7 @@ Scheduled, in progress, done and fell short are the statuses of Act. Only done l
 
 ### Examine: steps and outcomes (proposed)
 
-Steps: state it precisely (Naess's precization); ground it, asking why until a first principle is reached; set it against things (the strongest opposing case, the evidence, the person's other beliefs, as in Rawls's reflective equilibrium); take counsel from others; settle it.
+Steps: state it precisely (Naess's precization); ground it, asking why until a first principle is reached; set it against things (the strongest opposing case, the evidence, the person's other beliefs, as in Rawls's reflective equilibrium); take counsel from others (Reflect prepares the person for counsel off the platform and they record what was said; see Other people); settle it.
 
 Outcomes, on two axes that change independently:
 
@@ -382,6 +382,16 @@ Origins are where an item comes from (the efficient cause); serves is what it is
 - Only the person says a stage is done. Reflect shows each gate's evidence (income against the livable wage) but never declares it. The threshold is the one the person's community sets, and the person states which.
 - The hard exceptions are gates that need another person's consent: a joint vault opens only when both partners join; a household or village admits a member; parents hand a child their records at the threshold.
 
+## Other people
+
+**Decided.** Counselors are not brought onto the platform. Reflect gives the person what they need before counsel takes place: it helps with the preparatory work and makes the information accessible, so the person can take it to a pastor, mentor, friend or spouse.
+
+**Proposed.**
+- Default: everything stays private to the vault it lives in; nobody sees anything until the person acts.
+- Preparing for counsel: for an item under examination, Reflect gathers what a counselor would need (the statement, its origins, its cited holders, what it is grounded in, what it is in tension with, how it has changed) into something the person can read, print or bring. Afterward the person records what was said and by whom in the item's history, and still settles it. Aristotle: on important matters "we call in others to aid us in deliberation, distrusting ourselves" (*Nicomachean Ethics* III.3).
+- Roles others have: member (of a shared space, sees it); audience (sees what the person publishes to their public site through a publishing gate; journals never); subject (someone an item is about, who does not see it unless shown); heir (receives vaults at death as named).
+- Interaction between users on the platform (forums, finding others) is for later.
+
 ## Plans in phases
 
 **Decided.** A plan has phases, and the person chooses how detailed each phase is, because some people want detailed plans and others do not.
@@ -392,4 +402,3 @@ Origins are where an item comes from (the efficient cause); serves is what it is
 
 1. Reflect's, Examine's and Act's outcomes and statuses above (all proposed).
 2. For each domain beyond finance: what is stated, what is connected, and its default telos.
-3. Other people: what they can see and do, for counsel in Examine and for interaction on the platform.
