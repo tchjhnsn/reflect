@@ -48,3 +48,7 @@ The apps follow Aristotle's three kinds of goods: of the body (Body, Home), exte
 ## 6. Learn catalogs what a person knows
 
 **Decided (07:04Z).** Learn does not start with proving that something was learned. It is a tool for a person to categorize and catalog what they know, what they believe and what they want to learn, among other things. The wording is not settled; Torian was describing the idea, not naming it.
+
+**Decided (07:08Z).** Learn keeps two kinds of entry, linked: subjects (electrical wiring, the book of Romans) and claims (marriage is a covenant). A subject can hold the claims the person holds about it. A claim names who holds it, with a citation, as items do.
+
+**Proposed.** Each entry carries the person's relation to it, in place of proof: for a subject, want to learn, learning, know; for a claim, hold, unsure, reject. Sources (videos, books, courses, talks) attach to entries and stay in the library as suggested, shown or known. Aristotle's division of knowing (why a thing is so), skill (how to make or do) and opinion (held without proof) is offered as an optional way to sort subjects.
