@@ -353,6 +353,25 @@ Beliefs, telos and plans fall under reasoning.
 
 **Decided.** Spaces, each a vault: the person's private vault; a couple's joint vault (the marriage only); the household vault (the home, budget, intended household); a village space that households join. A child's records sit with the parents until the threshold, then move to the child's own vault. At death each private vault goes where the person named; shared vaults pass to remaining members.
 
+## What an item holds
+
+An item is one thing in a person's life that Reflect tracks: a belief, a fact, a goal, a plan, a step, a relationship, a thing owned.
+
+**Decided.**
+- An item can have several origins; the person marks which are true ("I want to marry" is often reasoning and appetite at once).
+- Who holds it is specific and cited. A holder can be the person, another person, a political party, Scripture, a church or a tradition, an author or a school of thought, and so on. Each holder other than the person carries a citation (a passage, a platform, a catechism, a book).
+
+**Proposed.**
+1. What it says: the person's words and its kind (belief, fact, goal, plan, step, person, thing).
+2. Where it lives: domain, subdomain, and vault (private, joint, household, village).
+3. Who holds it: holders as above. Holders the person does not name can be grouped after Aristotle's reputable opinions (*Topics* I.1): held by all, by most, or by the wise. The person's own stance toward a cited holder uses the holds in reflect#47: wrote, adopts, adopts with changes, studies, rejects.
+4. Source: stated, or connected (and which connection).
+5. Origins: one or more of Aristotle's seven.
+6. State: place in the pipeline, with a dated history that is only added to, never overwritten, so the person sees how it changed.
+7. Relations, a fixed set: part of (a plan's steps, a domain's items); serves (the telos or goal it moves toward); grounded in (what Examine traced it to); in tension with (what it was set against); reads (one item using another's facts, as income reads the intended household); about (the person it concerns).
+
+Origins are where an item comes from (the efficient cause); serves is what it is for (the final cause).
+
 ## Plans in phases
 
 **Decided.** A plan has phases, and the person chooses how detailed each phase is, because some people want detailed plans and others do not.
@@ -361,9 +380,7 @@ Beliefs, telos and plans fall under reasoning.
 
 ## Open questions
 
-1. What an item holds and how items relate (parents, origins). Next to settle, since the rest hangs on it.
-2. The formal life stages: which stages, which domains and questions each opens, how the next stage opens early, and who decides a stage is done (proposed: only the person).
-3. Reflect's, Examine's and Act's outcomes and statuses above (all proposed).
-4. For each domain beyond finance: what is stated, what is connected, and its default telos.
-5. Other people: what they can see and do, for counsel in Examine and for interaction on the platform.
-6. Whether an item can have several origins.
+1. The formal life stages: which stages, which domains and questions each opens, how the next stage opens early, and who decides a stage is done (proposed: only the person).
+2. Reflect's, Examine's and Act's outcomes and statuses above (all proposed).
+3. For each domain beyond finance: what is stated, what is connected, and its default telos.
+4. Other people: what they can see and do, for counsel in Examine and for interaction on the platform.
