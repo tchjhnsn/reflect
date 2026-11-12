@@ -59,3 +59,11 @@ The apps follow Aristotle's three kinds of goods: of the body (Body, Home), exte
 - Kinds of knowing, offered for sorting and never required: Ryle's knowing that and knowing how, and Aristotle's episteme (knowing why), techne (skill), phronesis (practical wisdom) and doxa (opinion).
 - Sources are typed as schema.org creative works (`Book`, `VideoObject`, `Course`) and cited in CSL, the citation format reference managers use.
 - Each term goes through the term engine before it is used in code.
+
+## 7. Learn's shelves
+
+**Decided (07:17Z).**
+- Each subject carries a Wikidata identifier (CC0; labels in every language; maps to library systems).
+- Subjects are arranged on shelves by the Library of Congress Classification's 21 main classes (public domain). Dewey is not used (OCLC owns it).
+- Claims sit under the subject they are about.
+- Only shelves with something on them show; a quiet "browse all" opens the rest.
