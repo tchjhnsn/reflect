@@ -87,3 +87,18 @@ export function cleanWork(title: unknown, body: unknown): { title: string; body:
 }
 
 export const isWorkKind = (k: unknown): k is WorkKind => typeof k === "string" && k in KINDS;
+
+/**
+ * A work from an imported file (Markdown or plain text). The title is a leading `# ` heading, which leaves
+ * the body, else the file's name without its extension. YAML front matter is kept as written.
+ */
+export function workFromFile(name: string, text: string): { title: string; body: string } {
+  const body = text.replace(/^﻿/, "").replace(/\r\n?/g, "\n");
+  const m = /^(?:\s*\n)*# +(.+)\n?/.exec(body);
+  const base = name.replace(/^.*[\\/]/, "").replace(/\.(md|markdown|txt|text)$/i, "").replace(/[-_]+/g, " ");
+  return m ? cleanWork(m[1], body.slice(m[0].length).replace(/^\n+/, "")) : cleanWork(base, body);
+}
+
+/** Files the journal imports: Markdown and plain text, up to 1 MB each. */
+export const IMPORTABLE = /\.(md|markdown|txt|text)$/i;
+export const MAX_IMPORT_BYTES = 1_000_000;

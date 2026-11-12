@@ -20,3 +20,12 @@ describe("works", () => {
     expect(cleanWork(1, null)).toEqual({ title: "", body: "" });
   });
 });
+
+describe("importing", () => {
+  it("takes the title from a leading heading, else the file name", async () => {
+    const { workFromFile } = await import("./works");
+    expect(workFromFile("notes/on-friends.md", "\n# On friends\n\nThey are made.\n")).toEqual({ title: "On friends", body: "They are made." });
+    expect(workFromFile("2019_diary.txt", "Rained all day.\r\n")).toEqual({ title: "2019 diary", body: "Rained all day." });
+    expect(workFromFile("a.md", "---\ntags: x\n---\n# Not a title here")).toEqual({ title: "a", body: "---\ntags: x\n---\n# Not a title here" });
+  });
+});

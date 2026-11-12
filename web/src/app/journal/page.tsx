@@ -8,12 +8,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { requireUser } from "@/server/session";
 import { listWorks } from "@/server/work-store";
 import { listEntries } from "@/server/journal-store";
+import { ImportButton } from "./import";
 
 export const metadata: Metadata = { title: "Journal" };
 export const dynamic = "force-dynamic";
 
 const day = (iso: string) => new Date(`${iso.slice(0, 10)}T12:00:00`).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
-const excerpt = (body: string) => body.replace(/^#+\s.*$/gm, "").replace(/[*_>`]/g, "").replace(/\s+/g, " ").trim().slice(0, 160);
+const excerpt = (body: string) => body.replace(/^#+\s.*$/gm, "").replace(/^\s*(?:[-*+]|\d+\.)\s+/gm, "").replace(/[*_>`]/g, "").replace(/\s+/g, " ").trim().slice(0, 160);
 
 /** The journal: the library of everything the person writes, and a way to start something new. */
 export default async function JournalPage() {
@@ -30,6 +31,7 @@ export default async function JournalPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button asChild variant="ghost" size="icon" aria-label="Export"><a href="/api/journal/export" download><DownloadIcon /></a></Button>
+          <ImportButton />
           <Button asChild><Link href="/journal/new"><PlusIcon />Create</Link></Button>
         </div>
       </header>

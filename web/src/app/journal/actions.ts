@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/server/session";
-import { createWork, saveWork } from "@/server/work-store";
+import { IMPORTABLE, MAX_IMPORT_BYTES } from "@reflect/core/works";
+import { createWork, importWork, saveWork } from "@/server/work-store";
 
 /** Start a work from a template of the prompt library and open it in the editor. */
 export async function createWorkAction(templateId: string, about: string | null): Promise<void> {
@@ -25,4 +26,18 @@ export async function saveWorkAction(id: string, title: string, body: string): P
   } catch (e) {
     return { error: (e as Error).message };
   }
+}
+
+/** Import one Markdown or text file as a work. The browser reads the file and sends its text. */
+export async function importWorkAction(fileName: string, text: string): Promise<{ error: string } | { ok: true }> {
+  const user = await requireUser();
+  if (!IMPORTABLE.test(fileName)) return { error: `${fileName}: only Markdown and text files.` };
+  if (new TextEncoder().encode(text).length > MAX_IMPORT_BYTES) return { error: `${fileName}: larger than 1 MB.` };
+  try {
+    await importWork(user.id, fileName, text);
+  } catch (e) {
+    return { error: `${fileName}: ${(e as Error).message}` };
+  }
+  revalidatePath("/journal");
+  return { ok: true };
 }

@@ -2,7 +2,7 @@
 // Nothing is updated or deleted. Title and body are sealed with the person's key.
 import { randomUUID } from "node:crypto";
 import { db } from "@/db/pool";
-import { cleanWork, isWorkKind, templateById, type WorkKind } from "@reflect/core/works";
+import { cleanWork, isWorkKind, templateById, workFromFile, type WorkKind } from "@reflect/core/works";
 import { open, seal } from "./crypto";
 
 export type Work = { id: string; kind: WorkKind; template: string; title: string; body: string; createdAt: string; savedAt: string; versions: number };
@@ -60,4 +60,24 @@ export async function saveWork(userId: string, id: string, title: unknown, body:
   if (next.title === cur.title && next.body === cleanWork("", cur.body).body) return { saved: false, savedAt: cur.savedAt };
   const r = await db().query("INSERT INTO work_version (work_id, seq, title_ct, body_ct) VALUES ($1, $2, $3, $4) RETURNING created_at", [id, cur.versions, seal(userId, next.title), seal(userId, next.body)]);
   return { saved: true, savedAt: (r.rows[0].created_at as Date).toISOString() };
+}
+
+/** A work from an imported file, kept as a journal entry; its first version is the file's text. */
+export async function importWork(userId: string, fileName: string, text: string): Promise<string> {
+  if (!text.trim()) throw new Error("The file is empty.");
+  const { title, body } = workFromFile(fileName, text);
+  const id = randomUUID();
+  const c = await db().connect();
+  try {
+    await c.query("BEGIN");
+    await c.query("INSERT INTO work (id, user_id, kind, template) VALUES ($1, $2, 'entry', 'import')", [id, userId]);
+    await c.query("INSERT INTO work_version (work_id, seq, title_ct, body_ct) VALUES ($1, 0, $2, $3)", [id, seal(userId, title), seal(userId, body)]);
+    await c.query("COMMIT");
+    return id;
+  } catch (e) {
+    await c.query("ROLLBACK");
+    throw e;
+  } finally {
+    c.release();
+  }
 }

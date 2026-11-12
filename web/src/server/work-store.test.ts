@@ -1,7 +1,8 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { db } from "@/db/pool";
-import { createWork, getWork, listWorks, saveWork } from "./work-store";
+import { createWork, getWork, importWork, listWorks, saveWork } from "./work-store";
+import { exportJournal } from "./journal-store";
 
 const live = Boolean(process.env.DATABASE_URL && process.env.REFLECT_DATA_KEY);
 
@@ -29,5 +30,14 @@ describe.skipIf(!live)("works on Neon", () => {
     const other = await newUser("Other");
     expect(await getWork(other, id)).toBeNull();
     await expect(saveWork(other, id, "x", "y")).rejects.toThrow(/No such work/);
+  });
+
+  it("imports a file as a work and exports every work with the journal", async () => {
+    const user = await newUser("Import Test");
+    const id = await importWork(user, "on-friends.md", "# On friends\n\nThey are made, not found.");
+    expect(await getWork(user, id)).toMatchObject({ kind: "entry", template: "import", title: "On friends", body: "They are made, not found." });
+    await expect(importWork(user, "empty.txt", "  \n")).rejects.toThrow(/empty/);
+    const b = await exportJournal(user);
+    expect(b.works?.map((w) => w.title)).toEqual(["On friends"]);
   });
 });
