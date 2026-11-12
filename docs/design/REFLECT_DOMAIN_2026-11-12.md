@@ -310,6 +310,19 @@ Beliefs, telos and plans fall under reasoning.
 - Examine: does the home's order serve the people in it; are its customs held or only inherited.
 - Plan: housing (rent or buy, sized for the intended household, HUD 30% from needs), the budget, the division of household work (provided by a member, bought or given).
 
+### Village
+
+**Decided.** A village (a church, a neighborhood, a local group) can have its own shared space, which households join the way people join a household. Shared spaces so far: each person's private vault, the couple's joint vault, the household vault, the village space.
+
+**Proposed.**
+- Observed: the household's ties beyond its walls (church, neighbors, nearby family, local groups); what is given and received among them (help, meals, childcare swaps, donations that income counts). Connected: a church directory, giving records, a neighborhood group.
+- Telos: a community of households that helps one another beyond daily needs (*Politics* I.2).
+- Origins, enumerated: nature (households drawn together), reasoning (we chose this church, moved near family), appetite (fellowship), habit (the church one grew up in), compulsion (school zoning, HOA), chance (who lives next door).
+- States: new to the area, attending, belonging, serving, leading; a move resets to new.
+- Examine: does this community help the household toward its telos; are we givers as well as takers.
+- Plan: where to put down roots, which community to join, how to serve. The back-burnered needs-request pipeline belongs here.
+- Split from belonging and standing: that is the person's own place; village is the household's place among households.
+
 ## Plans in phases
 
 **Decided.** A plan has phases, and the person chooses how detailed each phase is, because some people want detailed plans and others do not.
