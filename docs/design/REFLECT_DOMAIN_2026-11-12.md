@@ -323,6 +323,18 @@ Beliefs, telos and plans fall under reasoning.
 - Plan: where to put down roots, which community to join, how to serve. The back-burnered needs-request pipeline belongs here.
 - Split from belonging and standing: that is the person's own place; village is the household's place among households.
 
+### Polis
+
+**Decided.** Plan the polis without weaving in Polity for now. Civic facts are stated by the person; any connection is left for later.
+
+**Proposed.**
+- Observed: citizenship and residence, districts and representatives, voting record and upcoming elections, taxes, duties (jury service, the draft), legal standing (licenses, permits, record), where the person serves (office, boards, volunteering).
+- Telos: a citizen who does their part toward the common good; the polis exists for living well (*Politics* I.2). Each person states their own, and how political it becomes is theirs.
+- Origins, enumerated: nature (a political animal by nature), reasoning (a cause one holds), appetite (honor, standing), habit (always voting, or never), compulsion (taxes, jury duty, the law), chance (being called to serve, an issue that hits home).
+- States: resident, citizen, voting, serving, holding office.
+- Examine: do my civic beliefs hold up; am I doing my part or only consuming.
+- Plan: register and vote, prepare for each election, serve where called.
+
 ## Plans in phases
 
 **Decided.** A plan has phases, and the person chooses how detailed each phase is, because some people want detailed plans and others do not.
