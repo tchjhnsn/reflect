@@ -22,9 +22,9 @@ describe("chat cards render", () => {
     );
     expect(html).toContain("Wiring");
     expect(html).toContain("T Technology");
-    expect(html.match(/ADD TO SHELVES/g)).toHaveLength(1);
-    expect(html).toContain("on your shelves");
-    expect(html).toContain("ACCEPT");
+    expect(html.match(/Add to shelves/g)).toHaveLength(1);
+    expect(html).toContain("On your shelves");
+    expect(html).toContain("Accept");
     expect(html).toContain("held by Aristotle");
   });
 });

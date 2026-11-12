@@ -80,4 +80,4 @@ The apps follow Aristotle's three kinds of goods: of the body (Body, Home), exte
 - `/`: the home screen, MINE with 18 tiles and tones from the person's records; only Learn opens; the plus button opens the chat. The journal (folder), the other apps and OURS are not built in this design.
 - `/learn`, in the new design: MY SHELVES (Library of Congress shelves, books and subjects toned known, learning or registered, a book's side panel to set where you are with it), LIBRARY (Open Library by class or search, Add to shelves) and CLAIMS (belief, disbelief or suspension of judgment, holders cited, stances kept).
 - `/chat`: the plus button's chat over Learn (section 5). Not saved to the journal yet.
-- `/preview/chat-shadcn`: the same chat in shadcn's look with Vercel's AI Elements, to compare against the current look (08:38Z). Not linked from the app; which look to keep is open.
+- **Decided (08:48Z).** Torian prefers shadcn's look to the mono one for the chat. `/chat` is now built from Vercel's AI Elements on shadcn; the mono chat is archived. Home and Learn are still mono; whether they move to shadcn too is open.
