@@ -274,6 +274,18 @@ Beliefs, telos and plans fall under reasoning.
 - Examine, ongoing: a check-in rhythm and counsel. Premarital and marriage inventories (SYMBIS, Prepare/Enrich) go to the later study of existing tools.
 - Plan: the wedding stays minimal, perhaps only a needs list (later through the needs-request pipeline); the real plan is the household.
 
+### Raise children
+
+**Decided.** A child's records live in the parents' joint vault while the child is in their care. At the threshold the child gets their own vault, and the parents hand over what is the child's.
+
+**Proposed.**
+- Observed: each child's age and stage, health and growth, learning and schooling, character and habits; who provides care and teaching (a parent, someone paid, someone who gives it). Connected: pediatric records, school portals, childcare bills. Development is read against a standard (CDC milestones by age), not against other children.
+- Telos: raise the child to the threshold of adulthood, able to stand on their own and continue the line in turn (the chart's "in others' care" to "threshold set by community").
+- Origins, enumerated: nature (care of one's own), reasoning (raised in the faith, learn a trade), appetite (delight in them), habit (how the parents were raised), compulsion (compulsory schooling, vaccination rules), chance (illness, disability, a gifted child).
+- States: expecting, infant, young child, school age, teen, threshold. Each opens its own questions (childcare at infancy, schooling at school age, work and a mate in the teens). Another child loops back to expecting.
+- Examine, ongoing: is this working for this child; are these the parents' own reasons or habit.
+- Plan: make-or-buy. Childcare (parent at home, babysitter, daycare, family) and schooling (homeschool, public, charter, private), each weighed by cost, income given up (computed by income) and the parents' ideals. Costs from the USDA's cost of raising a child, feeding the intended household.
+
 ## Plans in phases
 
 **Decided.** A plan has phases, and the person chooses how detailed each phase is, because some people want detailed plans and others do not.
