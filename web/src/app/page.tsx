@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FolderIcon, PlusIcon } from "lucide-react";
+import { FolderIcon, ListIcon, PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Segmented } from "@/components/segmented";
 import { cn } from "@/lib/utils";
@@ -30,14 +30,19 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const tiles = ours ? OURS : MINE;
   return (
     <main className="mx-auto flex min-h-screen max-w-5xl flex-col px-6 py-6">
-      <header className="flex items-center justify-between">
-        <Button asChild variant="outline" size="icon" aria-label="Ask Reflect">
+      <header className="grid grid-cols-[1fr_auto_1fr] items-center">
+        <Button asChild variant="outline" size="icon" aria-label="Ask Reflect" className="justify-self-start">
           <Link href="/chat"><PlusIcon /></Link>
         </Button>
         <Segmented label="Whose" items={[{ label: "Mine", href: "/", on: !ours }, { label: "Ours", href: "/?view=ours", on: ours }]} />
-        <Button asChild variant="ghost" size="icon" aria-label="Your journal" title="Journal">
-          <Link href="/journal"><FolderIcon /></Link>
-        </Button>
+        <div className="flex items-center gap-1 justify-self-end">
+          <Button asChild variant="ghost" size="icon" aria-label="Your log" title="Log">
+            <Link href="/log"><ListIcon /></Link>
+          </Button>
+          <Button asChild variant="ghost" size="icon" aria-label="Your journal" title="Journal">
+            <Link href="/journal"><FolderIcon /></Link>
+          </Button>
+        </div>
       </header>
       {ours ? <p className="text-muted-foreground mt-6 text-center text-sm">Shared spaces (a marriage, a household, a village) are not built yet.</p> : null}
       <ul className="mt-8 grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-6">
