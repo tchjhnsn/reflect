@@ -106,7 +106,7 @@ stateDiagram-v2
 
 **Proposed.** A loop that repeats without change is a signal: when the same reason for falling short comes up again, Reflect puts it in front of the person.
 
-### Item states (proposed)
+### Item states
 
 ```mermaid
 stateDiagram-v2
@@ -128,6 +128,8 @@ stateDiagram-v2
   Done --> [*]
 ```
 
+**Decided (11-12).** The outcomes of Reflect and Examine and the statuses of Act below hold. The name "fell short" is a placeholder to be renamed.
+
 Scheduled, in progress, done and fell short are the statuses of Act. Only done leaves the cycle; fell short always goes back to Observe.
 
 - **Unstated** is a hole, not a record: a question the domain expects answered that has no answer yet.
@@ -136,7 +138,9 @@ Scheduled, in progress, done and fell short are the statuses of Act. Only done l
 - Items nest domain, then area, then item. A level's status is the count of its items in each phase, computed, never set by hand.
 - Whether Examine may be skipped (Reflected straight to Planned) is open.
 
-### Examine: steps and outcomes (proposed)
+### Examine: steps and outcomes
+
+**Decided.** The outcomes below hold. The steps remain proposed.
 
 Steps: state it precisely (Naess's precization); ground it, asking why until a first principle is reached; set it against things (the strongest opposing case, the evidence, the person's other beliefs, as in Rawls's reflective equilibrium); take counsel from others (Reflect prepares the person for counsel off the platform and they record what was said; see Other people); settle it.
 
@@ -400,5 +404,5 @@ Origins are where an item comes from (the efficient cause); serves is what it is
 
 ## Open questions
 
-1. Reflect's, Examine's and Act's outcomes and statuses above (all proposed).
-2. For each domain beyond finance: what is stated, what is connected, and its default telos.
+1. A better name for Act's "fell short" status.
+2. For each domain beyond finance: what is stated, what is connected, and its default telos (first passes are in each subdomain section).
