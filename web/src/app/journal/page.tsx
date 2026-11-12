@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireUser } from "@/server/session";
 import { listEntries } from "@/server/journal-store";
+import { CHAT_PROMPT } from "@reflect/core/chat-journal";
 import { EntryCard } from "./entry";
 import { Write } from "./write";
 
@@ -14,7 +15,8 @@ export const dynamic = "force-dynamic";
 /** The journal: the person's own entries, newest first, and the whole of it to export (docs/design/REFLECT_UI_2026-11-12.md section 1). */
 export default async function JournalPage() {
   const user = await requireUser();
-  const entries = await listEntries(user.id);
+  // Chats are kept apart, in the chat history (/chat/history).
+  const entries = (await listEntries(user.id)).filter((e) => e.promptId !== CHAT_PROMPT);
   return (
     <main className="mx-auto max-w-3xl px-6 py-6">
       <header className="flex items-center justify-between gap-4">
