@@ -4,13 +4,14 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/server/session";
 import { IMPORTABLE, MAX_IMPORT_BYTES } from "@reflect/core/works";
-import { createWork, importWork, saveWork } from "@/server/work-store";
-import { compileEdition, holdFromWork, placeClaim } from "@/server/book-store";
+import type { Holder } from "@reflect/core/claims";
+import { createWork, fileWork, importWork, saveWork } from "@/server/work-store";
+import { beliefFromWork, compileEdition, markBelief, placeClaim, type Marking } from "@/server/book-store";
 
-/** Start a work from a template of the prompt library and open it in the editor. */
-export async function createWorkAction(templateId: string, about: string | null): Promise<void> {
+/** Start a work from a template of the prompt library, filed in a domain when started from one, and open it. */
+export async function createWorkAction(templateId: string, about: string | null, domain: string | null = null): Promise<void> {
   const user = await requireUser();
-  const id = await createWork(user.id, templateId, about);
+  const id = await createWork(user.id, templateId, about, domain);
   revalidatePath("/journal");
   redirect(`/journal/w/${id}`);
 }
@@ -43,28 +44,39 @@ export async function importWorkAction(fileName: string, text: string): Promise<
   return { ok: true };
 }
 
-/** "I hold this": a selected passage becomes a belief in the chosen chapter of the book. */
-export async function holdAction(workId: string, passage: string, domain: string): Promise<{ error: string } | { ok: true }> {
-  const user = await requireUser();
+type Done = { error: string } | { ok: true };
+const attempt = async (run: () => Promise<unknown>, paths: string[]): Promise<Done> => {
   try {
-    await holdFromWork(user.id, workId, passage, domain);
+    await run();
   } catch (e) {
     return { error: (e as Error).message };
   }
-  revalidatePath("/journal/book");
+  for (const p of paths) revalidatePath(p, p.includes("[") ? "page" : undefined);
   return { ok: true };
+};
+
+/** A selected passage becomes a belief: an ideal or a practical belief, in the chosen domain, with its origins and holders. */
+export async function beliefFromWorkAction(workId: string, passage: string, domain: string, m: Marking & { holders?: Holder[] }): Promise<Done> {
+  const user = await requireUser();
+  return attempt(() => beliefFromWork(user.id, workId, passage, domain, m), ["/journal/book", "/journal/d/[domain]"]);
+}
+
+/** Mark a belief already kept an ideal or a practical belief, with its origins. */
+export async function markBeliefAction(claimId: string, m: Marking): Promise<Done> {
+  const user = await requireUser();
+  return attempt(() => markBelief(user.id, claimId, m), ["/journal/book", "/journal/d/[domain]"]);
+}
+
+/** File a work in a domain, or in none. */
+export async function fileWorkAction(workId: string, domain: string | null): Promise<Done> {
+  const user = await requireUser();
+  return attempt(() => fileWork(user.id, workId, domain), ["/journal", "/journal/d/[domain]"]);
 }
 
 /** Place a belief in a chapter of the book. */
 export async function placeAction(claimId: string, domain: string): Promise<{ error: string } | { ok: true }> {
   const user = await requireUser();
-  try {
-    await placeClaim(user.id, claimId, domain);
-  } catch (e) {
-    return { error: (e as Error).message };
-  }
-  revalidatePath("/journal/book");
-  return { ok: true };
+  return attempt(() => placeClaim(user.id, claimId, domain), ["/journal/book", "/journal/d/[domain]"]);
 }
 
 /** Keep the book as it stands as a dated edition in the journal, and open it. */

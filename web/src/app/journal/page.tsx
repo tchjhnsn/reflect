@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeftIcon, BookOpenIcon, DownloadIcon, PlusIcon } from "lucide-react";
 import { KINDS, workTitle } from "@reflect/core/works";
+import { DOMAINS } from "@reflect/core/book";
 import { CHAT_PROMPT } from "@reflect/core/chat-journal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,13 +37,23 @@ export default async function JournalPage() {
           <Button asChild><Link href="/journal/new"><PlusIcon />Create</Link></Button>
         </div>
       </header>
+      <nav aria-label="Domains" className="mt-6 flex flex-wrap gap-1.5">
+        {DOMAINS.map((d) => {
+          const n = works.filter((w) => w.domain === d.id).length;
+          return (
+            <Link key={d.id} href={`/journal/d/${d.id}`} className="hover:border-foreground/30 rounded-full border px-3 py-1 text-sm transition-colors">
+              {d.title}{n ? <span className="text-muted-foreground ml-1.5 text-xs">{n}</span> : null}
+            </Link>
+          );
+        })}
+      </nav>
       {works.length || earlier.length ? (
         <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {works.map((w) => (
             <Link key={w.id} href={`/journal/w/${w.id}`} className="group">
               <Card className="group-hover:border-foreground/30 h-full gap-2 py-5 transition-colors">
                 <CardHeader className="px-5">
-                  <CardDescription className="text-xs">{KINDS[w.kind].label} · {day(w.savedAt)}</CardDescription>
+                  <CardDescription className="text-xs">{KINDS[w.kind].label}{w.domain ? ` in ${DOMAINS.find((d) => d.id === w.domain)!.title}` : ""} · {day(w.savedAt)}</CardDescription>
                   <CardTitle className="text-base leading-snug">{workTitle(w)}</CardTitle>
                 </CardHeader>
                 {excerpt(w.body) ? <CardContent className="text-muted-foreground line-clamp-3 px-5 text-sm">{excerpt(w.body)}</CardContent> : null}

@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeftIcon, BoldIcon, BookmarkCheckIcon, Heading2Icon, ItalicIcon, ListIcon, QuoteIcon } from "lucide-react";
-import { DOMAINS } from "@reflect/core/book";
+import { ArrowLeftIcon, BoldIcon, Heading2Icon, ItalicIcon, ListIcon, QuoteIcon } from "lucide-react";
+import { DOMAINS, isDomain, type Domain } from "@reflect/core/book";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { Markdown } from "@tiptap/markdown";
@@ -12,7 +12,8 @@ import { KINDS } from "@reflect/core/works";
 import type { Work } from "@/server/work-store";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { holdAction, saveWorkAction } from "../../actions";
+import { fileWorkAction, saveWorkAction } from "../../actions";
+import { Mark, type IdealOption } from "../../mark";
 
 type Status = "saved" | "unsaved" | "saving" | "failed";
 const SAVE_AFTER_MS = 1200;
@@ -22,7 +23,7 @@ const SAVE_AFTER_MS = 1200;
  * and italic come from typing Markdown or from the small bar. It saves on its own a moment after you stop
  * typing, and each save that changes something is kept as a new version.
  */
-export function Editor({ work }: { work: Work }) {
+export function Editor({ work, ideals }: { work: Work; ideals: IdealOption[] }) {
   const [title, setTitle] = useState(work.title);
   const [status, setStatus] = useState<Status>("saved");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -90,17 +91,14 @@ export function Editor({ work }: { work: Work }) {
     }),
   });
 
-  // "I hold this": the selected passage becomes a belief, placed in a chapter of the book.
-  const [hold, setHold] = useState<{ passage: string; note?: string; error?: string } | null>(null);
-  const [holding, setHolding] = useState(false);
-  const keepHold = async (domain: string) => {
-    if (!hold) return;
-    setHolding(true);
-    const r = await holdAction(work.id, hold.passage, domain);
-    setHolding(false);
-    if ("error" in r) setHold({ ...hold, error: r.error });
-    else setHold({ passage: hold.passage, note: DOMAINS.find((d) => d.id === domain)!.title });
+  // The work's domain, and marking a selected passage an ideal or a practical belief.
+  const [domain, setDomain] = useState<Domain | null>(work.domain);
+  const file = async (d: Domain | null) => {
+    setDomain(d);
+    const r = await fileWorkAction(work.id, d);
+    if ("error" in r) setDomain(work.domain);
   };
+  const [mark, setMark] = useState<{ passage: string; kept?: Domain | null } | null>(null);
 
   const tool = (label: string, Icon: typeof BoldIcon, on: boolean | undefined, run: () => void) => (
     <Button key={label} type="button" size="icon" variant="ghost" className={cn("size-8", on && "bg-muted")} aria-label={label} aria-pressed={!!on} onMouseDown={(e) => e.preventDefault()} onClick={run}>
@@ -113,7 +111,12 @@ export function Editor({ work }: { work: Work }) {
       <header className="bg-background/90 sticky top-0 z-10 border-b backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center gap-2 px-4 py-2">
           <Button asChild variant="ghost" size="icon" aria-label="Journal" onClick={() => void save()}><Link href="/journal"><ArrowLeftIcon /></Link></Button>
-          <span className="text-muted-foreground hidden truncate text-sm sm:inline">{KINDS[work.kind].label}</span>
+          <span className="text-muted-foreground hidden truncate text-sm sm:inline">{KINDS[work.kind].label} in</span>
+          <select aria-label="Domain" value={domain ?? ""} onChange={(e) => void file(isDomain(e.target.value) ? e.target.value : null)}
+            className="text-muted-foreground hover:text-foreground rounded-md bg-transparent px-1 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
+            <option value="">no domain</option>
+            {DOMAINS.map((d) => <option key={d.id} value={d.id}>{d.title}</option>)}
+          </select>
           <div className="ml-auto flex items-center gap-0.5">
             {editor ? [
               tool("Heading", Heading2Icon, marks?.h2, () => editor.chain().focus().toggleHeading({ level: 2 }).run()),
@@ -122,26 +125,24 @@ export function Editor({ work }: { work: Work }) {
               tool("List", ListIcon, marks?.list, () => editor.chain().focus().toggleBulletList().run()),
               tool("Quote", QuoteIcon, marks?.quote, () => editor.chain().focus().toggleBlockquote().run()),
             ] : null}
-            <Button type="button" size="sm" variant="ghost" className="ml-1 h-8" disabled={!marks?.selected} onMouseDown={(e) => e.preventDefault()} onClick={() => setHold({ passage: marks!.selected })}>
-              <BookmarkCheckIcon className="size-4" /><span className="hidden sm:inline">I hold this</span>
+            <Button type="button" size="sm" variant="ghost" className="ml-1 h-8" disabled={!marks?.selected} onMouseDown={(e) => e.preventDefault()} onClick={() => setMark({ passage: marks!.selected })}>
+              Mark as a belief
             </Button>
             <span className={cn("text-muted-foreground ml-3 w-16 text-right text-xs", status === "failed" && "text-destructive")} role="status">
               {status === "saved" ? "Saved" : status === "saving" ? "Saving" : status === "failed" ? "Not saved" : "Edited"}
             </span>
           </div>
         </div>
-        {hold ? (
-          <div className="mx-auto max-w-3xl space-y-2 px-6 pb-3">
-            <blockquote className="border-l-2 pl-3 font-serif text-base italic">{hold.passage}</blockquote>
-            {hold.note ? (
-              <p className="text-sm">Kept in {hold.note}. <Link href="/journal/book" className="underline underline-offset-2">See the book</Link> <button type="button" className="text-muted-foreground ml-2 text-xs" onClick={() => setHold(null)}>Close</button></p>
+        {mark ? (
+          <div className="mx-auto max-w-3xl space-y-3 px-6 pb-4">
+            <blockquote className="border-l-2 pl-3 font-serif text-base italic">{mark.passage}</blockquote>
+            {mark.kept !== undefined ? (
+              <p className="text-sm">
+                Kept{mark.kept ? <> in <Link href={`/journal/d/${mark.kept}`} className="underline underline-offset-2">{DOMAINS.find((d) => d.id === mark.kept)!.title}</Link></> : null}.
+                <button type="button" className="text-muted-foreground ml-2 text-xs" onClick={() => setMark(null)}>Close</button>
+              </p>
             ) : (
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-muted-foreground mr-1 text-sm">Which chapter of your life?</span>
-                {DOMAINS.map((d) => <Button key={d.id} type="button" size="sm" variant="outline" className="h-7" disabled={holding} onClick={() => void keepHold(d.id)}>{d.title}</Button>)}
-                <Button type="button" size="sm" variant="ghost" className="h-7" onClick={() => setHold(null)}>Cancel</Button>
-                {hold.error ? <span className="text-destructive text-sm" role="alert">{hold.error}</span> : null}
-              </div>
+              <Mark target={{ workId: work.id, passage: mark.passage }} domain={domain} ideals={ideals} onDone={(d) => setMark({ passage: mark.passage, kept: d })} onCancel={() => setMark(null)} />
             )}
           </div>
         ) : null}

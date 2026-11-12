@@ -3,7 +3,16 @@
 // of the Ventures of a Lifetime chart, in chart order. The person places each belief in a domain; Reflect never
 // guesses. A belief that was held and is no longer shows as a revision, so the book reads as a life that grew.
 // The book is a live view; an edition is a dated snapshot of it, kept as a work.
+//
+// Ideals and practical beliefs (Torian, 2026-11-12 21:28Z, "Build"). After Aristotle, a belief is one of two
+// kinds. An ideal is what is best simply, as one would pray for it (the best constitution kat' euchen,
+// Politics IV.1 1288b21-39 and VII.4 1325b36), and is wished for as an end (boulesis, Nicomachean Ethics
+// III.2 1111b26 and III.4). A practical belief is what is best for me now, under my circumstances: what
+// deliberation and choice settle (prohairesis, NE III.3), the work of practical wisdom (NE VI.5, VI.7). A
+// practical belief names the ideal it serves and the circumstances it is for, as the particular premise of
+// the practical syllogism serves the universal one (NE VII.3 1147a1-10). Both keep their origins and holders.
 import type { Holder, StanceLine } from "./claims";
+import { originLabel, type Origin } from "./origins";
 
 /** The chapters, in the order of the Ventures of a Lifetime chart (the vault's folders, lifetime.ts). */
 export const DOMAINS = [
@@ -20,6 +29,24 @@ export const DOMAINS = [
 export type Domain = (typeof DOMAINS)[number]["id"];
 export const isDomain = (d: unknown): d is Domain => DOMAINS.some((x) => x.id === d);
 
+export const BELIEF_KINDS = [
+  { id: "ideal", label: "Ideal", plural: "Ideals", about: "What is best, as you would pray for it: an end you wish for." },
+  { id: "practical", label: "Practical belief", plural: "Practical beliefs", about: "What is best for you now, in your circumstances, serving an ideal." },
+] as const;
+export type BeliefKind = (typeof BELIEF_KINDS)[number]["id"];
+export const isBeliefKind = (k: unknown): k is BeliefKind => BELIEF_KINDS.some((x) => x.id === k);
+
+/** What marking a belief records. Throws with the reason when a practical belief lacks its ideal or circumstances. */
+export function checkKind(kind: unknown, serves: string | null | undefined, circumstances: string | null | undefined): { kind: BeliefKind; circumstances: string | null } {
+  if (!isBeliefKind(kind)) throw new Error("Mark it as an ideal or a practical belief.");
+  if (kind === "ideal") return { kind, circumstances: null };
+  const c = (circumstances ?? "").replace(/\s+/g, " ").trim();
+  if (!serves) throw new Error("Name the ideal it serves.");
+  if (!c) throw new Error("Say the circumstances it is for.");
+  if (c.length > 1000) throw new Error("The circumstances are at most 1000 characters.");
+  return { kind, circumstances: c };
+}
+
 /** A claim as the book reads it: its stance history, its domain if placed, and where it came from. */
 export type Belief = {
   id: string;
@@ -29,6 +56,11 @@ export type Belief = {
   domain: Domain | null;
   /** The passage in one of the person's works it was marked from, if any. */
   source: { workId: string; title: string } | null;
+  /** Ideal or practical belief, once the person says; a practical belief names its ideal and circumstances. */
+  kind?: BeliefKind | null;
+  serves?: { id: string; text: string } | null;
+  circumstances?: string | null;
+  origins?: Origin[];
 };
 
 export type BookEntry = {
@@ -36,6 +68,10 @@ export type BookEntry = {
   text: string;
   holders: Holder[];
   source: Belief["source"];
+  kind: BeliefKind | null;
+  serves: { id: string; text: string } | null;
+  circumstances: string | null;
+  origins: Origin[];
   /** Held now, or once held and no longer. */
   state: "held" | "once";
   /** When it was first held, and when it stopped being held (for `once`). */
@@ -50,20 +86,25 @@ export function bookEntry(b: Belief): BookEntry | null {
   const firstHeld = lines.find((l) => l.stance === "belief");
   if (!firstHeld) return null;
   const last = lines.at(-1)!;
-  if (last.stance === "belief") return { id: b.id, text: b.text, holders: b.holders, source: b.source, state: "held", since: firstHeld.at, until: null };
+  const base = { id: b.id, text: b.text, holders: b.holders, source: b.source, kind: b.kind ?? null, serves: b.serves ?? null, circumstances: b.circumstances ?? null, origins: b.origins ?? [] };
+  if (last.stance === "belief") return { ...base, state: "held", since: firstHeld.at, until: null };
   const lastHeld = [...lines].reverse().find((l) => l.stance === "belief")!;
   const dropped = lines.find((l) => l.at > lastHeld.at)!;
-  return { id: b.id, text: b.text, holders: b.holders, source: b.source, state: "once", since: firstHeld.at, until: dropped.at };
+  return { ...base, state: "once", since: firstHeld.at, until: dropped.at };
 }
 
+const KIND_ORDER = (k: BeliefKind | null) => (k === "ideal" ? 0 : k === "practical" ? 1 : 2);
+
 /**
- * The book: a chapter per domain in chart order, held beliefs first then revisions, each oldest first.
+ * The book: a chapter per domain in chart order, held beliefs first then revisions; within each, ideals,
+ * then practical beliefs, then beliefs not yet marked either; each oldest first.
  * Chapters with nothing in them are kept so the person sees the whole of a life. Beliefs held but not yet
  * placed in a domain are returned apart; they are not in the book until the person places them.
  */
 export function compileBook(beliefs: readonly Belief[]): { chapters: Chapter[]; unplaced: BookEntry[] } {
   const entries = beliefs.map((b) => ({ b, e: bookEntry(b) })).filter((x): x is { b: Belief; e: BookEntry } => x.e !== null);
-  const order = (a: BookEntry, z: BookEntry) => (a.state === z.state ? a.since.localeCompare(z.since) : a.state === "held" ? -1 : 1);
+  const order = (a: BookEntry, z: BookEntry) =>
+    a.state !== z.state ? (a.state === "held" ? -1 : 1) : KIND_ORDER(a.kind) - KIND_ORDER(z.kind) || a.since.localeCompare(z.since);
   return {
     chapters: DOMAINS.map((d) => ({ domain: d.id, title: d.title, about: d.about, entries: entries.filter((x) => x.b.domain === d.id).map((x) => x.e).sort(order) })),
     unplaced: entries.filter((x) => !x.b.domain).map((x) => x.e).sort(order),
@@ -79,8 +120,17 @@ export function bookMarkdown(chapters: readonly Chapter[], asOf: string): string
   for (const c of chapters) {
     if (!c.entries.length) continue;
     out.push(`## ${c.title}`);
+    let heading: string | null = null;
     for (const e of c.entries) {
-      const from = [e.holders.length ? `with ${e.holders.map(cite).join("; ")}` : "", e.source ? `from "${e.source.title}"` : ""].filter(Boolean).join(", ");
+      const h = e.state === "once" ? "Once held" : e.kind ? BELIEF_KINDS.find((k) => k.id === e.kind)!.plural : "Not yet marked";
+      if (h !== heading) out.push(`### ${(heading = h)}`);
+      const from = [
+        e.kind === "practical" && e.serves ? `serving "${e.serves.text}"` : "",
+        e.circumstances ? `for ${e.circumstances}` : "",
+        e.origins.length ? `from ${e.origins.map(originLabel).join(", ").toLowerCase()}` : "",
+        e.holders.length ? `with ${e.holders.map(cite).join("; ")}` : "",
+        e.source ? `in "${e.source.title}"` : "",
+      ].filter(Boolean).join(", ");
       out.push(e.state === "held" ? `- ${e.text} *(since ${day(e.since)}${from ? `, ${from}` : ""})*` : `- ~~${e.text}~~ *(held ${day(e.since)} to ${day(e.until!)})*`);
     }
   }

@@ -1,24 +1,28 @@
 // The journal's works (migration 0015). A work keeps every changed save as a version; the latest is the text.
-// Nothing is updated or deleted. Title and body are sealed with the person's key.
+// Nothing is updated or deleted. Title and body are sealed with the person's key. A work is filed in a domain
+// of a life, or in none (migration 0017, work_domain; the latest row counts).
 import { randomUUID } from "node:crypto";
 import { db } from "@/db/pool";
+import { isDomain, type Domain } from "@reflect/core/book";
 import { cleanWork, isWorkKind, templateById, workFromFile, type WorkKind } from "@reflect/core/works";
 import { open, seal } from "./crypto";
 
-export type Work = { id: string; kind: WorkKind; template: string; title: string; body: string; createdAt: string; savedAt: string; versions: number };
+export type Work = { id: string; kind: WorkKind; template: string; title: string; body: string; createdAt: string; savedAt: string; versions: number; domain: Domain | null };
 
 const isId = (id: string) => /^[0-9a-f-]{36}$/i.test(id);
 
 /** A new work from a template of the prompt library: its first version is the template's text, under a quote of what it is about when given (a log act). */
-export async function createWork(userId: string, templateId: string, about: string | null = null): Promise<string> {
+export async function createWork(userId: string, templateId: string, about: string | null = null, domain: string | null = null): Promise<string> {
   const t = templateById(templateId);
   if (!t) throw new Error("No such template.");
+  if (domain !== null && !isDomain(domain)) throw new Error("That is not a domain.");
   const id = randomUUID();
   const c = await db().connect();
   try {
     await c.query("BEGIN");
     await c.query("INSERT INTO work (id, user_id, kind, template) VALUES ($1, $2, $3, $4)", [id, userId, t.kind, t.id]);
     await c.query("INSERT INTO work_version (work_id, seq, title_ct, body_ct) VALUES ($1, 0, $2, $3)", [id, seal(userId, ""), seal(userId, about ? `> ${about.replace(/\s+/g, " ").trim()}\n\n${t.body}` : t.body)]);
+    if (domain) await c.query("INSERT INTO work_domain (id, user_id, work_id, domain) VALUES ($1, $2, $3, $4)", [randomUUID(), userId, id, domain]);
     await c.query("COMMIT");
     return id;
   } catch (e) {
@@ -29,12 +33,13 @@ export async function createWork(userId: string, templateId: string, about: stri
   }
 }
 
-type Row = { id: string; kind: string; template: string; created_at: Date; seq: number; title_ct: string; body_ct: string; saved_at: Date };
+type Row = { id: string; kind: string; template: string; created_at: Date; seq: number; title_ct: string; body_ct: string; saved_at: Date; domain: string | null };
 const toWork = (userId: string, r: Row): Work => ({
   id: r.id, kind: isWorkKind(r.kind) ? r.kind : "entry", template: r.template, title: open(userId, r.title_ct), body: open(userId, r.body_ct),
-  createdAt: r.created_at.toISOString(), savedAt: r.saved_at.toISOString(), versions: r.seq + 1,
+  createdAt: r.created_at.toISOString(), savedAt: r.saved_at.toISOString(), versions: r.seq + 1, domain: isDomain(r.domain) ? r.domain : null,
 });
-const LATEST = `SELECT w.id, w.kind, w.template, w.created_at, v.seq, v.title_ct, v.body_ct, v.created_at AS saved_at
+const LATEST = `SELECT w.id, w.kind, w.template, w.created_at, v.seq, v.title_ct, v.body_ct, v.created_at AS saved_at,
+    (SELECT domain FROM work_domain WHERE work_id = w.id ORDER BY created_at DESC, id LIMIT 1) AS domain
   FROM work w JOIN LATERAL (SELECT * FROM work_version WHERE work_id = w.id ORDER BY seq DESC LIMIT 1) v ON true`;
 
 /** Every work, most recently saved first. */
@@ -80,4 +85,13 @@ export async function importWork(userId: string, fileName: string, text: string)
   } finally {
     c.release();
   }
+}
+
+/** File a work in a domain of a life, or take it out of every domain (null). A new row; the latest counts. */
+export async function fileWork(userId: string, id: string, domain: string | null): Promise<void> {
+  if (domain !== null && !isDomain(domain)) throw new Error("That is not a domain.");
+  const cur = await getWork(userId, id);
+  if (!cur) throw new Error("No such work.");
+  if (cur.domain === domain) return;
+  await db().query("INSERT INTO work_domain (id, user_id, work_id, domain) VALUES ($1, $2, $3, $4)", [randomUUID(), userId, id, domain]);
 }
