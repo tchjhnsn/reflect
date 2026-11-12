@@ -372,6 +372,16 @@ An item is one thing in a person's life that Reflect tracks: a belief, a fact, a
 
 Origins are where an item comes from (the efficient cause); serves is what it is for (the final cause).
 
+## Life stages
+
+**Decided.** Gates between stages are soft for the most part: every domain is reachable, and Reflect shows the order and what comes next, so the next stage can open early (household planning while still seeking).
+
+**Proposed.**
+- Stages, each opening domains: (1) in others' care (records with the parents; learn, much by compulsion); (2) threshold (own vault; learn, work, income, needs, fitness, health, friends); (3) self-provided (income covers a livable wage for oneself; seek a mate and village open fully; intended household stated); (4) paired (joint and household vaults); (5) raising (raise children; income's target becomes the intended household); (6) caring for kin (often alongside raising); (7) passing on (legacy kept current); (8) death (vaults go where named).
+- Earlier domains never close. The way back is real: a bond that ends returns to seeking; a lost job can drop self-provided.
+- Only the person says a stage is done. Reflect shows each gate's evidence (income against the livable wage) but never declares it. The threshold is the one the person's community sets, and the person states which.
+- The hard exceptions are gates that need another person's consent: a joint vault opens only when both partners join; a household or village admits a member; parents hand a child their records at the threshold.
+
 ## Plans in phases
 
 **Decided.** A plan has phases, and the person chooses how detailed each phase is, because some people want detailed plans and others do not.
@@ -380,7 +390,6 @@ Origins are where an item comes from (the efficient cause); serves is what it is
 
 ## Open questions
 
-1. The formal life stages: which stages, which domains and questions each opens, how the next stage opens early, and who decides a stage is done (proposed: only the person).
-2. Reflect's, Examine's and Act's outcomes and statuses above (all proposed).
-3. For each domain beyond finance: what is stated, what is connected, and its default telos.
-4. Other people: what they can see and do, for counsel in Examine and for interaction on the platform.
+1. Reflect's, Examine's and Act's outcomes and statuses above (all proposed).
+2. For each domain beyond finance: what is stated, what is connected, and its default telos.
+3. Other people: what they can see and do, for counsel in Examine and for interaction on the platform.
