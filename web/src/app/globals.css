@@ -402,3 +402,5 @@ a.nd-item:hover span { text-decoration: underline; }
   .nd-item { width: 92px; }
 }
 .home-icon.is-off { color: #cfcfcf; cursor: default; }
+.chat-steps { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 4px; font-size: 11px; letter-spacing: 0.08em; color: #555555; }
+.chat-assistant > p + p { margin-top: 10px; }

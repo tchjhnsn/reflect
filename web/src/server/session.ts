@@ -15,12 +15,18 @@ const ensureOwner = () =>
       throw e;
     }));
 
-export async function requireUser(): Promise<{ id: string }> {
+/** The person using the app, or null when nobody is signed in. */
+export async function currentUser(): Promise<{ id: string } | null> {
   if (openMode()) {
     await ensureOwner();
     return { id: OWNER_ID };
   }
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/sign-in");
-  return { id: session.user.id };
+  return session ? { id: session.user.id } : null;
+}
+
+export async function requireUser(): Promise<{ id: string }> {
+  const user = await currentUser();
+  if (!user) redirect("/sign-in");
+  return user;
 }

@@ -1,47 +1,30 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { createStateStore } from "@json-render/core";
 import { JSONUIProvider, Renderer } from "@json-render/react";
 import { buildSpec } from "./spec";
 
-const added: string[] = [];
-vi.mock("./actions", () => ({
-  addBookFromChat: async (e: string) => void added.push(e),
-  keepClaimFromChat: async () => {
-    throw new Error("down");
-  },
-}));
-const { registry, handlers } = await import("./registry");
+vi.mock("./actions", () => ({ addBookFromChat: async () => {}, keepClaimFromChat: async () => {} }));
+const { registry } = await import("./registry");
 
 describe("chat cards render", () => {
-  it("renders library and claim cards from a spec, with the buttons until done and the note after", () => {
+  it("renders library and claim cards from a spec, with Add only for books not yet on the shelves", () => {
     const spec = buildSpec([
-      { kind: "library", label: "x", kept: new Set(), books: [{ work: "OL1W", title: "Wiring", authors: ["A. Writer"], subjects: [], contents: [], lcc: ["TK-1"] }] },
+      { kind: "library", label: "x", kept: new Set(["OL2W"]), books: [
+        { work: "OL1W", title: "Wiring", authors: ["A. Writer"], subjects: [], contents: [], lcc: ["TK-1"] },
+        { work: "OL2W", title: "Kept", authors: [], subjects: [], contents: [] },
+      ] },
       { kind: "propose_claim", text: "Virtue is a mean", stance: "belief", holders: [{ name: "Aristotle" }] },
     ])!;
-    const html = (state: Record<string, unknown>) =>
-      renderToStaticMarkup(
-        <JSONUIProvider registry={registry} store={createStateStore(state)}>
-          <Renderer spec={spec} registry={registry} />
-        </JSONUIProvider>,
-      );
-    const before = html(spec.state ?? {});
-    expect(before).toContain("Wiring");
-    expect(before).toContain("T Technology");
-    expect(before).toContain("ADD TO SHELVES");
-    expect(before).toContain("ACCEPT");
-    const after = html({ done: { e0: true, e1: true }, failed: {} });
-    expect(after).toContain("on your shelves");
-    expect(after).toContain("Kept in Learn.");
-    expect(after).not.toContain("ACCEPT<");
-  });
-
-  it("a tap runs the server action and marks its card done, or failed when the action throws", async () => {
-    let state: Record<string, unknown> = { done: {}, failed: {} };
-    const acts = handlers(() => (f) => (state = f(state)), () => state);
-    await acts.add_book!({ key: "e0", entry: '{"work":"OL1W","title":"Wiring"}' });
-    await acts.keep_claim!({ key: "e1", claim: "{}" });
-    expect(added).toEqual(['{"work":"OL1W","title":"Wiring"}']);
-    expect(state).toEqual({ done: { e0: true }, failed: { e1: true } });
+    const html = renderToStaticMarkup(
+      <JSONUIProvider registry={registry}>
+        <Renderer spec={spec} registry={registry} />
+      </JSONUIProvider>,
+    );
+    expect(html).toContain("Wiring");
+    expect(html).toContain("T Technology");
+    expect(html.match(/ADD TO SHELVES/g)).toHaveLength(1);
+    expect(html).toContain("on your shelves");
+    expect(html).toContain("ACCEPT");
+    expect(html).toContain("held by Aristotle");
   });
 });

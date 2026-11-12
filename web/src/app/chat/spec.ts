@@ -41,24 +41,20 @@ export function buildSpec(pieces: readonly Piece[]): Spec | null {
     } else if (p.kind === "library") {
       if (!p.books.length) note(`The open library has nothing for ${p.label}.`);
       for (const b of p.books) {
-        const key = `e${n}`;
         add({
           type: "LibraryBook",
-          props: { title: b.title, by: b.authors.join(", ") || "unknown author", shelf: shelfName(b.lcc), onShelves: p.kept.has(b.work), done: { $state: `/done/${key}` }, failed: { $state: `/failed/${key}` } },
-          on: { press: { action: "add_book", params: { key, entry: JSON.stringify(b) } } },
+          props: { title: b.title, by: b.authors.join(", ") || "unknown author", shelf: shelfName(b.lcc), onShelves: p.kept.has(b.work), entry: JSON.stringify(b) },
         });
       }
     } else {
-      const key = `e${n}`;
       const claim = { text: p.text, holders: p.holders, stance: p.stance, ...(p.subject ? { subject: p.subject } : {}) };
       add({
         type: "ProposeClaim",
-        props: { text: p.text, stance: p.stance, holders: holderText(p.holders), subject: p.subject ?? null, done: { $state: `/done/${key}` }, failed: { $state: `/failed/${key}` } },
-        on: { press: { action: "keep_claim", params: { key, claim: JSON.stringify(claim) } } },
+        props: { text: p.text, stance: p.stance, holders: holderText(p.holders), subject: p.subject ?? null, claim: JSON.stringify(claim) },
       });
     }
   }
   if (!root.length) return null;
   elements.root = { type: "Stack", props: {}, children: root };
-  return { root: "root", elements, state: { done: {}, failed: {} } };
+  return { root: "root", elements };
 }

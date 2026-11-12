@@ -13,6 +13,9 @@
     "bundle": "tsx scripts/person-bundle.ts"
   },
   "dependencies": {
+    "@ai-sdk/gateway": "^3.0.235",
+    "@ai-sdk/openai-compatible": "^2.0.93",
+    "@ai-sdk/react": "^3.0.333",
     "@better-auth/mcp": "1.7.18",
     "@better-auth/oauth-provider": "1.7.18",
     "@json-render/core": "0.21.3",
@@ -20,6 +23,7 @@
     "@modelcontextprotocol/server": "2.4.0",
     "@neondatabase/serverless": "1.2.0",
     "@vercel/oidc": "4.0.4",
+    "ai": "^6.0.330",
     "better-auth": "1.7.18",
     "fflate": "0.8.2",
     "next": "16.4.5",
