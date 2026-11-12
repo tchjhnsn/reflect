@@ -208,6 +208,19 @@ Beliefs, telos and plans fall under reasoning.
 - Examine: does it serve the telos, would you keep it, is it on track for income's target, what would you need to learn (hands off to Learn).
 - Household work is a set of tasks, each provided the way needs are: by a member (unpaid), bought (a babysitter, daycare, a school) or given (family, church, charity). A make-or-buy comparison weighs a member's hours against the cost of buying the task (economists value household production by replacement or opportunity cost). The concept is set here; the detail (childcare, schooling choices) is designed in the household and raise-children subdomains.
 
+### Learn
+
+**Decided.** Origins matter most here. Knowing why you learned what you know shows many people that most of it came from compulsion, not from nature or reasoning, while the desire to know is still there. Unlocking the desire to know by nature, and knowing what one desires to know, is the aim.
+
+**Decided.** Credentials are a gate between Learn and Work: someone who wants to be an electrician needs an electrician's license, and planning shows the credentials a goal requires. Across domains, the professions and what they require are modeled from a standard, so that when someone says what they want to be or do, Reflect helps build a plan from what is possible and required.
+
+**Proposed.**
+- Standards to model from: O*NET and the Standard Occupational Classification (United States Department of Labor; education, training and experience per occupation), CareerOneStop's License Finder and Certification Finder (licenses by state; licensing often differs by state and locality), the Bureau of Labor Statistics Occupational Outlook Handbook ("how to become one"), Credential Engine's registry (Credential Transparency Description Language), and ESCO (the European occupations and skills classification, which the vault's subject notes already reference).
+- Observed: subject grasp (teach, explain, gist, forgot), books, films, talks and conversations (stated, in the vault today); transcripts, LinkedIn, certifications, Open Library (connected).
+- Telos: learning needed for something else, and learning aspired to for its own sake (Aristotle, *Metaphysics* I.1).
+- States: each subject unrated, gist, explain, teach, or forgot; each input want, reading, read, abandoned. Learn precedes first work and continues for life.
+- Examine: do you grasp it (name the key subjects without looking); does it serve what it is needed for.
+
 ## Plans in phases
 
 **Decided.** A plan has phases, and the person chooses how detailed each phase is, because some people want detailed plans and others do not.
