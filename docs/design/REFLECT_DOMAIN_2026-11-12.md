@@ -262,6 +262,18 @@ Beliefs, telos and plans fall under reasoning.
 - Examine: a date that fell short goes back to Observe (why, and is it the same reason as before); are the criteria the person's own; are they prepared for the household they want.
 - Plan: ways to meet people (church, introductions, events, groups, apps), how often, steps on the calendar; household planning opens early.
 
+### Pair bond
+
+**Decided.** A couple has a joint vault: a shared space for what is truly joint (the household plan, their agreements, the jointly intended household). Each person keeps their own private vault and journal beside it.
+
+**Proposed.**
+- Observed (stated): stage (committed, engaged, married), shared ideals, agreements, time together. Connected: a shared calendar, joint accounts. The intended household moves from each person's vault into the joint vault.
+- Telos: a lasting marriage building the jointly intended household.
+- Origins, enumerated: nature (the union), reasoning (the vow), appetite (companionship, sex, children), habit (routines together), compulsion (in-laws, obligations), chance (illness, job loss, a move).
+- States: committed, engaged, married; a child opens raise children; if the bond ends, back to seek a mate.
+- Examine, ongoing: a check-in rhythm and counsel. Premarital and marriage inventories (SYMBIS, Prepare/Enrich) go to the later study of existing tools.
+- Plan: the wedding stays minimal, perhaps only a needs list (later through the needs-request pipeline); the real plan is the household.
+
 ## Plans in phases
 
 **Decided.** A plan has phases, and the person chooses how detailed each phase is, because some people want detailed plans and others do not.
