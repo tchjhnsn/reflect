@@ -286,6 +286,18 @@ Beliefs, telos and plans fall under reasoning.
 - Examine, ongoing: is this working for this child; are these the parents' own reasons or habit.
 - Plan: make-or-buy. Childcare (parent at home, babysitter, daycare, family) and schooling (homeschool, public, charter, private), each weighed by cost, income given up (computed by income) and the parents' ideals. Costs from the USDA's cost of raising a child, feeding the intended household.
 
+### Care for kin
+
+**Decided.** Reflect records kin the person may care for one day (their age, health, what they would want) before any need starts, so the plan is made ahead and not in a crisis.
+
+**Proposed.**
+- Observed: who may need care (aging parents, a disabled sibling) and what they need; who provides it (the person, someone paid, someone who gives it); the time and money it takes, which work and income already count.
+- Telos: honor and provide for those who raised you and kin who cannot provide for themselves.
+- Origins, enumerated: nature (kinship), reasoning (duty, honor your father and mother), appetite (love for them), habit (how the family handled it before), compulsion (filial responsibility laws in some states, guardianship), chance (a fall, a diagnosis, a death).
+- States: independent, needs some help, needs regular care, in full care, died. Death opens legacy and estate questions.
+- Examine: is the care right for them and sustainable for the person's household.
+- Plan: make-or-buy (care at home, in-home help, assisted living, nursing home), weighed by cost, income given up and what the person holds.
+
 ## Plans in phases
 
 **Decided.** A plan has phases, and the person chooses how detailed each phase is, because some people want detailed plans and others do not.
