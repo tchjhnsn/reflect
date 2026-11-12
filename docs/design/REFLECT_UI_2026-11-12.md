@@ -44,3 +44,7 @@ The apps follow Aristotle's three kinds of goods: of the body (Body, Home), exte
 - A proposal renders as a card with Accept, the one tap that lets it change anything. Nothing the AI guesses is saved without that tap; facts about the person are never inferred.
 - The conversation is kept in the journal; only accepted proposals become items.
 - A card can open its app ("open in Learn"), so the work itself stays in the tiles.
+
+## 6. Learn catalogs what a person knows
+
+**Decided (07:04Z).** Learn does not start with proving that something was learned. It is a tool for a person to categorize and catalog what they know, what they believe and what they want to learn, among other things. The wording is not settled; Torian was describing the idea, not naming it.
