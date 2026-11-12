@@ -121,20 +121,20 @@ stateDiagram-v2
   Planned --> Scheduled
   Scheduled --> InProgress : act begins
   InProgress --> Done
-  InProgress --> FellShort
-  FellShort --> Observed : observe why, go round again
+  InProgress --> Missed
+  Missed --> Observed : observe why, go round again
   InProgress --> Examining : examined while acting
   Done --> Examining : examined again
   Done --> [*]
 ```
 
-**Decided (11-12).** The outcomes of Reflect and Examine and the statuses of Act below hold. The name "fell short" is a placeholder to be renamed.
+**Decided (11-12).** The outcomes of Reflect and Examine and the statuses of Act below hold. The status for an attempt that did not get its result is named **missed** (renamed from "fell short").
 
-Scheduled, in progress, done and fell short are the statuses of Act. Only done leaves the cycle; fell short always goes back to Observe.
+Scheduled, in progress, done and missed are the statuses of Act. Only done leaves the cycle; missed always goes back to Observe.
 
 - **Unstated** is a hole, not a record: a question the domain expects answered that has no answer yet.
 - Reflect's outcomes: held, revised, unsure, dropped. A dropped item leaves the pipeline and stays in the record.
-- Act's statuses: scheduled, in progress, done, fell short.
+- Act's statuses: scheduled, in progress, done, missed.
 - Items nest domain, then area, then item. A level's status is the count of its items in each phase, computed, never set by hand.
 - Whether Examine may be skipped (Reflected straight to Planned) is open.
 
@@ -265,7 +265,7 @@ Beliefs, telos and plans fall under reasoning.
 - Telos: a pair bond toward the intended household.
 - Origins, enumerated: nature (the union Aristotle names first in *Politics* I.2), reasoning ("I want to marry and start a family"), appetite (sex, children, companionship), habit (a pattern in who one dates), compulsion (family pressure), chance (meeting someone).
 - States: the chart's loop (seek a mate, pair bond, back if the bond ends); the person says when it is a pair bond.
-- Examine: a date that fell short goes back to Observe (why, and is it the same reason as before); are the criteria the person's own; are they prepared for the household they want.
+- Examine: a date that missed goes back to Observe (why, and is it the same reason as before); are the criteria the person's own; are they prepared for the household they want.
 - Plan: ways to meet people (church, introductions, events, groups, apps), how often, steps on the calendar; household planning opens early.
 
 ### Pair bond
@@ -404,5 +404,4 @@ Origins are where an item comes from (the efficient cause); serves is what it is
 
 ## Open questions
 
-1. A better name for Act's "fell short" status.
-2. For each domain beyond finance: what is stated, what is connected, and its default telos (first passes are in each subdomain section).
+1. For each domain beyond finance: what is stated, what is connected, and its default telos (first passes are in each subdomain section).
