@@ -123,6 +123,8 @@ stateDiagram-v2
   InProgress --> Done
   InProgress --> FellShort
   FellShort --> Observed : observe why, go round again
+  InProgress --> Examining : examined while acting
+  Done --> Examining : examined again
   Done --> [*]
 ```
 
@@ -334,6 +336,22 @@ Beliefs, telos and plans fall under reasoning.
 - States: resident, citizen, voting, serving, holding office.
 - Examine: do my civic beliefs hold up; am I doing my part or only consuming.
 - Plan: register and vote, prepare for each election, serve where called.
+
+### Death and legacy
+
+**Decided.** The person names in advance what happens to each of their vaults at death: handed to named people (children, the executor) or sealed. Shared vaults (joint, household, village) pass to the members who remain.
+
+**Proposed.**
+- Observed: will and estate, beneficiaries, life insurance, guardians for children, end-of-life and burial wishes, power of attorney; what the person hopes to leave (to children, to the village, in their work).
+- Telos: leave the household provided for and pass on what was built, goods and wisdom.
+- Origins, enumerated: nature (care for those after), reasoning (my children cared for if I die), appetite (to be remembered), habit (how the family passed things on), compulsion (probate and estate law), chance (sudden death, so it is planned early).
+- States: unplanned, planned, kept current, settled (after death, by the executor).
+- Examine: does the plan still match the household; revisit at each life event (marriage, a child, a move, a death).
+- Plan: will, insurance sized against income and the intended household, guardians, wishes written.
+
+## Shared spaces
+
+**Decided.** Spaces, each a vault: the person's private vault; a couple's joint vault (the marriage only); the household vault (the home, budget, intended household); a village space that households join. A child's records sit with the parents until the threshold, then move to the child's own vault. At death each private vault goes where the person named; shared vaults pass to remaining members.
 
 ## Plans in phases
 
