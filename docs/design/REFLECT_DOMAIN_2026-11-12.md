@@ -96,6 +96,8 @@ stateDiagram-v2
 
 **Decided.** A state machine follows every nested item across all domains and shows where it sits: not yet stated (so nothing observed), observed but not reflected on, under examination, planned, or in action, and the status of the action.
 
+**Decided.** Examination is ongoing. It does not end once an item is planned or acted on: a relationship keeps being examined while moving toward marriage, after marriage, and after children and settling down.
+
 **Decided.** Examine can send an item back. That does not mean the person comes away believing something different. Examination may reinforce a belief, ground it in something more fundamental, leave it unchanged, or change only how it is communicated or structured.
 
 ### The cycle moves through life stages
@@ -153,6 +155,8 @@ Outcomes, on two axes that change independently:
 | | appetite |
 
 Beliefs, telos and plans fall under reasoning.
+
+**Decided.** Each subdomain enumerates its own origins under each of the seven categories. Appetite, for example, is several appetites: in seeking a mate, "I desire sex", "I desire children", "I desire companionship".
 
 **Decided.** The Number Theory of the Soul maps onto these origins; Reflect never depends on it. The mapping and Torian's ruling (sensors feed drivers and regulators and can override regulators; regulators are trained over development) are filed with NTS (tchjhnsn/NTS#3).
 
@@ -245,6 +249,18 @@ Beliefs, telos and plans fall under reasoning.
 - Standing: Aristotle's measure is honor earned and deserved, not sought for itself.
 - States: the chart's loop (affiliate, gain status, lose rank); each friendship acquaintance, friend, close friend, drifted; each group visiting, member, serving, leading, left.
 - Examine: do groups and roles serve the telos or only fill time.
+
+### Seek a mate
+
+**Decided.** Reflect records the person's own side: their dates, what happened, what they learned. It stays private. It is the person's own journal and inputs, part of their own life, so how much of another person's information they put in is up to them.
+
+**Proposed.**
+- Observed (stated): what the person is looking for (must-haves, dealbreakers, hopes); ideals about marriage and household (their own, those they hope a partner holds, those held generally); the intended household (which income reads); each date and how it went. Read from earlier subdomains, not asked again: income capacity for the intended household, health, fitness, work; shown as where the person stands, never a score.
+- Telos: a pair bond toward the intended household.
+- Origins, enumerated: nature (the union Aristotle names first in *Politics* I.2), reasoning ("I want to marry and start a family"), appetite (sex, children, companionship), habit (a pattern in who one dates), compulsion (family pressure), chance (meeting someone).
+- States: the chart's loop (seek a mate, pair bond, back if the bond ends); the person says when it is a pair bond.
+- Examine: a date that fell short goes back to Observe (why, and is it the same reason as before); are the criteria the person's own; are they prepared for the household they want.
+- Plan: ways to meet people (church, introductions, events, groups, apps), how often, steps on the calendar; household planning opens early.
 
 ## Plans in phases
 
