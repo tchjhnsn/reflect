@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import type { Entry } from "@reflect/core/journal";
+import { LocalTime } from "@/components/local-time";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +11,6 @@ import { closeEntryAction } from "./actions";
 import { Write } from "./write";
 
 const day = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
-const time = (iso: string) => new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 
 /** One entry: its parts in order, and while open, a way to add to it or close it. */
 export function EntryCard({ entry }: { entry: Entry }) {
@@ -27,7 +28,7 @@ export function EntryCard({ entry }: { entry: Entry }) {
       <CardContent className="space-y-3 px-5">
         {entry.parts.map((p) => (
           <div key={p.seq} className="space-y-1">
-            <p className="text-muted-foreground text-xs">{time(p.createdAt)}</p>
+            <p className="text-muted-foreground text-xs"><LocalTime iso={p.createdAt} only="time" /></p>
             <p className="text-sm leading-relaxed whitespace-pre-wrap">{p.text}</p>
           </div>
         ))}
@@ -38,9 +39,12 @@ export function EntryCard({ entry }: { entry: Entry }) {
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={() => setAdding(true)}>Add to it</Button>
               <Button size="sm" variant="ghost" disabled={pending} onClick={() => start(async () => void (await closeEntryAction(entry.id)))}>Close entry</Button>
+              <Button asChild size="sm" variant="ghost"><Link href={`/journal/items/new?entry=${entry.id}`}>Reflect on this</Link></Button>
             </div>
           )
-        ) : null}
+        ) : (
+          <Button asChild size="sm" variant="outline"><Link href={`/journal/items/new?entry=${entry.id}`}>Reflect on this</Link></Button>
+        )}
       </CardContent>
     </Card>
   );

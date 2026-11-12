@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { BookOpenIcon, BookmarkIcon, CheckIcon, CircleSlashIcon, MessageSquareQuoteIcon, PlusIcon, RefreshCwIcon, SparklesIcon } from "lucide-react";
 import { actText, logByDay, type Act, type ActKind } from "@reflect/core/log";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +32,7 @@ export function LogDays({ acts }: { acts: Act[] }) {
                     <Icon className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                     <span className="flex-1">{actText(a)}</span>
                     <span className="text-muted-foreground shrink-0 text-xs">{time(a) || "Learn"}</span>
+                    <Link href={`/journal/items/new?act=${encodeURIComponent(JSON.stringify(a))}`} className="text-muted-foreground hover:text-foreground shrink-0 text-xs underline-offset-2 hover:underline">Reflect</Link>
                   </li>
                 );
               })}
