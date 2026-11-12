@@ -174,6 +174,29 @@ Beliefs, telos and plans fall under reasoning.
 
 **Decided (from the earlier dating discussion).** Work is weighed two ways: how much it serves the person's telos (by degree, along a scale), and whether it is only for self-subsistence (whether they would keep doing it if their needs were met another way). Work can be both.
 
+## Subdomains, one at a time
+
+**Decided.** The domain design proceeds domain by domain, subdomain by subdomain. Income comes first, because what comes with entering independence of mind and body comes before seeking a mate.
+
+**Proposed.** Each subdomain answers the same six questions: what is observed (stated or connected); its default telos; typical items and their origins; its states and gates; what Examine looks like there; the shape of its plans and of running them.
+
+### Income
+
+**Decided.** The state observed is the person's movement toward self-sufficiency and then toward others being able to depend on them: where they are now against that state. Once self-sufficient, they prepare for how many people they want depending on them (for example, a wife who does not have to work and many children): can they sustain that now, and what must be done so they can.
+
+**Decided.** The intended household (spouse working or not, how many children) is stated in the line and household domains; income reads it to set its target.
+
+**Decided.** Donations count. Young families often have many things donated, so not everything has to be provided directly by income.
+
+**Decided, later.** A pipeline for requesting things a family needs and cannot provide at a phase of life (furniture, a month's supply of diapers for a new family), filled through church and charity partnerships, something like a marketplace for needs. Torian wants this visible; it is back-burnered for now.
+
+**Proposed.**
+- Capacity is the largest household the person's income sustains where they live, priced with MIT's household configurations (adults, working adults, children; MIT stops at three children, so larger families need an extension). The target is the intended household. The gap drives Plan.
+- What donations cover lowers what income must cover: each need records its providers, and gifts from community, church or charity join the existing providers (self, market, nature, polis, kin).
+- Observed: income sources, amounts and regularity (stated), or deposits, pay stubs and tax forms (connected).
+- Examine: on track for the intended household by when it is needed; how fragile the income is (sources, runway).
+- Plan: intent, milestones (graduate, first full-time job, self-sufficient, sustains the intended household), steps. Run: income observed monthly against the trajectory, with the fell-short loop.
+
 ## Plans in phases
 
 **Decided.** A plan has phases, and the person chooses how detailed each phase is, because some people want detailed plans and others do not.
