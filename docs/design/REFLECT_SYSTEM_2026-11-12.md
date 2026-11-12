@@ -29,9 +29,18 @@ Order, by what depends on what: (1) where records live, (2) record layout, (3) t
 
 ## 3. The state machine
 
+**Decided.** The catalog of expected questions per subdomain ships as defaults the person can add to and hide. Hidden questions are kept, not deleted.
+
 **Proposed.**
 - An item's state is a fold over its events, checked against the item statechart in the domain design. An event that makes a move the statechart does not allow is refused with the reason.
 - State events: stated, reflected (held, revised, unsure, dropped), put under examination, examined (what is believed x how it stands), planned, scheduled, started, done, missed, examined again.
-- Unstated items are computed, never stored: a catalog of expected questions per subdomain, minus the ones answered.
+- Unstated items are computed, never stored: the catalog of expected questions per subdomain, minus the ones answered and the ones hidden.
 - A domain's or subdomain's status is computed: the count of its items in each state.
 - Life stages: the person's move into a stage is an event (Reflect's existing `passages.jsonl`). Each gate's evidence is computed from items (income against the livable wage). Soft gates only order what is shown; hard gates are consent events (a partner joins the joint vault, a household admits a member, parents hand over a child's records).
+
+## 4. Standards and connections
+
+**Proposed.**
+- A standard is a cited reference dataset with a source, a version date and a license: the livable wage, USDA food plans and cost of raising a child, HUD's 30% housing rule, Ready.gov water, CDC milestones, O*NET/SOC and CareerOneStop credentials, BLS occupational data. A computation names the standard version it used, so a past result can be replayed.
+- Licensing differs. Federal data (USDA, HUD, CDC, BLS) is public domain; O*NET is CC BY 4.0 (credit required). The MIT Living Wage Calculator is now produced by the Living Wage Institute, all rights reserved: use from the site is allowed for up to 10 locations with attribution, and anything more needs a license request; scraping is forbidden (livingwage.mit.edu FAQ).
+- A connection (bank, payroll, calendar, later health records) adds observation events with source `connected:<id>`. It is read-only, the person approves each one, and credentials never enter a vault.
