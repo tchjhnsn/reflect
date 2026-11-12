@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 /** The header on app pages: an eyebrow on the left; home, the journal, what you know, your ideas, and your initial on the right. */
-export function Nav({ current, eyebrow, initial }: { current: "journal" | "learn" | "ideas" | "me"; eyebrow: string; initial: string }) {
+export function Nav({ current, eyebrow, initial }: { current: "journal" | "learn" | "ideas" | "me" | "chat"; eyebrow: string; initial: string }) {
   return (
     <nav className="top" aria-label="Main">
       <span className="eyebrow">{eyebrow}</span>

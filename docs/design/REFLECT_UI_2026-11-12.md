@@ -45,6 +45,8 @@ The apps follow Aristotle's three kinds of goods: of the body (Body, Home), exte
 - The conversation is kept in the journal; only accepted proposals become items.
 - A card can open its app ("open in Learn"), so the work itself stays in the tiles.
 
+**Built (Learn only).** The model does not render specs itself. It replies with a few words and a short plan naming what to show (shelves, claims, a library search, a library class, or a claim to propose). Reflect fetches each item from Learn and Open Library and builds the json-render spec from those records, so a card can only show what the app holds, and the model never sees more of the person than titles and names. Library books carry Add to my shelves; a proposed claim carries Accept. The person's own stance is the stance; they are never listed as a holder. Not built: the conversation is not saved to the journal, cards do not open their app, and only Learn answers.
+
 ## 6. Learn catalogs what a person knows
 
 **Decided (07:04Z).** Learn does not start with proving that something was learned. It is a tool for a person to categorize and catalog what they know, what they believe and what they want to learn, among other things. The wording is not settled; Torian was describing the idea, not naming it.
@@ -70,7 +72,8 @@ The apps follow Aristotle's three kinds of goods: of the body (Body, Home), exte
 
 ## 8. Built so far
 
-- `/`: the home screen, MINE with 18 tiles and tones from the person's records; Learn, Journal, Ideas and Legacy link to their pages. OURS and the chat are not built.
+- `/`: the home screen, MINE with 18 tiles and tones from the person's records; Learn, Journal, Ideas and Legacy link to their pages; the plus button opens the chat. OURS is not built.
 - `/learn`: shelves by Library of Congress class.
 - `/learn` claims: belief, disbelief or suspension of judgment, holders cited, stances kept (needs migration 0012).
 - `/learn/browse`: the library from Open Library, by search or class, with add to shelves.
+- `/chat`: the plus button's chat over Learn (section 5). Not saved to the journal yet.

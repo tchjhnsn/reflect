@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BOOK_STATUS, FILM_KINDS, FILM_STATUS, GRASP, RESOURCE_KINDS } from "@reflect/core/learning";
 import { SWEEP_PROMPT } from "@reflect/core/sweep";
-import { shelve } from "@reflect/core/shelves";
 import { STANCES } from "@reflect/core/claims";
 import { listClaims, type ClaimOut } from "@/server/claims-store";
 import { inputTitle, listInputs } from "@/server/ideas-store";
 import { requireUser } from "@/server/session";
 import { currentName } from "@/server/person-store";
 import { learnView } from "@/server/learn-store";
+import { shelvesOf } from "@/server/learn-shelves";
 import { initialOf, Nav } from "../nav";
 import { keepClaimAction, setStanceAction, addBookAction, addCredentialAction, addInputAction, rateCoursesAction, sweepAction, uploadLinkedInAction, uploadTranscriptAction } from "./actions";
 import { listCourses, listCredentials, recommendations } from "@/server/learn-sources-store";
@@ -31,13 +31,7 @@ export default async function LearnPage({ searchParams }: { searchParams: Promis
       <p className="sec-note">What you take in: books, films, talks, conversations, links and the subjects you study. Nothing here is known until you say how well you grasp it. Your own ideas are outputs and live in <Link href="/ideas">Ideas</Link>.</p>
 
       {(() => {
-        const seen = new Map<string, { id: string; name: string }>();
-        for (const s of [...v.known, ...v.shown, ...v.vouched, ...v.suggested, ...v.books.flatMap((b) => b.subjects)]) seen.set(s.id, { id: s.id, name: s.name });
-        const shelved = shelve(
-          v.books.map((b) => ({ id: b.id, title: b.title, subjects: b.subjects.map((x) => x.id), ...(b.catalog?.lcc ? { lcc: b.catalog.lcc } : {}) })),
-          [...seen.values()].sort((a, b) => a.name.localeCompare(b.name)),
-          browseAll,
-        );
+        const shelved = shelvesOf(v, browseAll);
         return (
           <section className="sec" aria-labelledby="h-shelves">
             <div className="sec-head"><h2 id="h-shelves" className="lbl">Shelves</h2></div>

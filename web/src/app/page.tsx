@@ -31,7 +31,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
     <main className={`home ${mono.className}`}>
       <div className="home-bar" aria-hidden="true" />
       <header className="home-top">
-        <Link href="/journal" className="home-icon" aria-label="Write in your journal (the chat is not built yet)">
+        <Link href="/chat" className="home-icon" aria-label="Ask Reflect">
           <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><path d="M11 2v18M2 11h18" stroke="currentColor" strokeWidth="2" fill="none" /></svg>
         </Link>
         <nav className="home-toggle" aria-label="Whose">

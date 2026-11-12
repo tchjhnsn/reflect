@@ -85,3 +85,27 @@ export async function readCatalogEntry(root: string, book: string): Promise<Cata
   const t = await readRecord(root, join(BOOKS, `${slugOf(book)}.openlibrary.json`));
   return t ? (JSON.parse(t) as CatalogEntry) : null;
 }
+
+/**
+ * A catalog entry that came back from a browser (a hidden form field, a chat card), cut to the fields and
+ * sizes Reflect keeps. Returns null when it has no work id or title. Contents are never taken from a client.
+ */
+export function cleanEntry(raw: unknown): CatalogEntry | null {
+  const e = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const strs = (v: unknown, n: number, max: number) => (Array.isArray(v) ? v.filter((x) => typeof x === "string" || typeof x === "number").map((x) => String(x).slice(0, max)).slice(0, n) : []);
+  const work = typeof e.work === "string" ? e.work.trim().slice(0, 40) : "";
+  const title = typeof e.title === "string" ? e.title.trim().slice(0, 300) : "";
+  if (!work || !title) return null;
+  const year = Number(e.year);
+  const lcc = strs(e.lcc, 20, 60);
+  return {
+    work,
+    title,
+    authors: strs(e.authors, 10, 200),
+    ...(Number.isInteger(year) && year > 0 ? { year } : {}),
+    ...(typeof e.isbn === "string" && e.isbn.trim() ? { isbn: e.isbn.trim().slice(0, 20) } : {}),
+    subjects: strs(e.subjects, 15, 200),
+    contents: [],
+    ...(lcc.length ? { lcc } : {}),
+  };
+}

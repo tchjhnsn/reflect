@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { browseClass, searchBooks, type Fetch } from "./openlibrary.ts";
+import { browseClass, cleanEntry, searchBooks, type Fetch } from "./openlibrary.ts";
 
 const fake = (docs: unknown[], seen: string[]): Fetch => async (url) => {
   seen.push(url);
@@ -21,5 +21,11 @@ describe("open library", () => {
     expect(seen[0]).toContain("sort=rating");
     expect(seen[0]).toContain("page=2");
     await expect(browseClass("TK", fake([], []))).rejects.toThrow();
+  });
+
+  it("cleans an entry that came back from a browser, and refuses one with no work or title", () => {
+    expect(cleanEntry({ work: "OL1W", title: " Wiring ", authors: ["A", 3, {}], year: "1999", lcc: ["TK-1"], contents: ["x"], extra: true })).toEqual({ work: "OL1W", title: "Wiring", authors: ["A", "3"], year: 1999, subjects: [], contents: [], lcc: ["TK-1"] });
+    expect(cleanEntry({ title: "no work" })).toBeNull();
+    expect(cleanEntry("nonsense")).toBeNull();
   });
 });

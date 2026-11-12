@@ -9,5 +9,5 @@ export default defineConfig({
     },
   },
   server: { fs: { allow: [".."] } },
-  test: { include: ["src/**/*.test.ts", "../packages/core/src/**/*.test.ts", "../packages/cli/*.test.ts"] },
+  test: { include: ["src/**/*.test.ts", "src/**/*.test.tsx", "../packages/core/src/**/*.test.ts", "../packages/cli/*.test.ts"] },
 });

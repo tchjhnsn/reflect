@@ -28,3 +28,38 @@ export async function chatJson(system: string, text: string, gateway: string | n
   if (!res.ok) return null;
   return JSON.parse(((await res.json()) as { message?: { content?: string } }).message?.content ?? "");
 }
+
+export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
+
+/** Like chatJson, with a whole conversation. Returns null when no model is set up or it answers badly. */
+export async function chatJsonMessages(messages: readonly ChatMessage[], gateway: string | null): Promise<unknown | null> {
+  if (gateway) {
+    const res = await fetch("https://ai-gateway.vercel.sh/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${gateway}` },
+      body: JSON.stringify({ model: "openai/gpt-oss-120b", messages, temperature: 0, response_format: { type: "json_object" } }),
+      signal: AbortSignal.timeout(45_000),
+    });
+    if (!res.ok) return null;
+    const content = ((await res.json()) as { choices?: { message?: { content?: string } }[] }).choices?.[0]?.message?.content ?? "";
+    try {
+      return JSON.parse(content);
+    } catch {
+      return null;
+    }
+  }
+  const ollama = process.env.OLLAMA_API_KEY;
+  if (!ollama) return null;
+  const res = await fetch(`${process.env.OLLAMA_HOST ?? "https://ollama.com"}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${ollama}` },
+    body: JSON.stringify({ model: process.env.REFLECT_READER_MODEL ?? "gpt-oss:120b", stream: false, think: false, format: "json", options: { temperature: 0 }, messages }),
+    signal: AbortSignal.timeout(45_000),
+  });
+  if (!res.ok) return null;
+  try {
+    return JSON.parse(((await res.json()) as { message?: { content?: string } }).message?.content ?? "");
+  } catch {
+    return null;
+  }
+}

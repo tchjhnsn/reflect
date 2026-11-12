@@ -320,3 +320,19 @@ a.home-tile:hover .home-label, a.home-tile:focus-visible .home-label { text-deco
 .home-foot i { width: 12px; height: 12px; display: inline-block; }
 .home-foot a { color: #555555; text-decoration: none; }
 @media (max-width: 900px) { .home-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 24px 16px 0; gap: 36px 12px; } .home-label { font-size: 13px; } }
+
+/* The plus button's chat: the person's words right, Reflect's left, cards from the apps under an answer. */
+.chat { display: flex; flex-direction: column; gap: 16px; min-height: 60vh; }
+.chat-log { display: flex; flex-direction: column; gap: 14px; flex: 1; }
+.chat-empty { margin-top: 24px; }
+.chat-msg p { margin: 0; line-height: 1.5; }
+.chat-user { align-self: flex-end; max-width: 85%; background: var(--ink); color: var(--paper); padding: 10px 14px; border-radius: 16px 16px 4px 16px; }
+.chat-assistant { align-self: stretch; }
+.chat-stack { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.chat-card { border: 1px solid var(--ink); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.chat-card p { font-size: 14px; }
+.chat-card-head { display: flex; justify-content: space-between; font: 500 11px var(--sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--soft); }
+.chat-card .primary, .chat-row .primary { align-self: flex-start; padding: 6px 14px; font-size: 13px; }
+.chat-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-top: 1px solid var(--rule); padding: 10px 0; }
+.chat-form { display: flex; gap: 8px; position: sticky; bottom: 0; background: var(--paper); padding: 12px 0; }
+.chat-form input { flex: 1; font: 400 17px var(--sans); color: var(--ink); background: transparent; border: 0; border-bottom: 1px solid var(--ink); padding: 8px 0; outline: none; min-width: 0; }
