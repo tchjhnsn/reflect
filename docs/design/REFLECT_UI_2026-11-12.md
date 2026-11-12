@@ -51,4 +51,11 @@ The apps follow Aristotle's three kinds of goods: of the body (Body, Home), exte
 
 **Decided (07:08Z).** Learn keeps two kinds of entry, linked: subjects (electrical wiring, the book of Romans) and claims (marriage is a covenant). A subject can hold the claims the person holds about it. A claim names who holds it, with a citation, as items do.
 
-**Proposed.** Each entry carries the person's relation to it, in place of proof: for a subject, want to learn, learning, know; for a claim, hold, unsure, reject. Sources (videos, books, courses, talks) attach to entries and stay in the library as suggested, shown or known. Aristotle's division of knowing (why a thing is so), skill (how to make or do) and opinion (held without proof) is offered as an optional way to sort subjects.
+**Decided (07:11Z).** Rejection is included, and Learn uses established terms, not coined ones.
+
+**Proposed: the standards.**
+- Claims take the three doxastic attitudes of epistemology: belief, disbelief and suspension of judgment (Stanford Encyclopedia of Philosophy, "Belief"; Friedman, "Suspended Judgment", 2013). A claim is stored in the shape of schema.org `Claim`.
+- What a person does with a subject is recorded with Experience API (xAPI) verbs from the ADL vocabulary, such as registered, experienced, progressed, completed and mastered. A subject's state is read from its latest verb; there is no separate status field.
+- Kinds of knowing, offered for sorting and never required: Ryle's knowing that and knowing how, and Aristotle's episteme (knowing why), techne (skill), phronesis (practical wisdom) and doxa (opinion).
+- Sources are typed as schema.org creative works (`Book`, `VideoObject`, `Course`) and cited in CSL, the citation format reference managers use.
+- Each term goes through the term engine before it is used in code.
