@@ -230,6 +230,12 @@ Beliefs, telos and plans fall under reasoning.
 - Defaults per need: food, USDA food plans (thrifty to liberal) and a stocked pantry; water, Ready.gov's gallon per person per day, stored for several days to two weeks; shelter, HUD's housing cost under 30% of income, rent or own; health, coverage, a regular doctor, connections such as Apple Health; transport, reliable access to work and essentials and its cost; knowledge, see Learn; safety, physical safety at home and away, an emergency fund, preparedness (Ready.gov), the documents checklist.
 - Firearms under safety: ownership, training, safe storage (especially with children in the home), and carry permits, a credential gate like a license, set by state law.
 
+### Fitness
+
+**Decided.** Fitness is its own subdomain. Rest and sleep stay with health.
+
+**Proposed.** Observed: activity and measures the person chooses (stated), or Apple Health, Strava, a wearable (connected). Default telos: the Physical Activity Guidelines for Americans as a floor (150 minutes of moderate activity a week and muscle strengthening twice a week), beyond that the person's own goal. States: inactive, building, maintaining, training; each goal set, in progress, reached or lapsed. Examine: is the goal the person's own, is the routine on track. Plan: a training plan at the chosen depth, on the calendar.
+
 ## Plans in phases
 
 **Decided.** A plan has phases, and the person chooses how detailed each phase is, because some people want detailed plans and others do not.
