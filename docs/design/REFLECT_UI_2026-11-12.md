@@ -4,7 +4,7 @@ Status: started 2026-11-12, after the system design (`REFLECT_SYSTEM_2026-11-12.
 
 ## 1. Home screen
 
-**Decided.** The style follows a reference Torian chose: wordless objects on a quiet white canvas, a thin black bar, monospace labels. The design itself is original, and only the principles are taken from the reference.
+**Decided.** The style follows a reference Torian chose: wordless objects on a quiet white canvas, a thin black bar, monospace labels. The design itself is original, and only the principles are taken from the reference. **Superseded in part (08:51Z):** the look is now shadcn's (section 8); the wordless objects and the quiet canvas stay.
 - A grid of objects, one per area of life, each a solid glyph with a small label.
 - A MINE / OURS toggle at the top center switches between the private vault and the shared spaces.
 - An object's tone shows its state: black when something in it is in action, grey when it is only in thought, light grey when nothing is stated.
@@ -80,4 +80,4 @@ The apps follow Aristotle's three kinds of goods: of the body (Body, Home), exte
 - `/`: the home screen, MINE with 18 tiles and tones from the person's records; only Learn opens; the plus button opens the chat. The journal (folder), the other apps and OURS are not built in this design.
 - `/learn`, in the new design: MY SHELVES (Library of Congress shelves, books and subjects toned known, learning or registered, a book's side panel to set where you are with it), LIBRARY (Open Library by class or search, Add to shelves) and CLAIMS (belief, disbelief or suspension of judgment, holders cited, stances kept).
 - `/chat`: the plus button's chat over Learn (section 5). Not saved to the journal yet.
-- **Decided (08:48Z).** Torian prefers shadcn's look to the mono one for the chat. `/chat` is now built from Vercel's AI Elements on shadcn; the mono chat is archived. Home and Learn are still mono; whether they move to shadcn too is open.
+- **Decided (08:48Z).** Torian prefers shadcn's look to the mono one for the chat. `/chat` is now built from Vercel's AI Elements on shadcn; the mono chat is archived. At 08:51Z he chose the shadcn look for the whole app: home, Learn, sign-in and consent now use shadcn components on its neutral theme with Inter. The mono `.nd` look (IBM Plex Mono, square corners) is archived; the shapes, tones and layout of section 1 to 4 stand.

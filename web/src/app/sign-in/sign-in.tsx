@@ -3,6 +3,9 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 
 /** Where to go next when this sign-in was for a person's AI app, else null. */
 function oauthNext(data: unknown): string | null {
@@ -37,41 +40,38 @@ export function SignIn() {
   };
 
   return (
-    <main className="shell">
-      <form className="screen" onSubmit={submit}>
-        <p className="eyebrow">Reflect</p>
-        <h1 className="prompt">{mode === "sign-up" ? "Start your journal." : "Welcome back."}</h1>
-        <label className="note" htmlFor="email">
-          Email
-        </label>
-        <input id="email" className="field" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <label className="note" htmlFor="password">
-          Password
-        </label>
-        <input
-          id="password"
-          className="field"
-          type="password"
-          autoComplete={mode === "sign-up" ? "new-password" : "current-password"}
-          minLength={10}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-        {error ? (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        ) : null}
-        <div className="actions">
-          <button type="button" className="quiet" onClick={() => setMode(mode === "sign-up" ? "sign-in" : "sign-up")}>
-            {mode === "sign-up" ? "I have an account" : "Create an account"}
-          </button>
-          <button type="submit" className="primary" disabled={pending}>
-            {mode === "sign-up" ? "Create account" : "Sign in"}
-          </button>
-        </div>
-      </form>
+    <main className="flex min-h-screen items-center justify-center p-6">
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardDescription>Reflect</CardDescription>
+          <CardTitle className="text-xl">{mode === "sign-up" ? "Create your account" : "Welcome back"}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form className="space-y-4" onSubmit={submit}>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium" htmlFor="email">Email</label>
+              <Input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium" htmlFor="password">Password</label>
+              <Input
+                id="password"
+                type="password"
+                autoComplete={mode === "sign-up" ? "new-password" : "current-password"}
+                minLength={10}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            {error ? <p className="text-destructive text-sm" role="alert">{error}</p> : null}
+            <Button type="submit" className="w-full" disabled={pending}>{mode === "sign-up" ? "Create account" : "Sign in"}</Button>
+            <Button type="button" variant="ghost" className="w-full" onClick={() => setMode(mode === "sign-up" ? "sign-in" : "sign-up")}>
+              {mode === "sign-up" ? "I have an account" : "Create an account"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </main>
   );
 }

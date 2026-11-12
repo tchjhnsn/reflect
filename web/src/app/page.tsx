@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { mono } from "./fonts";
+import { FolderIcon, PlusIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Segmented } from "@/components/segmented";
+import { cn } from "@/lib/utils";
 import { requireUser } from "@/server/session";
 import { learnView } from "@/server/learn-store";
 import { GLYPHS, hrefOf, MINE, OURS, toneOf, type Facts, type Tone } from "./home-tiles";
@@ -8,7 +11,8 @@ import { GLYPHS, hrefOf, MINE, OURS, toneOf, type Facts, type Tone } from "./hom
 export const metadata: Metadata = { title: "Reflect" };
 export const dynamic = "force-dynamic";
 
-const FILL: Record<Tone, string> = { action: "var(--home-action)", thought: "var(--home-thought)", unstated: "var(--home-unstated)" };
+const FILL: Record<Tone, string> = { action: "fill-foreground", thought: "fill-neutral-400", unstated: "fill-neutral-200" };
+const DOT: Record<Tone, string> = { action: "bg-foreground", thought: "bg-neutral-400", unstated: "bg-neutral-200" };
 const SAY: Record<Tone, string> = { action: "in action", thought: "in thought", unstated: "unstated" };
 
 /** Home: your life as objects. MINE is the private vault; OURS, the shared spaces, is not built yet. */
@@ -19,46 +23,43 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const facts: Facts = { learn: { underway: learn.books.some((b) => b.status === "reading"), stated: learn.books.length > 0 || learn.known.length > 0 } };
   const tiles = ours ? OURS : MINE;
   return (
-    <main className={`home ${mono.className}`}>
-      <div className="home-bar" aria-hidden="true" />
-      <header className="home-top">
-        <Link href="/chat" className="home-icon" aria-label="Ask Reflect">
-          <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><path d="M11 2v18M2 11h18" stroke="currentColor" strokeWidth="2" fill="none" /></svg>
-        </Link>
-        <nav className="home-toggle" aria-label="Whose">
-          <Link href="/" aria-current={!ours ? "page" : undefined}>MINE</Link>
-          <Link href="/?view=ours" aria-current={ours ? "page" : undefined}>OURS</Link>
-        </nav>
-        <span className="home-icon is-off" aria-label="Your journal, not built yet in this design" title="Journal: not built yet">
-          <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><path d="M3 7h6l2 2h8v10H3z" stroke="currentColor" strokeWidth="2" fill="none" strokeLinejoin="round" /></svg>
-        </span>
+    <main className="mx-auto flex min-h-screen max-w-5xl flex-col px-6 py-6">
+      <header className="flex items-center justify-between">
+        <Button asChild variant="outline" size="icon" aria-label="Ask Reflect">
+          <Link href="/chat"><PlusIcon /></Link>
+        </Button>
+        <Segmented label="Whose" items={[{ label: "Mine", href: "/", on: !ours }, { label: "Ours", href: "/?view=ours", on: ours }]} />
+        <Button variant="ghost" size="icon" disabled aria-label="Your journal, not built yet in this design" title="Journal: not built yet">
+          <FolderIcon />
+        </Button>
       </header>
-      {ours ? <p className="home-note">Shared spaces (a marriage, a household, a village) are not built yet.</p> : null}
-      <ul className="home-grid">
+      {ours ? <p className="text-muted-foreground mt-6 text-center text-sm">Shared spaces (a marriage, a household, a village) are not built yet.</p> : null}
+      <ul className="mt-8 grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-6">
         {tiles.map((t) => {
           const tone = ours ? "unstated" : toneOf(t, facts);
           const href = ours ? null : hrefOf(t);
           const body = (
             <>
-              <svg viewBox="0 0 100 100" aria-hidden="true"><path d={GLYPHS[t.id]} fill={FILL[tone]} fillRule="evenodd" /></svg>
-              <span className="home-label">{t.label.toUpperCase()}</span>
+              <svg viewBox="0 0 100 100" className="size-14" aria-hidden="true"><path d={GLYPHS[t.id]} className={FILL[tone]} fillRule="evenodd" /></svg>
+              <span className="text-sm font-medium">{t.label}</span>
             </>
           );
+          const box = "flex aspect-square flex-col items-center justify-center gap-3 rounded-xl border bg-card shadow-xs";
           return (
             <li key={t.id}>
               {href ? (
-                <Link href={href} className="home-tile" aria-label={`${t.label}, ${SAY[tone]}`}>{body}</Link>
+                <Link href={href} className={cn(box, "hover:bg-accent transition")} aria-label={`${t.label}, ${SAY[tone]}`}>{body}</Link>
               ) : (
-                <span className="home-tile is-off" aria-label={`${t.label}, ${SAY[tone]}, not built yet`}>{body}</span>
+                <span className={cn(box, "text-muted-foreground")} aria-label={`${t.label}, ${SAY[tone]}, not built yet`}>{body}</span>
               )}
             </li>
           );
         })}
       </ul>
-      <footer className="home-foot">
-        <span><i style={{ background: FILL.unstated }} />UNSTATED</span>
-        <span><i style={{ background: FILL.thought }} />IN THOUGHT</span>
-        <span><i style={{ background: FILL.action }} />IN ACTION</span>
+      <footer className="text-muted-foreground mt-auto flex justify-center gap-6 pt-8 text-xs">
+        {(["unstated", "thought", "action"] as const).map((t) => (
+          <span key={t} className="flex items-center gap-2"><i className={cn("inline-block size-2.5 rounded-full", DOT[t])} />{SAY[t].replace(/^./, (c) => c.toUpperCase())}</span>
+        ))}
       </footer>
     </main>
   );
