@@ -10,9 +10,17 @@ Order, by what depends on what: (1) where records live, (2) record layout, (3) t
 - Hosted is the record: the website holds every vault (private, joint, household, village), and any vault can be exported as a plain file system at any time.
 - Records sync both ways between hosted and local, and the same holds for a mobile app if one is made.
 - The core keeps running on plain files, so a local copy is a working vault, not only a backup.
+- Every change is an event: dated, with who made it and on which device, added to the item's history and never edited. An item's current state is computed from its events. Sync exchanges the events each side is missing.
+- When two devices edit the same field of the same item before syncing, Reflect keeps both versions and asks the person which stands. Nothing is silently dropped.
 
 **Proposed.**
-- Every change is an event: dated, with who made it and on which device, added to the item's history and never edited. An item's current state is computed from its events. This is the domain's "history only added to, never overwritten" carried into storage.
-- Sync exchanges the events each side is missing. Two devices adding events never conflict; only two edits to the same field of the same item can, and those are kept side by side for the person to choose, never silently dropped.
+- Events carry the domain's "history only added to, never overwritten" into storage; two devices adding events never conflict, only edits to the same field can.
 - Local and mobile copies work offline and sync when back online.
 - Shared vaults sync to each member's devices; a member sees only the vaults they belong to.
+
+## 2. Record layout
+
+**Proposed.** Build on the vault Reflect already writes (packages/core: life/, needs/, learn/, ideas/, work/, belonging/, line/, journal/), which already keeps notes as markdown with front matter and dated history lines, and rebuilds `life/state.json` from `passages.jsonl`.
+- Each vault is its own folder with its own `reflect.json` naming its kind (private, joint, household, village) and members. Locally: one folder per vault the person belongs to.
+- Inside a vault, folders follow domains and subdomains (the existing folders, plus ones the domain design adds).
+- An item is a markdown note: front matter holds its kind, holders with citations, origins, relations and computed state; the body holds the person's words. Beside it, `<item>.events.jsonl` holds its events, append-only. The note is rebuilt from the events, the same pattern as `state.json` from `passages.jsonl`.
