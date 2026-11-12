@@ -7,11 +7,11 @@ import { BOOKS, cleanIsbn, slugOf } from "./learning.ts";
 import { readRecord, writeRecord } from "./record-io.ts";
 
 export type Fetch = (url: string) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
-export type CatalogEntry = { work: string; title: string; authors: string[]; year?: number; isbn?: string; subjects: string[]; contents: string[] };
+export type CatalogEntry = { work: string; title: string; authors: string[]; year?: number; isbn?: string; subjects: string[]; contents: string[]; lcc?: string[] };
 
 const BASE = "https://openlibrary.org";
-const FIELDS = "key,title,author_name,first_publish_year,isbn,subject";
-type Doc = { key?: string; title?: string; author_name?: string[]; first_publish_year?: number; isbn?: string[]; subject?: string[] };
+const FIELDS = "key,title,author_name,first_publish_year,isbn,subject,lcc";
+type Doc = { key?: string; title?: string; author_name?: string[]; first_publish_year?: number; isbn?: string[]; subject?: string[]; lcc?: string[] };
 
 async function get(fetcher: Fetch, path: string): Promise<unknown> {
   const r = await fetcher(`${BASE}${path}`);
@@ -42,6 +42,7 @@ const fromDoc = (d: Doc, isbn?: string): CatalogEntry => ({
   ...(isbn ? { isbn } : d.isbn?.find((i) => i.length === 13) ? { isbn: d.isbn.find((i) => i.length === 13) } : {}),
   subjects: topSubjects(d.subject),
   contents: [],
+  ...(d.lcc?.length ? { lcc: d.lcc.slice(0, 20) } : {}),
 });
 
 /** Books whose title or author matches, best first. */

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BOOK_STATUS, FILM_KINDS, FILM_STATUS, GRASP, RESOURCE_KINDS } from "@reflect/core/learning";
 import { SWEEP_PROMPT } from "@reflect/core/sweep";
+import { shelve } from "@reflect/core/shelves";
 import { inputTitle, listInputs } from "@/server/ideas-store";
 import { requireUser } from "@/server/session";
 import { currentName } from "@/server/person-store";
@@ -15,14 +16,55 @@ export const dynamic = "force-dynamic";
 
 const graspText = (g: string) => GRASP.find((x) => x.id === g)?.text ?? g;
 
-export default async function LearnPage() {
+export default async function LearnPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const user = await requireUser();
+  const browseAll = (await searchParams).shelves === "all";
   const [v, courses, credentials, recs, inputs] = await Promise.all([learnView(user.id), listCourses(user.id), listCredentials(user.id), recommendations(user.id), listInputs(user.id)]);
   return (
     <main className="page">
       <Nav current="learn" eyebrow="Learn" initial={initialOf(await currentName(user.id))} />
       <h1 className="title">What you know</h1>
       <p className="sec-note">What you take in: books, films, talks, conversations, links and the subjects you study. Nothing here is known until you say how well you grasp it. Your own ideas are outputs and live in <Link href="/ideas">Ideas</Link>.</p>
+
+      {(() => {
+        const seen = new Map<string, { id: string; name: string }>();
+        for (const s of [...v.known, ...v.shown, ...v.vouched, ...v.suggested, ...v.books.flatMap((b) => b.subjects)]) seen.set(s.id, { id: s.id, name: s.name });
+        const shelved = shelve(
+          v.books.map((b) => ({ id: b.id, title: b.title, subjects: b.subjects.map((x) => x.id), ...(b.catalog?.lcc ? { lcc: b.catalog.lcc } : {}) })),
+          [...seen.values()].sort((a, b) => a.name.localeCompare(b.name)),
+          browseAll,
+        );
+        return (
+          <section className="sec" aria-labelledby="h-shelves">
+            <div className="sec-head"><h2 id="h-shelves" className="lbl">Shelves</h2></div>
+            <p className="sec-note">Arranged by the Library of Congress Classification. A book goes where its catalog call numbers point; a subject goes where most of its books are.</p>
+            {shelved.shelves.length ? (
+              <dl className="facts shelves" style={{ borderTop: 0 }}>
+                {shelved.shelves.map((sh) => (
+                  <div className="fact" key={sh.id}>
+                    <dt><span className="muted">{sh.id}</span> {sh.name}</dt>
+                    <dd>
+                      {sh.books.length || sh.subjects.length ? (
+                        <>
+                          {sh.books.map((b, i) => <span key={b.id}>{i ? ", " : ""}<Link href={`/learn/book/${b.id}`}>{b.title}</Link></span>)}
+                          {sh.books.length && sh.subjects.length ? <span className="muted"> · </span> : null}
+                          {sh.subjects.length ? <span className="muted">{sh.subjects.map((x) => x.name).join(", ")}</span> : null}
+                        </>
+                      ) : <span className="muted">Empty</span>}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            ) : (
+              <p className="sec-note">No shelves yet. Add a book with its ISBN and it goes on its shelf.</p>
+            )}
+            {shelved.unshelved.books.length || shelved.unshelved.subjects.length ? (
+              <p className="sec-note">Not yet shelved: {[...shelved.unshelved.books.map((b) => b.title), ...shelved.unshelved.subjects.map((x) => x.name)].join(", ")}.</p>
+            ) : null}
+            <p className="sec-note">{browseAll ? <Link href="/learn">Show only filled shelves</Link> : <Link href="/learn?shelves=all">Browse all 21 shelves</Link>}</p>
+          </section>
+        );
+      })()}
 
       <section className="sec" aria-labelledby="h-known">
         <div className="sec-head"><h2 id="h-known" className="lbl">Known</h2></div>
