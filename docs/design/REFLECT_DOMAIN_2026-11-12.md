@@ -236,6 +236,16 @@ Beliefs, telos and plans fall under reasoning.
 
 **Proposed.** Observed: activity and measures the person chooses (stated), or Apple Health, Strava, a wearable (connected). Default telos: the Physical Activity Guidelines for Americans as a floor (150 minutes of moderate activity a week and muscle strengthening twice a week), beyond that the person's own goal. States: inactive, building, maintaining, training; each goal set, in progress, reached or lapsed. Examine: is the goal the person's own, is the routine on track. Plan: a training plan at the chosen depth, on the calendar.
 
+### Belonging and standing
+
+**Decided.** Friends are a subdomain of their own, because a person wants to evaluate their friendships. A person may record how they met a friend, why they consider them a friend, and the habits they share. When evaluating a friendship, Reflect offers Aristotle's three kinds (utility, pleasure, virtue; *Nicomachean Ethics* VIII and IX) as a suggestion, never a default the person must answer, since some will not accept the classification. Origins still apply, to learn the origin and nature of each friendship.
+
+**Proposed.**
+- Observed (stated): friends, groups (teams, clubs, a congregation), roles and offices held. Notes about friends hold other people's information: private, never published.
+- Standing: Aristotle's measure is honor earned and deserved, not sought for itself.
+- States: the chart's loop (affiliate, gain status, lose rank); each friendship acquaintance, friend, close friend, drifted; each group visiting, member, serving, leading, left.
+- Examine: do groups and roles serve the telos or only fill time.
+
 ## Plans in phases
 
 **Decided.** A plan has phases, and the person chooses how detailed each phase is, because some people want detailed plans and others do not.
