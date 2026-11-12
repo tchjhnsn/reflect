@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeftIcon, DownloadIcon, PlusIcon } from "lucide-react";
+import { ArrowLeftIcon, BookOpenIcon, DownloadIcon, PlusIcon } from "lucide-react";
 import { KINDS, workTitle } from "@reflect/core/works";
 import { CHAT_PROMPT } from "@reflect/core/chat-journal";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ export default async function JournalPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button asChild variant="ghost" size="icon" aria-label="Export"><a href="/api/journal/export" download><DownloadIcon /></a></Button>
+          <Button asChild variant="ghost"><Link href="/journal/book"><BookOpenIcon />Book</Link></Button>
           <ImportButton />
           <Button asChild><Link href="/journal/new"><PlusIcon />Create</Link></Button>
         </div>

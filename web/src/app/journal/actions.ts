@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/server/session";
 import { IMPORTABLE, MAX_IMPORT_BYTES } from "@reflect/core/works";
 import { createWork, importWork, saveWork } from "@/server/work-store";
+import { compileEdition, holdFromWork, placeClaim } from "@/server/book-store";
 
 /** Start a work from a template of the prompt library and open it in the editor. */
 export async function createWorkAction(templateId: string, about: string | null): Promise<void> {
@@ -40,4 +41,36 @@ export async function importWorkAction(fileName: string, text: string): Promise<
   }
   revalidatePath("/journal");
   return { ok: true };
+}
+
+/** "I hold this": a selected passage becomes a belief in the chosen chapter of the book. */
+export async function holdAction(workId: string, passage: string, domain: string): Promise<{ error: string } | { ok: true }> {
+  const user = await requireUser();
+  try {
+    await holdFromWork(user.id, workId, passage, domain);
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  revalidatePath("/journal/book");
+  return { ok: true };
+}
+
+/** Place a belief in a chapter of the book. */
+export async function placeAction(claimId: string, domain: string): Promise<{ error: string } | { ok: true }> {
+  const user = await requireUser();
+  try {
+    await placeClaim(user.id, claimId, domain);
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  revalidatePath("/journal/book");
+  return { ok: true };
+}
+
+/** Keep the book as it stands as a dated edition in the journal, and open it. */
+export async function compileEditionAction(): Promise<void> {
+  const user = await requireUser();
+  const id = await compileEdition(user.id);
+  revalidatePath("/journal");
+  redirect(`/journal/w/${id}`);
 }
