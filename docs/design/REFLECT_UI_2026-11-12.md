@@ -8,7 +8,7 @@ Status: started 2026-11-12, after the system design (`REFLECT_SYSTEM_2026-11-12.
 - A grid of objects, one per area of life, each a solid glyph with a small label.
 - A MINE / OURS toggle at the top center switches between the private vault and the shared spaces.
 - An object's tone shows its state: black when something in it is in action, grey when it is only in thought, light grey when nothing is stated.
-- The journal is a fixed place in the top bar, not a tile.
+- The journal is a fixed place in the top bar, and also has a tile (see 3).
 
 ## 2. Tiles are apps
 
@@ -24,7 +24,9 @@ MINE (9): Learn; Work (with income, unpaid work counts); Body (health, fitness, 
 
 OURS (4): Marriage; Household (with home and budget); Children; Village.
 
-They follow Aristotle's three kinds of goods: of the body (Body, Home), external (Work, Friends, Mate, Kin, Polis, Legacy and the shared spaces) and of the soul (Learn).
+**Decided (06:28Z).** The screen keeps the fuller grid: the apps are condensed, the tiles are not. MINE shows 18 tiles (Learn, Work, Income, Food, Water, Shelter, Health, Fitness, Transport, Safety, Friends, Standing, Mate, Kin, Polis, Legacy, Ideas, Journal) and OURS shows 6 (Marriage, Household, Home, Budget, Children, Village). Several tiles open the same app: Income opens Work; Food, Water, Shelter, Transport and Safety open Home; Health and Fitness open Body; Standing opens Polis; Ideas and Journal open the journal; Home and Budget open Household.
+
+The apps follow Aristotle's three kinds of goods: of the body (Body, Home), external (Work, Friends, Mate, Kin, Polis, Legacy and the shared spaces) and of the soul (Learn).
 
 ## 4. Learn, the first app
 
