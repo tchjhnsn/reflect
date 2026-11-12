@@ -11,6 +11,7 @@ import { requireUser } from "@/server/session";
 import { addBook, addSubjects, keepRecall, rateSubject, setBookStatus, getBook } from "@/server/learn-store";
 import { addCredential, getUpload, keepCourses, keepLinkedIn, listCourses, saveUpload } from "@/server/learn-sources-store";
 import { checkBadge } from "@reflect/core/credentials";
+import { keepClaim, setStance } from "@/server/claims-store";
 import { readLinkedInExport } from "@reflect/core/linkedin";
 import { draftTranscript, transcriptText } from "@reflect/core/transcript";
 import { chatJson } from "@reflect/core/chat";
@@ -196,4 +197,22 @@ export async function addFromLibraryAction(form: FormData): Promise<void> {
   await addBook(user.id, { title: clean.title, authors: clean.authors, ...(clean.isbn ? { isbn: clean.isbn } : {}), status: status(form.get("status")), subjects: [], catalog: clean });
   revalidatePath("/learn");
   revalidatePath("/learn/browse");
+}
+
+/** Keep a claim with who holds it and the person's stance. Holders come one per line: "name | citation". */
+export async function keepClaimAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  const holders = String(form.get("holders") ?? "")
+    .split("\n")
+    .map((l) => l.split("|"))
+    .map(([name, ...cite]) => ({ name: (name ?? "").trim(), citation: cite.join("|").trim() }))
+    .filter((h) => h.name);
+  await keepClaim(user.id, { text: String(form.get("claim") ?? ""), holders, subject: String(form.get("subject") ?? ""), stance: String(form.get("stance") ?? ""), note: String(form.get("note") ?? "") });
+  revalidatePath("/learn");
+}
+
+export async function setStanceAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  await setStance(user.id, String(form.get("claim") ?? ""), String(form.get("stance") ?? ""));
+  revalidatePath("/learn");
 }

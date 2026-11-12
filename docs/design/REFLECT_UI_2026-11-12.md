@@ -72,4 +72,5 @@ The apps follow Aristotle's three kinds of goods: of the body (Body, Home), exte
 
 - `/`: the home screen, MINE with 18 tiles and tones from the person's records; Learn, Journal, Ideas and Legacy link to their pages. OURS and the chat are not built.
 - `/learn`: shelves by Library of Congress class.
+- `/learn` claims: belief, disbelief or suspension of judgment, holders cited, stances kept (needs migration 0012).
 - `/learn/browse`: the library from Open Library, by search or class, with add to shelves.

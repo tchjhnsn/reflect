@@ -3,12 +3,14 @@ import Link from "next/link";
 import { BOOK_STATUS, FILM_KINDS, FILM_STATUS, GRASP, RESOURCE_KINDS } from "@reflect/core/learning";
 import { SWEEP_PROMPT } from "@reflect/core/sweep";
 import { shelve } from "@reflect/core/shelves";
+import { STANCES } from "@reflect/core/claims";
+import { listClaims, type ClaimOut } from "@/server/claims-store";
 import { inputTitle, listInputs } from "@/server/ideas-store";
 import { requireUser } from "@/server/session";
 import { currentName } from "@/server/person-store";
 import { learnView } from "@/server/learn-store";
 import { initialOf, Nav } from "../nav";
-import { addBookAction, addCredentialAction, addInputAction, rateCoursesAction, sweepAction, uploadLinkedInAction, uploadTranscriptAction } from "./actions";
+import { keepClaimAction, setStanceAction, addBookAction, addCredentialAction, addInputAction, rateCoursesAction, sweepAction, uploadLinkedInAction, uploadTranscriptAction } from "./actions";
 import { listCourses, listCredentials, recommendations } from "@/server/learn-sources-store";
 
 export const metadata: Metadata = { title: "Learn" };
@@ -19,6 +21,8 @@ const graspText = (g: string) => GRASP.find((x) => x.id === g)?.text ?? g;
 export default async function LearnPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const user = await requireUser();
   const browseAll = (await searchParams).shelves === "all";
+  // Claims need migration 0012; until it runs, the section says so instead of failing the page.
+  const claims: ClaimOut[] | null = await listClaims(user.id).catch(() => null);
   const [v, courses, credentials, recs, inputs] = await Promise.all([learnView(user.id), listCourses(user.id), listCredentials(user.id), recommendations(user.id), listInputs(user.id)]);
   return (
     <main className="page">
@@ -65,6 +69,60 @@ export default async function LearnPage({ searchParams }: { searchParams: Promis
           </section>
         );
       })()}
+
+      <section className="sec" aria-labelledby="h-claims">
+        <div className="sec-head"><h2 id="h-claims" className="lbl">Claims</h2></div>
+        <p className="sec-note">What you can hold true or false, apart from what you know. Name who holds it, with a citation. Your stance is belief, disbelief or suspension of judgment; the latest one counts, and earlier ones are kept.</p>
+        {claims === null ? (
+          <p className="sec-note">Claims are not set up on this database yet (migration 0012).</p>
+        ) : (
+          <>
+            {STANCES.map((st) => {
+              const here = claims.filter((c) => c.stance?.stance === st.id);
+              if (!here.length) return null;
+              return (
+                <div key={st.id}>
+                  <h3 className="lbl">{st.text}</h3>
+                  <ul className="note learn-list">
+                    {here.map((c) => (
+                      <li key={c.id}>
+                        <strong>{c.text}</strong>
+                        {c.subject ? <span className="muted"> · under {c.subject.name}</span> : null}
+                        {c.holders.length ? <span className="muted"> · held by {c.holders.map((h) => (h.citation ? `${h.name} (${h.citation})` : h.name)).join("; ")}</span> : null}
+                        {c.history.length > 1 ? <span className="muted"> · {c.history.length} stances kept</span> : null}
+                        <form action={setStanceAction} className="browse-add">
+                          <input type="hidden" name="claim" value={c.id} />
+                          <label className="sr-only" htmlFor={`st-${c.id}`}>Your stance now</label>
+                          <select id={`st-${c.id}`} name="stance" defaultValue={c.stance?.stance} className="learn-select">
+                            {STANCES.map((x) => <option key={x.id} value={x.id}>{x.text}</option>)}
+                          </select>
+                          <button type="submit">Update stance</button>
+                        </form>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+            {!claims.length ? <p className="sec-note">No claims yet.</p> : null}
+            <form action={keepClaimAction} className="add">
+              <label className="lbl" htmlFor="claim">A claim</label>
+              <input id="claim" name="claim" required maxLength={500} placeholder="Marriage is a covenant" />
+              <label className="lbl" htmlFor="claim-subject">The subject it is about (optional)</label>
+              <input id="claim-subject" name="subject" maxLength={120} placeholder="Marriage" />
+              <label className="lbl" htmlFor="holders">Who holds it, one per line, with a citation after a bar (optional)</label>
+              <textarea id="holders" name="holders" rows={3} maxLength={5000} placeholder={"Scripture | Malachi 2:14\nWestminster Confession | ch. 24"} />
+              <label className="lbl" htmlFor="stance">Your stance</label>
+              <select id="stance" name="stance" defaultValue="belief" className="learn-select">
+                {STANCES.map((x) => <option key={x.id} value={x.id}>{x.text}</option>)}
+              </select>
+              <label className="lbl" htmlFor="claim-note">Why, in your words (optional)</label>
+              <input id="claim-note" name="note" maxLength={5000} />
+              <div className="actions"><button type="submit" className="primary">Keep the claim</button></div>
+            </form>
+          </>
+        )}
+      </section>
 
       <section className="sec" aria-labelledby="h-known">
         <div className="sec-head"><h2 id="h-known" className="lbl">Known</h2></div>
