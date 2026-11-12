@@ -221,6 +221,15 @@ Beliefs, telos and plans fall under reasoning.
 - States: each subject unrated, gist, explain, teach, or forgot; each input want, reading, read, abandoned. Learn precedes first work and continues for life.
 - Examine: do you grasp it (name the key subjects without looking); does it serve what it is needed for.
 
+### The other needs
+
+**Decided.** Safety includes firearms. Fitness is its own subdomain, apart from the health need.
+
+**Proposed.**
+- Shared by every need: observed as how it is met (self-provided, stocked, supplied, cared for) and by whom (self, market, nature, polis, kin, gifts); default telos is the need met for the intended household in a way that can be kept up; Examine asks how fragile it is (providers, runway); a plan moves a need toward the way the person wants it met.
+- Defaults per need: food, USDA food plans (thrifty to liberal) and a stocked pantry; water, Ready.gov's gallon per person per day, stored for several days to two weeks; shelter, HUD's housing cost under 30% of income, rent or own; health, coverage, a regular doctor, connections such as Apple Health; transport, reliable access to work and essentials and its cost; knowledge, see Learn; safety, physical safety at home and away, an emergency fund, preparedness (Ready.gov), the documents checklist.
+- Firearms under safety: ownership, training, safe storage (especially with children in the home), and carry permits, a credential gate like a license, set by state law.
+
 ## Plans in phases
 
 **Decided.** A plan has phases, and the person chooses how detailed each phase is, because some people want detailed plans and others do not.
