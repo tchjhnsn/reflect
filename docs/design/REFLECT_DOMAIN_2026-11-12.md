@@ -205,7 +205,7 @@ Beliefs, telos and plans fall under reasoning.
 - What donations cover lowers what income must cover: each need records its providers, and gifts from community, church or charity join the existing providers (self, market, nature, polis, kin).
 - Observed: income sources, amounts and regularity (stated), or deposits, pay stubs and tax forms (connected).
 - Examine: on track for the intended household by when it is needed; how fragile the income is (sources, runway).
-- Plan: intent, milestones (graduate, first full-time job, self-sufficient, sustains the intended household), steps. Run: income observed monthly against the trajectory, with the fell-short loop.
+- Plan: intent, milestones (graduate, first full-time job, self-sufficient, sustains the intended household), steps. Run: income observed monthly against the trajectory, with the missed loop.
 
 ### Work and provide
 
@@ -265,7 +265,7 @@ Beliefs, telos and plans fall under reasoning.
 - Telos: a pair bond toward the intended household.
 - Origins, enumerated: nature (the union Aristotle names first in *Politics* I.2), reasoning ("I want to marry and start a family"), appetite (sex, children, companionship), habit (a pattern in who one dates), compulsion (family pressure), chance (meeting someone).
 - States: the chart's loop (seek a mate, pair bond, back if the bond ends); the person says when it is a pair bond.
-- Examine: a date that missed goes back to Observe (why, and is it the same reason as before); are the criteria the person's own; are they prepared for the household they want.
+- Examine: a missed date goes back to Observe (why, and is it the same reason as before); are the criteria the person's own; are they prepared for the household they want.
 - Plan: ways to meet people (church, introductions, events, groups, apps), how often, steps on the calendar; household planning opens early.
 
 ### Pair bond
