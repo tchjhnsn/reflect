@@ -1,6 +1,6 @@
 # Reflect: domain design
 
-Status: domain design in progress, nothing built. Started 2026-11-12 from the discussion with Torian in the thread "Design partner preparation in Reflect". Each point is marked **Decided** (Torian said it) or **Proposed** (Claude suggested it, not yet confirmed). Nothing moves from proposed to decided without Torian saying so. The system design comes after this document is settled, and the interface after that.
+Status: domain design settled as a first pass, nothing built. The system design follows in `REFLECT_SYSTEM_2026-11-12.md`. Started 2026-11-12 from the discussion with Torian in the thread "Design partner preparation in Reflect". Each point is marked **Decided** (Torian said it) or **Proposed** (Claude suggested it, not yet confirmed). Nothing moves from proposed to decided without Torian saying so. The system design comes after this document is settled, and the interface after that.
 
 ## What Reflect is
 
