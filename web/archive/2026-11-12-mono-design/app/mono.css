@@ -1,0 +1,104 @@
+/* Home: your life as objects (docs/design/REFLECT_UI_2026-11-12.md). Its own plain look in every theme. */
+.home { --home-ink: #111111; --home-action: #111111; --home-thought: #8a8a8a; --home-unstated: #dadada; min-height: 100vh; background: #ffffff; color: var(--home-ink); display: flex; flex-direction: column; }
+.home-bar { height: 22px; background: #111111; }
+.home-top { display: flex; align-items: center; justify-content: space-between; padding: 18px 28px; }
+.home-icon { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: var(--home-ink); }
+.home-toggle { display: flex; gap: 22px; font-size: 18px; letter-spacing: 0.06em; }
+.home-toggle a { color: #9a9a9a; text-decoration: none; padding: 10px 2px; }
+.home-toggle a[aria-current="page"] { color: var(--home-ink); }
+.home-note { text-align: center; color: #555555; font-size: 14px; margin: 0 16px; }
+.home-grid { list-style: none; margin: 0; padding: 32px 72px 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 56px 24px; flex-grow: 1; align-content: start; }
+.home-tile { display: flex; flex-direction: column; align-items: center; gap: 22px; color: var(--home-ink); text-decoration: none; padding: 8px 0; }
+.home-tile svg { width: min(150px, 100%); aspect-ratio: 1; }
+.home-label { font-size: 16px; letter-spacing: 0.08em; }
+a.home-tile:hover .home-label, a.home-tile:focus-visible .home-label { text-decoration: underline; }
+.home-tile.is-off { cursor: default; }
+.home-foot { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 16px 40px; padding: 28px 16px 34px; font-size: 13px; letter-spacing: 0.08em; color: #555555; }
+.home-foot span { display: flex; align-items: center; gap: 10px; }
+.home-foot i { width: 12px; height: 12px; display: inline-block; }
+.home-foot a { color: #555555; text-decoration: none; }
+@media (max-width: 900px) { .home-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 24px 16px 0; gap: 36px 12px; } .home-label { font-size: 13px; } }
+
+/* The new design (docs/design/REFLECT_UI_2026-11-12.md): white, black, one mono face. Everything under .nd. */
+.nd { --nd-ink: #111111; --nd-soft: #555555; --nd-dim: #9a9a9a; --nd-rule: #e3e3e3; --nd-faint: #efefef; min-height: 100vh; background: #ffffff; color: var(--nd-ink); display: flex; flex-direction: column; color-scheme: light; }
+.nd a { color: inherit; }
+.nd-bar { height: 22px; background: var(--nd-ink); flex-shrink: 0; }
+.nd-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 12px 24px; padding: 22px 72px 8px; }
+.nd-head-l { display: flex; align-items: baseline; gap: 24px; }
+.nd-title { font: inherit; font-size: 22px; letter-spacing: 0.08em; margin: 0; font-weight: 400; }
+.nd-quiet { font-size: 14px; letter-spacing: 0.08em; color: var(--nd-soft) !important; text-decoration: none; padding: 8px 0; }
+.nd-quiet:hover { color: var(--nd-ink) !important; }
+.nd-u { text-decoration: underline; font-size: 12px; }
+.nd-tabs { display: flex; gap: 22px; }
+.nd-tabs a { font-size: 15px; letter-spacing: 0.08em; color: var(--nd-dim) !important; text-decoration: none; padding: 8px 0; }
+.nd-tabs a[aria-current="page"] { color: var(--nd-ink) !important; }
+.nd-body { flex-grow: 1; padding: 8px 72px 24px; display: flex; flex-direction: column; gap: 26px; position: relative; }
+.nd-row-end { display: flex; justify-content: flex-end; margin-bottom: -14px; }
+.nd-note { font-size: 13px; color: var(--nd-soft); line-height: 1.6; margin: 0; max-width: 70ch; }
+.nd-small { font-size: 12px; letter-spacing: 0.04em; color: var(--nd-soft); }
+.nd-dim { color: var(--nd-dim); }
+.nd-shelf { display: grid; grid-template-columns: 240px 1fr; column-gap: 32px; align-items: start; border-top: 1px solid var(--nd-rule); padding-top: 16px; }
+.nd-shelf-name { display: flex; flex-direction: column; gap: 6px; font-size: 12px; letter-spacing: 0.06em; color: var(--nd-soft); }
+.nd-letter { font-size: 26px; color: var(--nd-ink); }
+.nd-letter.is-empty { color: #cfcfcf; }
+.nd-stance { font-size: 15px; color: var(--nd-ink); letter-spacing: 0.06em; }
+.nd-items { display: flex; flex-wrap: wrap; gap: 26px; min-height: 30px; }
+.nd-item { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 116px; text-decoration: none; font-size: 11px; letter-spacing: 0.06em; text-align: center; line-height: 1.35; }
+a.nd-item:hover span { text-decoration: underline; }
+.nd-tone-known { fill: #111111; }
+.nd-tone-learning { fill: #8a8a8a; }
+.nd-tone-registered { fill: #d4d4d4; }
+.nd-panel { position: fixed; top: 22px; right: 0; bottom: 0; width: min(480px, 100vw); background: #ffffff; border-left: 1px solid var(--nd-rule); box-sizing: border-box; padding: 28px 36px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; z-index: 5; }
+.nd-panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.nd-panel-title { font-size: 18px; letter-spacing: 0.06em; line-height: 1.4; }
+.nd-x { text-decoration: none; font-size: 18px; padding: 4px 10px; }
+.nd-choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.nd-btn, .nd-btn-line { white-space: nowrap; font: inherit; font-size: 11px; letter-spacing: 0.08em; padding: 9px 12px; cursor: pointer; border: 1px solid var(--nd-ink); border-radius: 0; }
+.nd-btn { background: var(--nd-ink); color: #ffffff; }
+.nd-btn-line { background: #ffffff; color: var(--nd-ink); }
+.nd-btn:disabled, .nd-btn-line:disabled { opacity: 0.4; cursor: default; }
+.nd-library { display: grid; grid-template-columns: 300px 1fr; column-gap: 40px; align-items: start; }
+.nd-classes { display: flex; flex-direction: column; border-top: 1px solid var(--nd-rule); }
+.nd-classes a { display: flex; gap: 12px; padding: 9px 8px; font-size: 13px; letter-spacing: 0.04em; text-decoration: none; border-bottom: 1px solid var(--nd-faint); }
+.nd-classes a span:first-child { width: 16px; }
+.nd-classes a[aria-current="page"] { background: #f2f2f2; }
+.nd-classes a:hover { background: #f7f7f7; }
+.nd-results { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.nd-search { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 12px; border-bottom: 1px solid var(--nd-ink); padding: 6px 0 12px; }
+.nd-results-title { font-size: 16px; letter-spacing: 0.06em; }
+.nd-search input, .nd-form input, .nd-form textarea, .nd-ask input { font: inherit; font-size: 13px; color: var(--nd-ink); background: transparent; border: 0; border-bottom: 1px solid var(--nd-rule); padding: 6px 0; outline: none; border-radius: 0; }
+.nd-search input { width: min(320px, 100%); }
+.nd-search input:focus, .nd-form input:focus, .nd-form textarea:focus, .nd-ask input:focus { border-bottom-color: var(--nd-ink); }
+.nd-book { display: grid; grid-template-columns: 44px 1fr auto; gap: 18px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--nd-faint); }
+.nd-book-text { display: flex; flex-direction: column; gap: 3px; font-size: 14px; min-width: 0; }
+.nd-claim-list { display: flex; flex-direction: column; }
+.nd-claim { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--nd-faint); }
+.nd-form { display: flex; flex-direction: column; gap: 14px; border-top: 1px solid var(--nd-ink); padding-top: 16px; max-width: 640px; }
+.nd-form label { display: flex; flex-direction: column; gap: 6px; font-size: 11px; letter-spacing: 0.08em; color: var(--nd-soft); }
+.nd-form textarea { resize: vertical; }
+.nd-foot { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 36px; padding: 6px 16px 26px; font-size: 12px; letter-spacing: 0.08em; color: var(--nd-soft); }
+
+/* The plus button's chat, in the new design: the person's words right in black, Reflect's left, cards under. */
+.nd-ask { flex-grow: 1; display: flex; flex-direction: column; gap: 16px; padding: 8px 72px 0; max-width: 820px; width: 100%; box-sizing: border-box; }
+.chat-log { display: flex; flex-direction: column; gap: 16px; flex: 1; font-size: 14px; line-height: 1.5; }
+.chat-msg p { margin: 0; }
+.chat-user { align-self: flex-end; max-width: 80%; background: #111111; color: #ffffff; padding: 10px 14px; }
+.chat-assistant { align-self: stretch; max-width: 90%; }
+.chat-stack { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.chat-card { border: 1px solid #111111; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.chat-card p { margin: 0; font-size: 13px; }
+.chat-card-head { display: flex; justify-content: space-between; font-size: 11px; letter-spacing: 0.08em; color: #555555; }
+.chat-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-bottom: 1px solid #e3e3e3; padding: 8px 0; font-size: 13px; }
+.chat-form { display: flex; gap: 10px; align-items: center; border-top: 1px solid #e3e3e3; padding: 14px 0 24px; position: sticky; bottom: 0; background: #ffffff; }
+.chat-form input { flex: 1; min-width: 0; font-size: 14px !important; border-bottom: 0 !important; padding: 10px 0 !important; }
+.muted { color: #555555; }
+
+@media (max-width: 900px) {
+  .nd-head, .nd-body, .nd-ask { padding-left: 16px; padding-right: 16px; }
+  .nd-shelf, .nd-library { grid-template-columns: 1fr; row-gap: 12px; }
+  .nd-classes { max-height: 240px; overflow-y: auto; }
+  .nd-item { width: 92px; }
+}
+.home-icon.is-off { color: #cfcfcf; cursor: default; }
+.chat-steps { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 4px; font-size: 11px; letter-spacing: 0.08em; color: #555555; }
+.chat-assistant > p + p { margin-top: 10px; }
