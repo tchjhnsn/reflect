@@ -32,7 +32,7 @@ export function LogDays({ acts }: { acts: Act[] }) {
                     <Icon className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                     <span className="flex-1">{actText(a)}</span>
                     <span className="text-muted-foreground shrink-0 text-xs">{time(a) || "Learn"}</span>
-                    <Link href={`/journal/items/new?act=${encodeURIComponent(JSON.stringify(a))}`} className="text-muted-foreground hover:text-foreground shrink-0 text-xs underline-offset-2 hover:underline">Reflect</Link>
+                    <Link href={`/journal/new?about=${encodeURIComponent(actText(a))}`} className="text-muted-foreground hover:text-foreground shrink-0 text-xs underline-offset-2 hover:underline">Write about it</Link>
                   </li>
                 );
               })}
