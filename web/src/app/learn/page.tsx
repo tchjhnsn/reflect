@@ -61,7 +61,7 @@ export default async function LearnPage({ searchParams }: { searchParams: Promis
             {shelved.unshelved.books.length || shelved.unshelved.subjects.length ? (
               <p className="sec-note">Not yet shelved: {[...shelved.unshelved.books.map((b) => b.title), ...shelved.unshelved.subjects.map((x) => x.name)].join(", ")}.</p>
             ) : null}
-            <p className="sec-note">{browseAll ? <Link href="/learn">Show only filled shelves</Link> : <Link href="/learn?shelves=all">Browse all 21 shelves</Link>}</p>
+            <p className="sec-note"><Link href="/learn/browse">Browse the library</Link> · {browseAll ? <Link href="/learn">Show only filled shelves</Link> : <Link href="/learn?shelves=all">Browse all 21 shelves</Link>}</p>
           </section>
         );
       })()}

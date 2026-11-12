@@ -51,6 +51,15 @@ export async function searchBooks(query: string, fetcher: Fetch, limit = 5): Pro
   return (body?.docs ?? []).filter((d) => d.key && d.title).map((d) => fromDoc(d));
 }
 
+/** Browse one Library of Congress main class (a letter, as in shelves.ts), best rated first. */
+export async function browseClass(lccClass: string, fetcher: Fetch, opts: { page?: number; limit?: number } = {}): Promise<CatalogEntry[]> {
+  if (!/^[A-Z]$/.test(lccClass)) throw new Error("a class is one capital letter of the Library of Congress Classification");
+  const limit = Math.min(Math.max(opts.limit ?? 24, 1), 50);
+  const page = Math.max(opts.page ?? 1, 1);
+  const body = (await get(fetcher, `/search.json?q=${encodeURIComponent(`lcc:${lccClass}*`)}&sort=rating&fields=${FIELDS}&limit=${limit}&page=${page}`)) as { docs?: Doc[] } | null;
+  return (body?.docs ?? []).filter((d) => d.key && d.title).map((d) => fromDoc(d));
+}
+
 /** One edition by ISBN, with its work's subjects and, when the catalog has it, its table of contents. */
 export async function lookupIsbn(isbn: string, fetcher: Fetch): Promise<CatalogEntry | null> {
   const n = cleanIsbn(isbn);

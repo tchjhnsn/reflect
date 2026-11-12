@@ -286,6 +286,9 @@ button:disabled { opacity: 0.5; cursor: default; }
 /* Learn */
 .learn-list { padding-left: 1.1em; }
 .learn-list li { margin: 6px 0; }
+.browse-classes { columns: 2 220px; list-style: none; padding-left: 0; }
+.browse-add { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0 12px; }
+.browse-add .learn-select { width: auto; }
 .learn-select { font: 500 14px var(--sans); padding: 6px 8px; border: 1px solid var(--rule); border-radius: 8px; background: var(--paper); color: var(--ink); max-width: 100%; }
 .learn-text { width: 100%; font: 16px/1.5 var(--serif, inherit); border: 0; border-bottom: 1px solid var(--rule); background: transparent; color: var(--ink); padding: 8px 0; }
 .learn-recall { margin: 10px 0 0; padding-left: 12px; border-left: 2px solid var(--rule); }

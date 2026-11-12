@@ -6,7 +6,7 @@ import { BOOK_STATUS, FILM_STATUS, type BookStatus, type FilmStatus } from "@ref
 import { readSweep } from "@reflect/core/sweep";
 import { addInput } from "@/server/ideas-store";
 import { keepSweepItems } from "@/server/sweep-store";
-import { lookupIsbn } from "@reflect/core/openlibrary";
+import { lookupIsbn, type CatalogEntry } from "@reflect/core/openlibrary";
 import { requireUser } from "@/server/session";
 import { addBook, addSubjects, keepRecall, rateSubject, setBookStatus, getBook } from "@/server/learn-store";
 import { addCredential, getUpload, keepCourses, keepLinkedIn, listCourses, saveUpload } from "@/server/learn-sources-store";
@@ -171,4 +171,29 @@ export async function keepSweepAction(form: FormData): Promise<void> {
   revalidatePath(`/learn/upload/${id}`);
   revalidatePath("/learn");
   revalidatePath("/ideas");
+}
+
+/** Put a book from the library on the person's shelves, with the catalog entry they saw. Its subjects stay suggestions. */
+export async function addFromLibraryAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  let entry: CatalogEntry;
+  try {
+    entry = JSON.parse(String(form.get("entry") ?? "")) as CatalogEntry;
+  } catch {
+    throw new Error("that library entry could not be read");
+  }
+  if (!entry?.title || !entry.work) throw new Error("that library entry has no title");
+  const clean: CatalogEntry = {
+    work: String(entry.work).slice(0, 40),
+    title: String(entry.title).slice(0, 300),
+    authors: (entry.authors ?? []).map(String).slice(0, 10),
+    ...(entry.year ? { year: Number(entry.year) } : {}),
+    ...(entry.isbn ? { isbn: String(entry.isbn).slice(0, 20) } : {}),
+    subjects: (entry.subjects ?? []).map(String).slice(0, 15),
+    contents: [],
+    ...(entry.lcc?.length ? { lcc: entry.lcc.map(String).slice(0, 20) } : {}),
+  };
+  await addBook(user.id, { title: clean.title, authors: clean.authors, ...(clean.isbn ? { isbn: clean.isbn } : {}), status: status(form.get("status")), subjects: [], catalog: clean });
+  revalidatePath("/learn");
+  revalidatePath("/learn/browse");
 }
