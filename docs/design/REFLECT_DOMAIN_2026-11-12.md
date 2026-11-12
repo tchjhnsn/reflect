@@ -197,6 +197,17 @@ Beliefs, telos and plans fall under reasoning.
 - Examine: on track for the intended household by when it is needed; how fragile the income is (sources, runway).
 - Plan: intent, milestones (graduate, first full-time job, self-sufficient, sustains the intended household), steps. Run: income observed monthly against the trajectory, with the fell-short loop.
 
+### Work and provide
+
+**Decided.** Unpaid work counts as work: maintaining a family is a full-time job (preparing meals, cleaning, caring for the children, being at practices and recitals, bathing and feeding them). Later designs may show how much work a given responsibility requires. This also lets a couple evaluate a babysitter or daycare, and homeschooling against public, charter or private school.
+
+**Proposed.**
+- Each piece of work is paid or unpaid, with its role, hours and since when; paid work feeds income. Connected sources: payroll, an imported LinkedIn profile, ventures run in Naive.
+- No default telos of its own: work serves income's telos and the life telos, weighed by telos and by subsistence (decided earlier).
+- States: learn, then the gate of first work, then work and provide (new venture, job or move loops back); each piece of work is seeking, working, between work or ended.
+- Examine: does it serve the telos, would you keep it, is it on track for income's target, what would you need to learn (hands off to Learn).
+- Household work is a set of tasks, each provided the way needs are: by a member (unpaid), bought (a babysitter, daycare, a school) or given (family, church, charity). A make-or-buy comparison weighs a member's hours against the cost of buying the task (economists value household production by replacement or opportunity cost). The concept is set here; the detail (childcare, schooling choices) is designed in the household and raise-children subdomains.
+
 ## Plans in phases
 
 **Decided.** A plan has phases, and the person chooses how detailed each phase is, because some people want detailed plans and others do not.
