@@ -36,7 +36,7 @@ export const { registry, handlers } = defineRegistry(catalog, {
     LibraryBook: ({ props, emit }) => (
       <div className="chat-row">
         <div><strong>{props.title}</strong><span className="muted"> {props.by} · {props.shelf}</span></div>
-        {props.onShelves || props.done ? <span className="muted">on your shelves</span> : <span>{props.failed ? <span className="muted">Could not add. </span> : null}<button type="button" className="primary" onClick={() => emit("press")}>Add to my shelves</button></span>}
+        {props.onShelves || props.done ? <span className="muted">on your shelves</span> : <span>{props.failed ? <span className="muted">Could not add. </span> : null}<button type="button" className="nd-btn" onClick={() => emit("press")}>ADD TO SHELVES</button></span>}
       </div>
     ),
     Claim: ({ props }) => (
@@ -50,7 +50,7 @@ export const { registry, handlers } = defineRegistry(catalog, {
         <div className="chat-card-head"><span>PROPOSED · LEARN CLAIM</span><span>{props.stance}</span></div>
         <strong>{props.text}</strong>
         <p className="muted">{[props.subject ? `under ${props.subject}` : "", props.holders ? `held by ${props.holders}` : ""].filter(Boolean).join(" · ")}</p>
-        {props.done ? <span className="muted">Kept in Learn.</span> : <span>{props.failed ? <span className="muted">Could not keep it. </span> : null}<button type="button" className="primary" onClick={() => emit("press")}>Accept</button></span>}
+        {props.done ? <span className="muted">Kept in Learn.</span> : <span>{props.failed ? <span className="muted">Could not keep it. </span> : null}<button type="button" className="nd-btn" onClick={() => emit("press")}>ACCEPT</button></span>}
       </div>
     ),
     Note: ({ props }) => <p className="muted">{props.text}</p>,

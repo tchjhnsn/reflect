@@ -32,7 +32,7 @@ export function SignIn() {
     else {
       const next = oauthNext(result.data);
       if (next) window.location.href = next;
-      else router.replace("/journal");
+      else router.replace("/");
     }
   };
 

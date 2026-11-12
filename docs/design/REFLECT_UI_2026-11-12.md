@@ -72,8 +72,9 @@ The apps follow Aristotle's three kinds of goods: of the body (Body, Home), exte
 
 ## 8. Built so far
 
-- `/`: the home screen, MINE with 18 tiles and tones from the person's records; Learn, Journal, Ideas and Legacy link to their pages; the plus button opens the chat. OURS is not built.
-- `/learn`: shelves by Library of Congress class.
-- `/learn` claims: belief, disbelief or suspension of judgment, holders cited, stances kept (needs migration 0012).
-- `/learn/browse`: the library from Open Library, by search or class, with add to shelves.
+**Decided (08:00Z).** Torian: the old pages clash with the new design, so they are archived (`web/archive/2026-11-12-old-app/`), not deleted. The app now holds only the new design: home, Learn and the chat. Sign-in is off on the local dev server and on Vercel previews (which sit behind the Vercel team's own sign-in), and stays on in production. Work is previewed on a dev server in the session, not by pushing.
+
+
+- `/`: the home screen, MINE with 18 tiles and tones from the person's records; only Learn opens; the plus button opens the chat. The journal (folder), the other apps and OURS are not built in this design.
+- `/learn`, in the new design: MY SHELVES (Library of Congress shelves, books and subjects toned known, learning or registered, a book's side panel to set where you are with it), LIBRARY (Open Library by class or search, Add to shelves) and CLAIMS (belief, disbelief or suspension of judgment, holders cited, stances kept).
 - `/chat`: the plus button's chat over Learn (section 5). Not saved to the journal yet.

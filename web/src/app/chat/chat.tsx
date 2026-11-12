@@ -53,22 +53,22 @@ export function Chat() {
   }
 
   return (
-    <div className="chat">
+    <div className="nd-ask">
       <div className="chat-log" aria-live="polite">
-        {turns.length ? null : <p className="muted chat-empty">Ask about what you are learning: your shelves, a book to find, a claim you hold. I show what is in your apps, and nothing is kept unless you accept it.</p>}
+        {turns.length ? null : <p className="nd-note">Ask about what you are learning: your shelves, a book to find, a claim you hold. I show what is in your apps, and nothing is kept unless you accept it.</p>}
         {turns.map((t, i) => (
           <div key={i} className={`chat-msg chat-${t.role}`}>
             <p>{t.content}</p>
             {t.spec ? <Cards spec={t.spec} /> : null}
           </div>
         ))}
-        {busy ? <p className="muted">Looking in your apps…</p> : null}
+        {busy ? <p className="nd-note">Looking in your apps...</p> : null}
         <div ref={end} />
       </div>
       <form className="chat-form" onSubmit={send}>
         <label htmlFor="chat-input" className="sr-only">Message</label>
-        <input id="chat-input" value={text} onChange={(e) => setText(e.target.value)} placeholder="Ask Reflect" autoComplete="off" maxLength={4000} />
-        <button type="submit" className="primary" disabled={busy || !text.trim()}>Send</button>
+        <input id="chat-input" value={text} onChange={(e) => setText(e.target.value)} placeholder="Say anything..." autoComplete="off" maxLength={4000} />
+        <button type="submit" className="nd-btn" disabled={busy || !text.trim()}>SEND</button>
       </form>
     </div>
   );

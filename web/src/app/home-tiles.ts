@@ -65,24 +65,15 @@ export const OURS: readonly Tile[] = [
 
 /** Where a tile goes. Ideas has its own page; every other tile goes to its app, when the app exists. */
 export function hrefOf(t: Tile): string | null {
-  if (t.id === "ideas") return "/ideas";
-  return ({ learn: "/learn", journal: "/journal", legacy: "/legacy" } as Partial<Record<App, string>>)[t.app] ?? null;
+  // Only apps built in the new design open. The old journal, ideas and legacy pages are archived.
+  return t.app === "learn" ? "/learn" : null;
 }
 
 export type Tone = "action" | "thought" | "unstated";
-export type Facts = { learn: { underway: boolean; stated: boolean }; journal: { entries: number }; ideas: number; legacy: boolean };
+export type Facts = { learn: { underway: boolean; stated: boolean } };
 
 /** A tile's tone from what the person has, never from a guess. */
 export function toneOf(t: Tile, f: Facts): Tone {
-  if (t.id === "ideas") return f.ideas ? "thought" : "unstated";
-  switch (t.app) {
-    case "learn":
-      return f.learn.underway ? "action" : f.learn.stated ? "thought" : "unstated";
-    case "journal":
-      return f.journal.entries ? "action" : "unstated";
-    case "legacy":
-      return f.legacy ? "thought" : "unstated";
-    default:
-      return "unstated";
-  }
+  if (t.app === "learn") return f.learn.underway ? "action" : f.learn.stated ? "thought" : "unstated";
+  return "unstated";
 }

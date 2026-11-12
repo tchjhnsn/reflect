@@ -28,12 +28,12 @@ describe("chat cards render", () => {
     const before = html(spec.state ?? {});
     expect(before).toContain("Wiring");
     expect(before).toContain("T Technology");
-    expect(before).toContain("Add to my shelves");
-    expect(before).toContain("Accept");
+    expect(before).toContain("ADD TO SHELVES");
+    expect(before).toContain("ACCEPT");
     const after = html({ done: { e0: true, e1: true }, failed: {} });
     expect(after).toContain("on your shelves");
     expect(after).toContain("Kept in Learn.");
-    expect(after).not.toContain("Accept<");
+    expect(after).not.toContain("ACCEPT<");
   });
 
   it("a tap runs the server action and marks its card done, or failed when the action throws", async () => {

@@ -1,329 +1,221 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BOOK_STATUS, FILM_KINDS, FILM_STATUS, GRASP, RESOURCE_KINDS } from "@reflect/core/learning";
-import { SWEEP_PROMPT } from "@reflect/core/sweep";
 import { STANCES } from "@reflect/core/claims";
-import { listClaims, type ClaimOut } from "@/server/claims-store";
-import { inputTitle, listInputs } from "@/server/ideas-store";
+import { browseClass, searchBooks, type CatalogEntry } from "@reflect/core/openlibrary";
+import { LCC_CLASSES } from "@reflect/core/shelves";
 import { requireUser } from "@/server/session";
-import { currentName } from "@/server/person-store";
-import { learnView } from "@/server/learn-store";
+import { learnView, type LearnView } from "@/server/learn-store";
+import { listClaims, type ClaimOut } from "@/server/claims-store";
 import { shelvesOf } from "@/server/learn-shelves";
-import { initialOf, Nav } from "../nav";
-import { keepClaimAction, setStanceAction, addBookAction, addCredentialAction, addInputAction, rateCoursesAction, sweepAction, uploadLinkedInAction, uploadTranscriptAction } from "./actions";
-import { listCourses, listCredentials, recommendations } from "@/server/learn-sources-store";
+import { mono } from "../fonts";
+import { addFromLibraryAction, keepClaimAction, setBookStatusAction, setStanceAction } from "./actions";
+import { bookTone, subjectTone, type ShelfTone } from "./tones";
 
 export const metadata: Metadata = { title: "Learn" };
 export const dynamic = "force-dynamic";
 
-const graspText = (g: string) => GRASP.find((x) => x.id === g)?.text ?? g;
+type Tab = "shelves" | "library" | "claims";
+const BOOK = "M8 4 h84 v92 h-84 z";
+const SUBJ = "M50 4 A46 46 0 1 1 49.99 4 Z";
+const STATUS = [["want", "WANT TO READ"], ["reading", "READING"], ["read", "READ"]] as const;
+const openLibrary = (url: string) => fetch(url, { headers: { "user-agent": "reflect-app" }, cache: "no-store" });
+const STANCE_LABEL: Record<string, string> = { belief: "BELIEF", disbelief: "DISBELIEF", suspension: "SUSPENSION OF JUDGMENT" };
+const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
 
+/** Learn in the new design: your shelves by Library of Congress class, the whole library, and your claims. */
 export default async function LearnPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const user = await requireUser();
-  const browseAll = (await searchParams).shelves === "all";
-  // Claims need migration 0012; until it runs, the section says so instead of failing the page.
-  const claims: ClaimOut[] | null = await listClaims(user.id).catch(() => null);
-  const [v, courses, credentials, recs, inputs] = await Promise.all([learnView(user.id), listCourses(user.id), listCredentials(user.id), recommendations(user.id), listInputs(user.id)]);
+  const sp = await searchParams;
+  const tab: Tab = one(sp.tab) === "library" ? "library" : one(sp.tab) === "claims" ? "claims" : "shelves";
+  const view = await learnView(user.id);
+  const href = (t: Tab, extra = "") => `/learn?tab=${t}${extra}`;
   return (
-    <main className="page">
-      <Nav current="learn" eyebrow="Learn" initial={initialOf(await currentName(user.id))} />
-      <h1 className="title">What you know</h1>
-      <p className="sec-note">What you take in: books, films, talks, conversations, links and the subjects you study. Nothing here is known until you say how well you grasp it. Your own ideas are outputs and live in <Link href="/ideas">Ideas</Link>.</p>
-
-      {(() => {
-        const shelved = shelvesOf(v, browseAll);
-        return (
-          <section className="sec" aria-labelledby="h-shelves">
-            <div className="sec-head"><h2 id="h-shelves" className="lbl">Shelves</h2></div>
-            <p className="sec-note">Arranged by the Library of Congress Classification. A book goes where its catalog call numbers point; a subject goes where most of its books are.</p>
-            {shelved.shelves.length ? (
-              <dl className="facts shelves" style={{ borderTop: 0 }}>
-                {shelved.shelves.map((sh) => (
-                  <div className="fact" key={sh.id}>
-                    <dt><span className="muted">{sh.id}</span> {sh.name}</dt>
-                    <dd>
-                      {sh.books.length || sh.subjects.length ? (
-                        <>
-                          {sh.books.map((b, i) => <span key={b.id}>{i ? ", " : ""}<Link href={`/learn/book/${b.id}`}>{b.title}</Link></span>)}
-                          {sh.books.length && sh.subjects.length ? <span className="muted"> · </span> : null}
-                          {sh.subjects.length ? <span className="muted">{sh.subjects.map((x) => x.name).join(", ")}</span> : null}
-                        </>
-                      ) : <span className="muted">Empty</span>}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            ) : (
-              <p className="sec-note">No shelves yet. Add a book with its ISBN and it goes on its shelf.</p>
-            )}
-            {shelved.unshelved.books.length || shelved.unshelved.subjects.length ? (
-              <p className="sec-note">Not yet shelved: {[...shelved.unshelved.books.map((b) => b.title), ...shelved.unshelved.subjects.map((x) => x.name)].join(", ")}.</p>
-            ) : null}
-            <p className="sec-note"><Link href="/learn/browse">Browse the library</Link> · {browseAll ? <Link href="/learn">Show only filled shelves</Link> : <Link href="/learn?shelves=all">Browse all 21 shelves</Link>}</p>
-          </section>
-        );
-      })()}
-
-      <section className="sec" aria-labelledby="h-claims">
-        <div className="sec-head"><h2 id="h-claims" className="lbl">Claims</h2></div>
-        <p className="sec-note">What you can hold true or false, apart from what you know. Name who holds it, with a citation. Your stance is belief, disbelief or suspension of judgment; the latest one counts, and earlier ones are kept.</p>
-        {claims === null ? (
-          <p className="sec-note">Claims are not set up on this database yet (migration 0012).</p>
-        ) : (
-          <>
-            {STANCES.map((st) => {
-              const here = claims.filter((c) => c.stance?.stance === st.id);
-              if (!here.length) return null;
-              return (
-                <div key={st.id}>
-                  <h3 className="lbl">{st.text}</h3>
-                  <ul className="note learn-list">
-                    {here.map((c) => (
-                      <li key={c.id}>
-                        <strong>{c.text}</strong>
-                        {c.subject ? <span className="muted"> · under {c.subject.name}</span> : null}
-                        {c.holders.length ? <span className="muted"> · held by {c.holders.map((h) => (h.citation ? `${h.name} (${h.citation})` : h.name)).join("; ")}</span> : null}
-                        {c.history.length > 1 ? <span className="muted"> · {c.history.length} stances kept</span> : null}
-                        <form action={setStanceAction} className="browse-add">
-                          <input type="hidden" name="claim" value={c.id} />
-                          <label className="sr-only" htmlFor={`st-${c.id}`}>Your stance now</label>
-                          <select id={`st-${c.id}`} name="stance" defaultValue={c.stance?.stance} className="learn-select">
-                            {STANCES.map((x) => <option key={x.id} value={x.id}>{x.text}</option>)}
-                          </select>
-                          <button type="submit">Update stance</button>
-                        </form>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              );
-            })}
-            {!claims.length ? <p className="sec-note">No claims yet.</p> : null}
-            <form action={keepClaimAction} className="add">
-              <label className="lbl" htmlFor="claim">A claim</label>
-              <input id="claim" name="claim" required maxLength={500} placeholder="Marriage is a covenant" />
-              <label className="lbl" htmlFor="claim-subject">The subject it is about (optional)</label>
-              <input id="claim-subject" name="subject" maxLength={120} placeholder="Marriage" />
-              <label className="lbl" htmlFor="holders">Who holds it, one per line, with a citation after a bar (optional)</label>
-              <textarea id="holders" name="holders" rows={3} maxLength={5000} placeholder={"Scripture | Malachi 2:14\nWestminster Confession | ch. 24"} />
-              <label className="lbl" htmlFor="stance">Your stance</label>
-              <select id="stance" name="stance" defaultValue="belief" className="learn-select">
-                {STANCES.map((x) => <option key={x.id} value={x.id}>{x.text}</option>)}
-              </select>
-              <label className="lbl" htmlFor="claim-note">Why, in your words (optional)</label>
-              <input id="claim-note" name="note" maxLength={5000} />
-              <div className="actions"><button type="submit" className="primary">Keep the claim</button></div>
-            </form>
-          </>
-        )}
-      </section>
-
-      <section className="sec" aria-labelledby="h-known">
-        <div className="sec-head"><h2 id="h-known" className="lbl">Known</h2></div>
-        {v.known.length ? (
-          <dl className="facts" style={{ borderTop: 0 }}>
-            {v.known.map((s) => (
-              <div className="fact" key={s.id}><dt>{s.name}</dt><dd>{graspText(s.grasp!.grasp)}{s.vouches ? `; vouched for by ${s.vouches}` : ""}</dd></div>
-            ))}
-          </dl>
-        ) : (
-          <p className="sec-note">Nothing rated yet. Open a book you have read and name what you remember of it.</p>
-        )}
-      </section>
-
-      <section className="sec" aria-labelledby="h-books">
-        <div className="sec-head"><h2 id="h-books" className="lbl">Books</h2></div>
-        {v.books.length ? (
-          <ul className="note learn-list">
-            {v.books.map((b) => (
-              <li key={b.id}>
-                <Link href={`/learn/book/${b.id}`}>{b.title}</Link>
-                {b.authors.length ? `, ${b.authors.join(", ")}` : ""} <span className="muted">({b.status}{b.finishedOn ? ` ${b.finishedOn}` : ""})</span>
-                {b.unrated.length ? <span className="muted">. Not yet rated: {b.unrated.join(", ")}</span> : null}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="sec-note">No books yet.</p>
-        )}
-      </section>
-
-      {v.shown.length ? (
-        <section className="sec" aria-labelledby="h-shown">
-          <div className="sec-head"><h2 id="h-shown" className="lbl">Shown, not yet rated by you</h2></div>
-          <p className="sec-note">Someone saw you show knowledge of these. Rate them yourself to count them as known.</p>
-          <ul className="note learn-list">{v.shown.map((s) => <li key={s.id}>{s.name}</li>)}</ul>
-        </section>
-      ) : null}
-
-      {v.vouched.length ? (
-        <section className="sec" aria-labelledby="h-vouched">
-          <div className="sec-head"><h2 id="h-vouched" className="lbl">Vouched for by others</h2></div>
-          <p className="sec-note">Others say you know these. They stay apart from what you know until you rate them yourself.</p>
-          <ul className="note learn-list">{v.vouched.map((s) => <li key={s.id}>{s.name}, by {s.vouches}</li>)}</ul>
-        </section>
-      ) : null}
-
-      {v.suggested.length ? (
-        <section className="sec" aria-labelledby="h-suggested">
-          <div className="sec-head"><h2 id="h-suggested" className="lbl">Suggested, not known</h2></div>
-          <p className="sec-note">Someone thinks these relate to you. They are places to look, not what you know.</p>
-          <ul className="note learn-list">{v.suggested.map((s) => <li key={s.id}>{s.name}</li>)}</ul>
-        </section>
-      ) : null}
-
-      <section className="sec" aria-labelledby="h-inputs">
-        <div className="sec-head"><h2 id="h-inputs" className="lbl">Films, talks, conversations and links</h2></div>
-        {inputs.length ? (
-          <ul className="note learn-list">
-            {inputs.map((i) => (
-              <li key={i.id}>
-                {i.body.kind === "link" && i.body.url ? <a href={i.body.url} rel="noreferrer">{inputTitle(i.body)}</a> : inputTitle(i.body)}{" "}
-                <span className="muted">
-                  ({i.body.kind === "film" ? `${i.body.film}${i.body.year ? ` ${i.body.year}` : ""}, ${i.body.status}` : i.body.kind === "talk" ? `talk by ${i.body.speaker}` : i.body.kind === "conversation" ? i.body.on : `${i.body.link}${i.body.source ? ` on ${i.body.source}` : ""}`})
-                  {i.subjects.length ? `. ${i.subjects.join(", ")}` : ""}
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="sec-note">Nothing yet beside your books.</p>
-        )}
-        <form action={addInputAction} className="add">
-          <label className="lbl" htmlFor="ikind">What it is</label>
-          <select id="ikind" name="kind" defaultValue="film" className="learn-select">
-            <option value="film">a film, documentary or series</option>
-            <option value="talk">a talk: someone you saw speak</option>
-            <option value="conversation">a conversation</option>
-            <option value="link">a link: a post, thread, video or article</option>
-          </select>
-          <label className="lbl" htmlFor="ititle">Title, or for a conversation what it was about</label>
-          <input id="ititle" name="title" maxLength={300} />
-          <label className="lbl" htmlFor="iwho">Who: the speaker, the people you talked with (separated by ;), or the author</label>
-          <input id="iwho" name="who" maxLength={300} />
-          <label className="lbl" htmlFor="iurl">Link (optional)</label>
-          <input id="iurl" name="url" type="url" maxLength={2000} />
-          <label className="lbl" htmlFor="ion">When (YYYY-MM-DD, optional)</label>
-          <input id="ion" name="on" maxLength={10} />
-          <label className="lbl" htmlFor="ifilm">For a film</label>
-          <div className="choices">
-            <select id="ifilm" name="film" defaultValue="film" className="learn-select" aria-label="Kind of film">{FILM_KINDS.map((k) => <option key={k} value={k}>{k}</option>)}</select>
-            <select name="status" defaultValue="watched" className="learn-select" aria-label="Whether you watched it">{FILM_STATUS.map((k) => <option key={k} value={k}>{k}</option>)}</select>
-            <input name="year" inputMode="numeric" maxLength={4} placeholder="year" aria-label="Year" />
-          </div>
-          <label className="lbl" htmlFor="ilink">For a link</label>
-          <select id="ilink" name="link" defaultValue="post" className="learn-select">{RESOURCE_KINDS.map((k) => <option key={k} value={k}>{k}</option>)}</select>
-          <label className="lbl" htmlFor="isubjects">What it touches on, as subjects (comma separated, optional)</label>
-          <input id="isubjects" name="subjects" maxLength={2000} />
-          <div className="actions"><button type="submit" className="primary">Keep it</button></div>
-        </form>
-      </section>
-
-      <section className="sec" aria-labelledby="h-sweep">
-        <div className="sec-head"><h2 id="h-sweep" className="lbl">From your AI&apos;s memory</h2></div>
-        <p className="sec-note">Paste this into the AI you talk to most. It lists from what it already knows of you what you read, watched and heard, subjects you showed or it suggests, and your own ideas with what fed them. You keep items one by one.</p>
-        <details className="note">
-          <summary>The prompt</summary>
-          <textarea readOnly className="learn-prompt" rows={12} defaultValue={SWEEP_PROMPT} aria-label="The prompt" />
-        </details>
-        <form action={sweepAction} className="add">
-          <label className="lbl" htmlFor="reply">Its reply</label>
-          <textarea id="reply" name="reply" rows={5} maxLength={2_000_000} />
-          <label className="lbl" htmlFor="replyfile">Or the file it is in</label>
-          <input id="replyfile" name="file" type="file" accept=".json,.md,.txt,application/json,text/plain,text/markdown" />
-          <div className="actions"><button type="submit" className="primary">Read the reply</button></div>
-        </form>
-      </section>
-
-      <section className="sec" aria-labelledby="h-courses">
-        <div className="sec-head"><h2 id="h-courses" className="lbl">Courses</h2></div>
-        {courses.length ? (
-          <form action={rateCoursesAction}>
-            {courses.map((c) => (
-              <fieldset key={c.id} className="learn-grasp">
-                <legend>
-                  {c.row.term} {c.row.code ? `${c.row.code} ` : ""}{c.row.title}
-                  <span className="muted">{c.row.grade ? `; grade ${c.row.grade}` : ""}{c.subject.grasp ? `; you say: ${graspText(c.subject.grasp.grasp)}` : "; not yet rated by you"}</span>
-                </legend>
-                <div className="choices">
-                  {GRASP.map((g) => (
-                    <label key={g.id} className="chip"><input type="radio" name={`grasp-${c.id}`} value={g.id} /> {g.text}</label>
-                  ))}
-                </div>
-              </fieldset>
-            ))}
-            <div className="actions"><button type="submit" className="primary">Keep my ratings</button></div>
-          </form>
-        ) : (
-          <p className="sec-note">Upload a transcript to look back over what you studied and say what you kept of it, whatever the grade.</p>
-        )}
-        <form action={uploadTranscriptAction} className="add">
-          <label className="lbl" htmlFor="transcript">Transcript (PDF or text)</label>
-          <input id="transcript" name="file" type="file" accept=".pdf,.txt,application/pdf,text/plain" required />
-          <p className="sec-note">A model drafts its courses; only rows really in your transcript are offered, and you choose which to keep.</p>
-          <div className="actions"><button type="submit" className="primary">Read my transcript</button></div>
-        </form>
-      </section>
-
-      <section className="sec" aria-labelledby="h-creds">
-        <div className="sec-head"><h2 id="h-creds" className="lbl">Credentials</h2></div>
-        {credentials.length ? (
-          <ul className="note learn-list">
-            {credentials.map((c) => (
-              <li key={c.id}>
-                {c.name}, {c.issuer}{c.issued ? `, ${c.issued}` : ""}{c.subjects.length ? `. Covers ${c.subjects.join(", ")}` : ""}
-                {c.checked ? <span className="muted">. The issuer&apos;s badge says {c.checked.name}</span> : null}
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        <form action={addCredentialAction} className="add">
-          <label className="lbl" htmlFor="cname">Name</label>
-          <input id="cname" name="name" maxLength={300} />
-          <label className="lbl" htmlFor="issuer">Issuer</label>
-          <input id="issuer" name="issuer" maxLength={300} />
-          <label className="lbl" htmlFor="issued">Issued (YYYY-MM, optional)</label>
-          <input id="issued" name="issued" maxLength={10} />
-          <label className="lbl" htmlFor="curl">Link to the badge or certificate (optional)</label>
-          <input id="curl" name="url" type="url" maxLength={2000} />
-          <label className="chip"><input type="checkbox" name="check" /> Check the badge with its issuer</label>
-          <label className="lbl" htmlFor="csubjects">Subjects it covers (comma separated, optional)</label>
-          <input id="csubjects" name="subjects" maxLength={2000} />
-          <div className="actions"><button type="submit" className="primary">Keep the credential</button></div>
-        </form>
-      </section>
-
-      <section className="sec" aria-labelledby="h-li">
-        <div className="sec-head"><h2 id="h-li" className="lbl">From LinkedIn</h2></div>
-        {recs.length ? (
-          recs.map((r, i) => (
-            <blockquote key={i} className="note learn-recall">{r.text} <span className="muted">({r.by}{r.role ? `, ${r.role}` : ""})</span></blockquote>
-          ))
-        ) : null}
-        <form action={uploadLinkedInAction} className="add">
-          <label className="lbl" htmlFor="linkedin">Your LinkedIn data export (the zip)</label>
-          <input id="linkedin" name="file" type="file" accept=".zip,application/zip" required />
-          <p className="sec-note">Ask LinkedIn for a copy of your data under Settings, Data privacy. You see what it holds before anything is kept.</p>
-          <div className="actions"><button type="submit" className="primary">Read the export</button></div>
-        </form>
-      </section>
-
-      <section className="sec" aria-labelledby="h-add">
-        <div className="sec-head"><h2 id="h-add" className="lbl">Add a book</h2></div>
-        <form action={addBookAction} className="add">
-          <label className="lbl" htmlFor="title">Title</label>
-          <input id="title" name="title" required maxLength={300} />
-          <label className="lbl" htmlFor="isbn">ISBN, to look it up in Open Library (optional)</label>
-          <input id="isbn" name="isbn" inputMode="numeric" maxLength={20} />
-          <label className="lbl" htmlFor="status">Where you are with it</label>
-          <select id="status" name="status" defaultValue="read" className="learn-select">
-            {BOOK_STATUS.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-          <label className="lbl" htmlFor="subjects">Its key subjects, as you would name them (comma separated, optional)</label>
-          <input id="subjects" name="subjects" maxLength={2000} />
-          <div className="actions"><button type="submit" className="primary">Keep the book</button></div>
-        </form>
-      </section>
+    <main className={`nd ${mono.className}`}>
+      <div className="nd-bar" aria-hidden="true" />
+      <header className="nd-head">
+        <div className="nd-head-l">
+          <Link href="/" className="nd-quiet">&#8592; HOME</Link>
+          <h1 className="nd-title">LEARN</h1>
+        </div>
+        <nav className="nd-tabs" aria-label="Learn">
+          <Link href={href("shelves")} aria-current={tab === "shelves" ? "page" : undefined}>MY SHELVES</Link>
+          <Link href={href("library")} aria-current={tab === "library" ? "page" : undefined}>LIBRARY</Link>
+          <Link href={href("claims")} aria-current={tab === "claims" ? "page" : undefined}>CLAIMS</Link>
+        </nav>
+      </header>
+      {tab === "shelves" ? <Shelves view={view} all={one(sp.all) === "1"} open={one(sp.book)} /> : null}
+      {tab === "library" ? <Library view={view} cls={one(sp.class).toUpperCase()} q={one(sp.q).trim()} /> : null}
+      {tab === "claims" ? <Claims claims={await listClaims(user.id).catch((): ClaimOut[] | null => null)} /> : null}
+      <footer className="nd-foot">
+        <span>&#9632; BOOK</span>
+        <span>&#9679; SUBJECT</span>
+        <span>DARK = KNOWN · GREY = LEARNING · LIGHT = REGISTERED</span>
+        <span>LIBRARY OF CONGRESS CLASSIFICATION</span>
+      </footer>
     </main>
+  );
+}
+
+function Glyph({ d, tone, w }: { d: string; tone: ShelfTone; w: number }) {
+  return <svg width={w} height={84} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d={d} className={`nd-tone-${tone}`} /></svg>;
+}
+
+function Shelves({ view, all, open }: { view: LearnView; all: boolean; open: string }) {
+  const sh = shelvesOf(view, all);
+  const byId = new Map(view.books.map((b) => [b.id, b]));
+  const subjectBooks = new Map<string, LearnView["books"]>();
+  for (const b of view.books) for (const s of b.subjects) subjectBooks.set(s.id, [...(subjectBooks.get(s.id) ?? []), b]);
+  const grasp = new Map(view.books.flatMap((b) => b.subjects).concat(view.known).map((s) => [s.id, s.grasp?.grasp ?? null]));
+  const book = open ? byId.get(open) : undefined;
+  const items = (books: { id: string; title: string }[], subjects: { id: string; name: string }[]) => (
+    <div className="nd-items">
+      {books.map((b) => {
+        const full = byId.get(b.id)!;
+        return (
+          <Link key={b.id} href={`/learn?tab=shelves&book=${b.id}${all ? "&all=1" : ""}`} className="nd-item" aria-label={`${b.title}, book, ${full.status}`}>
+            <Glyph d={BOOK} tone={bookTone(full.status)} w={62} />
+            <span>{b.title.toUpperCase()}</span>
+          </Link>
+        );
+      })}
+      {subjects.map((s) => (
+        <span key={s.id} className="nd-item" aria-label={`${s.name}, subject`}>
+          <Glyph d={SUBJ} tone={subjectTone(grasp.get(s.id), (subjectBooks.get(s.id) ?? []).map((b) => b.status))} w={84} />
+          <span>{s.name.toUpperCase()}</span>
+        </span>
+      ))}
+    </div>
+  );
+  return (
+    <section className="nd-body">
+      <div className="nd-row-end">
+        <Link href={all ? "/learn?tab=shelves" : "/learn?tab=shelves&all=1"} className="nd-quiet nd-u">{all ? "ONLY FILLED SHELVES" : "ALL 21 SHELVES"}</Link>
+      </div>
+      {sh.shelves.length ? null : <p className="nd-note">No shelves yet. Find a book in the <Link href="/learn?tab=library">library</Link> and it goes on its shelf.</p>}
+      {sh.shelves.map((s) => (
+        <div key={s.id} className="nd-shelf">
+          <div className="nd-shelf-name">
+            <span className={`nd-letter${s.books.length || s.subjects.length ? "" : " is-empty"}`}>{s.id}</span>
+            <span>{s.name.toUpperCase()}</span>
+          </div>
+          {items(s.books, s.subjects)}
+        </div>
+      ))}
+      {sh.unshelved.books.length || sh.unshelved.subjects.length ? (
+        <div className="nd-shelf">
+          <div className="nd-shelf-name"><span className="nd-letter is-empty">?</span><span>NOT YET SHELVED (NO CALL NUMBER)</span></div>
+          {items(sh.unshelved.books, sh.unshelved.subjects)}
+        </div>
+      ) : null}
+      {book ? (
+        <aside className="nd-panel" aria-label={book.title}>
+          <div className="nd-panel-head">
+            <span className="nd-panel-title">{book.title.toUpperCase()}</span>
+            <Link href={`/learn?tab=shelves${all ? "&all=1" : ""}`} aria-label="Close" className="nd-x">&#10005;</Link>
+          </div>
+          <p className="nd-small">{book.authors.join(", ") || "Author not given"}{book.catalog?.year ? ` · ${book.catalog.year}` : ""}</p>
+          <form action={setBookStatusAction} className="nd-choices">
+            <input type="hidden" name="book" value={book.id} />
+            {STATUS.map(([id, label]) => (
+              <button key={id} name="status" value={id} className={book.status === id ? "nd-btn" : "nd-btn-line"} aria-pressed={book.status === id}>{label}</button>
+            ))}
+          </form>
+          {book.subjects.length ? <p className="nd-small">SUBJECTS · {book.subjects.map((s) => s.name).join(", ")}</p> : null}
+          {book.catalog?.subjects.length ? <p className="nd-small nd-dim">THE CATALOG SUGGESTS · {book.catalog.subjects.slice(0, 8).join(", ")}</p> : null}
+        </aside>
+      ) : null}
+    </section>
+  );
+}
+
+async function Library({ view, cls, q }: { view: LearnView; cls: string; q: string }) {
+  const pick = LCC_CLASSES.find((c) => c.id === cls);
+  let books: CatalogEntry[] | null = [];
+  let title = "SEARCH THE LIBRARY, OR PICK A SHELF";
+  if (q) {
+    books = await searchBooks(q, openLibrary, 12).catch(() => null);
+    title = `RESULTS FOR "${q.toUpperCase()}"`;
+  } else if (pick) {
+    books = await browseClass(pick.id, openLibrary, { limit: 12 }).catch(() => null);
+    title = `${pick.id} · ${pick.name.toUpperCase()} · BEST RATED`;
+  }
+  const kept = new Set(view.books.map((b) => b.catalog?.work).filter(Boolean));
+  return (
+    <section className="nd-body nd-library">
+      <nav className="nd-classes" aria-label="Shelves">
+        {LCC_CLASSES.map((c) => (
+          <Link key={c.id} href={`/learn?tab=library&class=${c.id}`} aria-current={c.id === pick?.id ? "page" : undefined}>
+            <span className="nd-dim">{c.id}</span><span>{c.name}</span>
+          </Link>
+        ))}
+      </nav>
+      <div className="nd-results">
+        <form className="nd-search" action="/learn">
+          <input type="hidden" name="tab" value="library" />
+          <span className="nd-results-title">{title}</span>
+          <label htmlFor="q" className="sr-only">Search titles or authors</label>
+          <input id="q" name="q" defaultValue={q} placeholder="Search titles or authors..." />
+        </form>
+        {books === null ? <p className="nd-note">The open library did not answer. Try again in a moment.</p> : null}
+        {books && (q || pick) && !books.length ? <p className="nd-note">Nothing found.</p> : null}
+        {(books ?? []).map((b) => (
+          <div key={b.work} className="nd-book">
+            <svg width="34" height="46" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d={BOOK} className={kept.has(b.work) ? "nd-tone-known" : "nd-tone-registered"} /></svg>
+            <div className="nd-book-text"><span>{b.title}</span><span className="nd-small">{b.authors.join(", ") || "Author not given"}{b.year ? ` · ${b.year}` : ""}</span></div>
+            {kept.has(b.work) ? (
+              <span className="nd-small">ON YOUR SHELVES</span>
+            ) : (
+              <form action={addFromLibraryAction}>
+                <input type="hidden" name="entry" value={JSON.stringify(b)} />
+                <input type="hidden" name="status" value="want" />
+                <button className="nd-btn">ADD TO SHELVES</button>
+              </form>
+            )}
+          </div>
+        ))}
+        <span className="nd-small">FROM OPEN LIBRARY</span>
+      </div>
+    </section>
+  );
+}
+
+function Claims({ claims }: { claims: ClaimOut[] | null }) {
+  if (!claims) return <section className="nd-body"><p className="nd-note">Claims are not set up on this database yet.</p></section>;
+  return (
+    <section className="nd-body nd-claims">
+      <p className="nd-note">What you believe, disbelieve, or suspend judgment on, with who holds each view. Your latest stance counts; earlier ones are kept.</p>
+      {STANCES.map((st) => {
+        const here = claims.filter((c) => c.stance?.stance === st.id);
+        return (
+          <div key={st.id} className="nd-shelf">
+            <div className="nd-shelf-name"><span className="nd-stance">{STANCE_LABEL[st.id]}</span><span>{here.length}</span></div>
+            <div className="nd-claim-list">
+              {here.length ? null : <span className="nd-small nd-dim">None</span>}
+              {here.map((c) => (
+                <div key={c.id} className="nd-claim">
+                  <div className="nd-book-text">
+                    <span>{c.text}</span>
+                    <span className="nd-small">{[c.subject?.name, c.holders.map((h) => (h.citation ? `${h.name} (${h.citation})` : h.name)).join("; ")].filter(Boolean).join(" · ") || "No holder named"}</span>
+                  </div>
+                  <form action={setStanceAction} className="nd-choices">
+                    <input type="hidden" name="claim" value={c.id} />
+                    {STANCES.filter((x) => x.id !== st.id).map((x) => <button key={x.id} name="stance" value={x.id} className="nd-btn-line">{STANCE_LABEL[x.id]}</button>)}
+                  </form>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+      <form action={keepClaimAction} className="nd-form">
+        <span className="nd-results-title">KEEP A CLAIM</span>
+        <label>CLAIM<input name="claim" required maxLength={500} /></label>
+        <label>SUBJECT (OPTIONAL)<input name="subject" maxLength={120} /></label>
+        <label>WHO HOLDS IT, ONE PER LINE: NAME | CITATION<textarea name="holders" rows={2} /></label>
+        <div className="nd-choices">
+          {STANCES.map((x) => <button key={x.id} name="stance" value={x.id} className="nd-btn-line">KEEP AS {STANCE_LABEL[x.id]}</button>)}
+        </div>
+      </form>
+    </section>
   );
 }

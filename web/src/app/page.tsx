@@ -1,17 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { IBM_Plex_Mono } from "next/font/google";
+import { mono } from "./fonts";
 import { requireUser } from "@/server/session";
 import { learnView } from "@/server/learn-store";
-import { listEntries } from "@/server/journal-store";
-import { listIdeas } from "@/server/ideas-store";
-import { legacyStatus } from "@/server/legacy-store";
 import { GLYPHS, hrefOf, MINE, OURS, toneOf, type Facts, type Tone } from "./home-tiles";
 
 export const metadata: Metadata = { title: "Reflect" };
 export const dynamic = "force-dynamic";
 
-const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], display: "swap" });
 const FILL: Record<Tone, string> = { action: "var(--home-action)", thought: "var(--home-thought)", unstated: "var(--home-unstated)" };
 const SAY: Record<Tone, string> = { action: "in action", thought: "in thought", unstated: "unstated" };
 
@@ -19,13 +15,8 @@ const SAY: Record<Tone, string> = { action: "in action", thought: "in thought", 
 export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const user = await requireUser();
   const ours = (await searchParams).view === "ours";
-  const [learn, entries, ideas, legacy] = await Promise.all([learnView(user.id), listEntries(user.id, 1), listIdeas(user.id), legacyStatus(user.id)]);
-  const facts: Facts = {
-    learn: { underway: learn.books.some((b) => b.status === "reading"), stated: learn.books.length > 0 || learn.known.length > 0 },
-    journal: { entries: entries.length },
-    ideas: ideas.length,
-    legacy: legacy.plan !== null,
-  };
+  const learn = await learnView(user.id);
+  const facts: Facts = { learn: { underway: learn.books.some((b) => b.status === "reading"), stated: learn.books.length > 0 || learn.known.length > 0 } };
   const tiles = ours ? OURS : MINE;
   return (
     <main className={`home ${mono.className}`}>
@@ -38,9 +29,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
           <Link href="/" aria-current={!ours ? "page" : undefined}>MINE</Link>
           <Link href="/?view=ours" aria-current={ours ? "page" : undefined}>OURS</Link>
         </nav>
-        <Link href="/journal" className="home-icon" aria-label="Your journal">
+        <span className="home-icon is-off" aria-label="Your journal, not built yet in this design" title="Journal: not built yet">
           <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><path d="M3 7h6l2 2h8v10H3z" stroke="currentColor" strokeWidth="2" fill="none" strokeLinejoin="round" /></svg>
-        </Link>
+        </span>
       </header>
       {ours ? <p className="home-note">Shared spaces (a marriage, a household, a village) are not built yet.</p> : null}
       <ul className="home-grid">
@@ -68,7 +59,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
         <span><i style={{ background: FILL.unstated }} />UNSTATED</span>
         <span><i style={{ background: FILL.thought }} />IN THOUGHT</span>
         <span><i style={{ background: FILL.action }} />IN ACTION</span>
-        <Link href="/me">ME</Link>
       </footer>
     </main>
   );
