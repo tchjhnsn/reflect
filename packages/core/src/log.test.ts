@@ -37,6 +37,26 @@ describe("the log", () => {
     ]);
   });
 
+  it("gives one act per kept status change, putting down included, and keeps a back-dated day", () => {
+    const acts = learnActs({
+      books: [{
+        title: "Ulysses", addedAt: "2026-11-12T09:00:00.000Z", startedOn: "2026-11-12", finishedOn: null,
+        statuses: [
+          { status: "want", day: "2026-11-12", at: "2026-11-12T09:00:00.000Z" },
+          { status: "reading", day: "2026-11-12", at: "2026-11-12T09:10:00.000Z" },
+          { status: "abandoned", day: "2026-11-12", at: "2026-11-12T09:20:00.000Z" },
+        ],
+      }, {
+        title: "Republic", addedAt: "2026-11-12T09:30:00.000Z", startedOn: "2019-03-01", finishedOn: "2019-03-01",
+        statuses: [{ status: "read", day: "2019-03-01", at: "2026-11-12T09:30:00.000Z" }],
+      }],
+      claims: [],
+      grasps: [],
+    });
+    expect(acts.map(actText)).toEqual(["Put Ulysses on your shelves", "Started reading Ulysses", "Put down Ulysses", "Finished Republic"]);
+    expect(acts.at(-1)?.at).toBe("2019-03-01");
+  });
+
   it("puts a timestamp on the person's own day", () => {
     const late = learnActs({ books: [], claims: [], grasps: [{ subject: "Logic", grasp: "gist", at: "2026-11-12T03:00:00.000Z" }] });
     expect(logByDay(late, -360)[0]!.day).toBe("2026-11-11");

@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BookOpenIcon, CheckIcon, MessageSquareQuoteIcon, PlusIcon, RefreshCwIcon, SparklesIcon } from "lucide-react";
+import { BookOpenIcon, BookmarkIcon, CheckIcon, CircleSlashIcon, MessageSquareQuoteIcon, PlusIcon, RefreshCwIcon, SparklesIcon } from "lucide-react";
 import { actText, logByDay, type Act, type ActKind } from "@reflect/core/log";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-const ICON: Record<ActKind, typeof PlusIcon> = { intended: PlusIcon, started: BookOpenIcon, finished: CheckIcon, kept_claim: MessageSquareQuoteIcon, changed_stance: RefreshCwIcon, rated: SparklesIcon };
+const ICON: Record<ActKind, typeof PlusIcon> = { intended: PlusIcon, started: BookOpenIcon, finished: CheckIcon, put_down: CircleSlashIcon, cited: BookmarkIcon, kept_claim: MessageSquareQuoteIcon, changed_stance: RefreshCwIcon, rated: SparklesIcon };
 const dayName = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 const time = (a: Act) => (a.at.length === 10 ? "" : new Date(a.at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }));
 
