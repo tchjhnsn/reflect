@@ -33,3 +33,15 @@ The apps follow Aristotle's three kinds of goods: of the body (Body, Home), exte
 **Decided.** Learn comes first: curriculum built from YouTube, books, courses and other things a person might want to learn. The person says what they want to learn; Reflect drafts a curriculum and the person edits it.
 
 **Proposed.** Watching happens inside Reflect, with videos embedded, so that it can count as an action: YouTube does not give apps a person's watch history (to be checked against YouTube's current terms before building). Credentials earned in Learn feed Work, per the domain design.
+
+## 5. The plus button opens a chat
+
+**Decided (06:40Z, 06:47Z).** The plus button opens a chat with the AI, and the chat fetches from the apps rather than answering from memory. Torian pointed to Vercel's json-render with Chat SDK agents (vercel.com/changelog/json-render-and-chat-sdk-agents) as the way to do it.
+
+**Proposed.**
+- Each app exposes tools to the chat: reads (what is in Learn, what the budget says) and proposals (draft a curriculum, add a budget line). The chat calls the tools; it holds no copy of the apps' data.
+- Each app also publishes a small catalog of components (a curriculum card, a budget table, an item with its holders). The model can only render what is in the catalog, and json-render checks every spec against it, so a card shows the app's real records in the app's own shape.
+- A proposal renders as a card with Accept, the one tap that lets it change anything. Nothing the AI guesses is saved without that tap; facts about the person are never inferred.
+- The conversation is kept in the journal; only accepted proposals become items.
+- A card can open its app ("open in Learn"), so the work itself stays in the tiles.
+- Chat SDK's adapters can post the same cards to Slack or Teams. Reflect would use that only under the rules in the system design's "What leaves": nothing from a private or shared vault goes to an outside platform unless the person sends it.
