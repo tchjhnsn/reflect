@@ -8,7 +8,7 @@ Status: started 2026-11-12, after the system design (`REFLECT_SYSTEM_2026-11-12.
 - A grid of objects, one per area of life, each a solid glyph with a small label.
 - A MINE / OURS toggle at the top center switches between the private vault and the shared spaces.
 - An object's tone shows its state: black when something in it is in action, grey when it is only in thought, light grey when nothing is stated.
-- The journal is a fixed place in the top bar, and also has a tile (see 3).
+- The journal is the folder icon at the top right (06:29Z): it is the vault's files, and export lives inside it. The journal also has a tile (see 3).
 
 ## 2. Tiles are apps
 
