@@ -9,7 +9,11 @@ import { ASK_SYSTEM, cleanProposal, lccClass, learnSummary } from "@reflect/core
 import { STANCES } from "@reflect/core/claims";
 import { browseClass, searchBooks } from "@reflect/core/openlibrary";
 import { LCC_CLASSES } from "@reflect/core/shelves";
+import { acceptLocalDate, clean } from "@reflect/core/journal";
+import { chatPart, isChatId } from "@reflect/core/chat-journal";
+import { isoDate } from "@reflect/core/person";
 import { currentUser } from "@/server/session";
+import { keepChatMessage } from "@/server/journal-store";
 import { chatModel } from "@/server/chat-model";
 import { learnView } from "@/server/learn-store";
 import { listClaims, type ClaimOut } from "@/server/claims-store";
@@ -23,7 +27,7 @@ const MAX_MESSAGES = 30;
 export async function POST(req: Request) {
   const user = await currentUser();
   if (!user) return Response.json({ error: "sign in first" }, { status: 401 });
-  const body = (await req.json().catch(() => null)) as { messages?: UIMessage[] } | null;
+  const body = (await req.json().catch(() => null)) as { id?: unknown; localDate?: unknown; messages?: UIMessage[] } | null;
   const messages = Array.isArray(body?.messages) ? body.messages.slice(-MAX_MESSAGES) : [];
   if (!messages.length) return Response.json({ error: "messages are required" }, { status: 400 });
   const model = chatModel();
@@ -35,6 +39,16 @@ export async function POST(req: Request) {
     subjects: [...new Set(view.books.flatMap((b) => b.subjects.map((s) => s.name)).concat(view.known.map((s) => s.name)))],
     claims: (claims ?? []).map((c) => ({ text: c.text, stance: c.stance?.stance ?? null })),
   });
+  // The chat is kept in the journal as one entry (its id is the chat's id), one part per message.
+  const day = typeof body?.localDate === "string" ? isoDate(body.localDate) : null;
+  const journal = isChatId(body?.id) && day && acceptLocalDate(day, new Date()) ? { chat: body.id as string, day } : null;
+  const keep = async (who: "you" | "reflect", text: string) => {
+    const words = clean(text);
+    if (journal && words) await keepChatMessage(user.id, journal.chat, journal.day, chatPart(who, words)).catch(() => undefined);
+  };
+  const last = messages.at(-1);
+  if (last?.role === "user") await keep("you", last.parts.map((p) => (p.type === "text" ? p.text : "")).join(""));
+
   const kept = new Set(view.books.map((b) => b.catalog?.work).filter((w): w is string => Boolean(w)));
 
   const stream = createUIMessageStream({
@@ -60,6 +74,7 @@ export async function POST(req: Request) {
         system: `${ASK_SYSTEM}\n\n${summary}`,
         messages: await convertToModelMessages(messages),
         stopWhen: stepCountIs(4),
+        onFinish: async ({ steps }) => keep("reflect", steps.map((st) => st.text).filter(Boolean).join("\n\n")),
         tools: {
           show_shelves: tool({
             description: "Show the person's shelves: their books and subjects by Library of Congress class.",

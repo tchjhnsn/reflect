@@ -2,6 +2,7 @@
 
 // The chat with AI Elements (shadcn): Conversation, Message, Tool, Suggestion and Prompt Input, over the
 // same /api/chat and the same cards. Torian chose this look over the mono one (2026-11-12).
+import { useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type ToolUIPart, type UIMessage } from "ai";
 import { SPEC_DATA_PART_TYPE } from "@json-render/core";
@@ -13,7 +14,12 @@ import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import { Tool, ToolHeader } from "@/components/ai-elements/tool";
 import { registry } from "./registry";
 
-const transport = new DefaultChatTransport({ api: "/api/chat" });
+const today = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+// The device's date goes with each message, so the journal entry this chat is kept in has the person's day.
+const transport = new DefaultChatTransport({ api: "/api/chat", body: () => ({ localDate: today() }) });
 const TITLE: Record<string, string> = {
   show_shelves: "Looked at your shelves",
   show_claims: "Looked at your claims",
@@ -54,7 +60,9 @@ function Answer({ message }: { message: UIMessage }) {
 }
 
 export function Chat() {
-  const { messages, sendMessage, status } = useChat({ transport });
+  // A chat's id is its journal entry's id (a uuid), made once per visit to the page.
+  const [id] = useState(() => crypto.randomUUID());
+  const { messages, sendMessage, status } = useChat({ id, transport });
   return (
     <div className="mx-auto flex h-screen max-w-3xl flex-col p-6">
       <div className="mb-4 flex items-center justify-between">
@@ -65,7 +73,7 @@ export function Chat() {
       <Conversation className="flex-1">
         <ConversationContent>
           {messages.length === 0 ? (
-            <ConversationEmptyState title="Ask about what you are learning" description="Your shelves, a book to find, a claim you hold. Nothing is kept unless you accept it." />
+            <ConversationEmptyState title="Ask about what you are learning" description="Your shelves, a book to find, a claim you hold. This chat is kept in your journal; nothing goes into your apps unless you accept it." />
           ) : (
             messages.map((m) => (
               <Message key={m.id} from={m.role}>
