@@ -159,8 +159,10 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       {e.cover ? <img src={`https://covers.openlibrary.org/b/id/${e.cover}-S.jpg`} alt="" loading="lazy" className="size-full object-cover" /> : null}
                     </div>
-                    <span className="min-w-0 flex-1 truncate">{e.title}</span>
-                    <span className="text-muted-foreground shrink-0 text-right text-xs">{[e.publisher, e.year, e.pages ? `${e.pages} pages` : null, e.language?.toUpperCase()].filter(Boolean).join(" · ")}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate">{e.title}</span>
+                      <span className="text-muted-foreground block truncate text-xs">{[e.publisher, e.year, e.pages ? `${e.pages} pages` : null, e.language?.toUpperCase()].filter(Boolean).join(" · ")}</span>
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -183,7 +185,7 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
               </ol>
               <p className="text-muted-foreground text-xs">Hardcover readers and average Hardcover ratings{hc.rating ? ` (the book: ★ ${hc.rating.toFixed(2)} from ${hc.ratings.toLocaleString("en-US")} ratings)` : ""}, from <a href={`https://hardcover.app/books/${hc.slug}`} target="_blank" rel="noreferrer" className="underline underline-offset-2">Hardcover</a>.</p>
             </section>
-          ) : ranked.error ? <span hidden data-hardcover-error={ranked.error} /> : null}
+          ) : ranked.error ? <p className="text-muted-foreground text-xs">Hardcover edition rankings did not load: {ranked.error}.</p> : null}
           {mine || fromIt.length || related.length || bearing.length ? (
             <Card className="gap-3 py-5">
               <CardHeader className="px-5"><CardTitle className="text-sm">Claims and ideas from this book</CardTitle></CardHeader>
