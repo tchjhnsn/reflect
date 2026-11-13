@@ -2,13 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeftIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
-import { gutenbergBook } from "@reflect/core/gutenberg";
 import { workAccess, workEntry } from "@reflect/core/openlibrary";
 import { Button } from "@/components/ui/button";
 import { requireUser } from "@/server/session";
 import { learnView } from "@/server/learn-store";
+import { readText, textSource } from "@/server/texts";
 import { Menu } from "../../../browse/category-menu";
-import { Page } from "./page-text";
+import { locate } from "@reflect/core/excerpts";
+import { excerptsOf } from "@/server/excerpt-store";
+import { Page, type Mark } from "./page-text";
 
 export const metadata: Metadata = { title: "Reading" };
 export const dynamic = "force-dynamic";
@@ -17,7 +19,8 @@ const cached = (url: string) => fetch(url, { headers: { "user-agent": "reflect-a
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
 
 /**
- * A public-domain book read inside Reflect, one chapter at a time, from Project Gutenberg's text. Where you
+ * A public-domain book read inside Reflect, one chapter at a time, from its Standard Ebooks or Project
+ * Gutenberg text. Where you
  * are is kept in this browser, and with your account when the book is on your shelves; a passage you select can be kept as a claim, cited to the book and chapter.
  */
 export default async function ReadPage({ params, searchParams }: { params: Promise<{ work: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -27,13 +30,20 @@ export default async function ReadPage({ params, searchParams }: { params: Promi
   const [entry, access, view] = await Promise.all([workEntry(work, cached).catch(() => null), workAccess(work, cached).catch(() => null), learnView(user.id)]);
   // The book on the person's shelves, when it is there: its place is kept with their account and shown on the shelf.
   const shelved = view.books.find((b) => b.catalog?.work === work);
-  const id = access?.gutenberg[0];
-  if (!entry || !id) notFound();
-  const book = await gutenbergBook(id, cached).catch(() => null);
+  if (!entry) notFound();
+  const source = await textSource(entry, access);
+  // A Standard Ebooks edition that cannot be read falls back to the Gutenberg text the catalog links.
+  const book = source ? await readText(source, access?.gutenberg[0] ? { kind: "gutenberg", id: access.gutenberg[0] } : null) : null;
   if (!book) notFound();
   const asked = Number(one((await searchParams).c));
   const n = Math.min(Math.max(asked || shelved?.place?.chapter || 1, 1), book.chapters.length);
   const chapter = book.chapters[n - 1]!;
+  // The person's highlights in this chapter, at their kept place or found again by their words.
+  const marks: Mark[] = (await excerptsOf(user.id, work).catch(() => [])).flatMap((e) => {
+    if (!e.anchor || e.anchor.chapter !== n) return [];
+    const s = locate(chapter.paragraphs, e.anchor, e.quote);
+    return s ? [{ id: e.id, quote: e.quote, ...s }] : [];
+  });
   const href = (c: number) => `/learn/works/${work}/read?c=${c}`;
 
   return (
@@ -44,12 +54,12 @@ export default async function ReadPage({ params, searchParams }: { params: Promi
       </div>
       <p className="text-muted-foreground mt-8 text-center text-xs tracking-wide uppercase">{entry.authors[0] ?? ""}{entry.authors[0] ? " · " : ""}{n} of {book.chapters.length}</p>
       <h1 className="mt-2 text-center font-serif text-3xl font-medium">{chapter.title}</h1>
-      <Page work={work} chapter={n} chapters={book.chapters.length} title={entry.title} author={entry.authors[0] ?? ""} chapterTitle={chapter.title} paragraphs={chapter.paragraphs} {...(shelved ? { bookId: shelved.id, kept: shelved.place } : {})} />
+      <Page work={work} chapter={n} chapters={book.chapters.length} title={entry.title} author={entry.authors[0] ?? ""} chapterTitle={chapter.title} paragraphs={chapter.paragraphs} source={`${book.source.kind}:${book.source.id}`} marks={marks} {...(shelved ? { bookId: shelved.id, kept: shelved.place } : {})} />
       <nav className="mt-12 flex items-center justify-between gap-3 border-t pt-6">
         {n > 1 ? <Button asChild variant="outline"><Link href={href(n - 1)}><ChevronLeftIcon />Previous</Link></Button> : <span />}
         {n < book.chapters.length ? <Button asChild variant="outline"><Link href={href(n + 1)}>Next<ChevronRightIcon /></Link></Button> : <Button asChild variant="outline"><Link href={`/learn/works/${work}`}>Back to the book</Link></Button>}
       </nav>
-      <p className="text-muted-foreground mt-8 text-center text-xs">Text from <a href={`https://www.gutenberg.org/ebooks/${id}`} target="_blank" rel="noreferrer" className="underline underline-offset-2">Project Gutenberg</a>, in the public domain in the United States.</p>
+      <p className="text-muted-foreground mt-8 text-center text-xs">Text from <a href={book.credit.href} target="_blank" rel="noreferrer" className="underline underline-offset-2">{book.credit.name}</a>, in the public domain in the United States.</p>
     </main>
   );
 }

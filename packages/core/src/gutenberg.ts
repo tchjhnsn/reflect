@@ -69,3 +69,47 @@ export async function gutenbergBook(id: string, fetcher: TextFetch): Promise<Gut
   const chapters = chaptersOf(text);
   return chapters.length ? { id, chapters } : null;
 }
+
+/** One book in Gutenberg's catalog search: its number, title and author. */
+export type GutenbergHit = { id: string; title: string; author: string };
+
+const decode = (s: string) => s.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&amp;/g, "&");
+
+/** The books in an answer from Gutenberg's catalog search (its OPDS feed), in its order. Exported for tests. */
+export function opdsHits(xml: string): GutenbergHit[] {
+  const out: GutenbergHit[] = [];
+  for (const e of xml.split("<entry>").slice(1)) {
+    const id = /<id>https?:\/\/www\.gutenberg\.org\/ebooks\/(\d{1,6})\.opds<\/id>/.exec(e)?.[1];
+    const title = /<title>([^<]*)<\/title>/.exec(e)?.[1];
+    if (id && title) out.push({ id, title: decode(title).trim(), author: decode(/<content type="text">([^<]*)<\/content>/.exec(e)?.[1] ?? "").trim() });
+  }
+  return out;
+}
+
+const SMALL = new Set(["the", "a", "an", "of", "and", "on", "in", "to"]);
+const wordsOf = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(Boolean);
+
+/**
+ * Whether a catalog hit is the book: every word of the book's title (small words aside) is in the hit's title,
+ * which may be longer ("An Inquiry into the Nature and Causes of the Wealth of Nations"), and, when the author is
+ * known, a word of their name of four letters or more is in the hit's author. Exported for tests.
+ */
+export function isTheBook(book: { title: string; authors?: readonly string[] }, hit: GutenbergHit): boolean {
+  const want = wordsOf(book.title).filter((w) => !SMALL.has(w));
+  const got = new Set(wordsOf(hit.title));
+  if (!want.length || !want.every((w) => got.has(w))) return false;
+  const names = (book.authors ?? []).flatMap((a) => wordsOf(a)).filter((w) => w.length >= 4);
+  if (!names.length) return true;
+  const by = wordsOf(hit.author);
+  return names.some((n) => by.includes(n));
+}
+
+/** The Gutenberg number of a book, found in Gutenberg's own catalog by title and author, or null. Open Library links only some of them. */
+export async function findGutenberg(book: { title: string; authors?: readonly string[] }, fetcher: TextFetch): Promise<string | null> {
+  const last = (book.authors?.[0] ?? "").split(/\s+/).filter((w) => w.length >= 3).at(-1) ?? "";
+  const q = `${book.title.replace(/[:;(].*$/, "")} ${last}`.trim();
+  if (!q) return null;
+  const r = await fetcher(`https://www.gutenberg.org/ebooks/search.opds/?query=${encodeURIComponent(q)}`);
+  if (!r.ok) return null;
+  return opdsHits(await r.text()).find((h) => isTheBook(book, h))?.id ?? null;
+}
