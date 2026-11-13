@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import type { CatalogEntry, Sort } from "@reflect/core/openlibrary";
 import { Button } from "@/components/ui/button";
-import type { BookSource } from "@/server/browse";
+import type { BookSource, Filter } from "@/server/browse";
 import { BookCard } from "../book-card";
 import { moreBooksAction } from "./actions";
 
@@ -23,7 +23,7 @@ function read(): Saved | null {
  * reload. What was added and how far down the person was are kept for this tab, so coming back from a book
  * page shows the same list at the same place.
  */
-export function MoreBooks({ source, sort, per, first }: { source: BookSource; sort?: Sort; per: number; /** How many books the page itself shows. */ first: number }) {
+export function MoreBooks({ source, sort, filter, hide = false, per, first }: { source: BookSource; sort?: Sort; filter?: Filter; /** Leave out books already on the person's shelves. */ hide?: boolean; per: number; /** How many books the page itself asked for and got. */ first: number }) {
   const [state, setState] = useState<Omit<Saved, "y">>({ books: [], mine: {}, page: 1, done: first < per });
   const [error, setError] = useState(false);
   const [pending, run] = useTransition();
@@ -63,7 +63,7 @@ export function MoreBooks({ source, sort, per, first }: { source: BookSource; so
   const more = () => run(async () => {
     setError(false);
     try {
-      const next = await moreBooksAction(source, state.page + 1, sort);
+      const next = await moreBooksAction(source, state.page + 1, sort, filter);
       const seen = new Set(state.books.map((b) => b.work));
       setState({ books: [...state.books, ...next.books.filter((b) => !seen.has(b.work))], mine: { ...state.mine, ...next.mine }, page: state.page + 1, done: next.books.length < per || state.page + 1 >= 20 });
     } catch {
@@ -75,7 +75,7 @@ export function MoreBooks({ source, sort, per, first }: { source: BookSource; so
     <>
       {state.books.length ? (
         <ul className="grid grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-          {state.books.map((b) => <BookCard key={b.work} b={b} have={state.mine[b.work]} />)}
+          {state.books.filter((b) => !hide || !state.mine[b.work]).map((b) => <BookCard key={b.work} b={b} have={state.mine[b.work]} />)}
         </ul>
       ) : null}
       {error ? <p className="text-muted-foreground text-center text-sm">The open library did not answer. Try again in a moment.</p> : null}

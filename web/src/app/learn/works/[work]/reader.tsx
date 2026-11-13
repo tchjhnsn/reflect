@@ -14,17 +14,18 @@ export type ReadLink = { name: string; href: string };
  * Reading the book: the first reader opens on the page when the person asks, the whole book when one has it
  * free and a preview otherwise; the other readers and the places off the page sit beside it.
  */
-export function Reader({ sources, links, here, work }: { sources: ReadSource[]; links: ReadLink[]; /** Reflect's own reader for the book, when it has a text for it. */ here?: string; work: string }) {
+export function Reader({ sources, links, here, work, kept }: { sources: ReadSource[]; links: ReadLink[]; /** Reflect's own reader for the book, when it has a text for it. */ here?: string; work: string; /** The place kept with the person's account, when the book is on their shelves. */ kept?: { chapter: number; chapters: number } | null }) {
   const [open, setOpen] = useState<string | null>(null);
-  const [place, setPlace] = useState<{ chapter: number; chapters: number } | null>(null);
+  const [place, setPlace] = useState<{ chapter: number; chapters: number } | null>(kept ?? null);
   useEffect(() => {
+    if (kept) return;
     try {
       const p = JSON.parse(window.localStorage.getItem(`reflect:read:${work}`) ?? "null") as { chapter?: number; chapters?: number } | null;
       if (p?.chapter && p.chapters) setPlace({ chapter: p.chapter, chapters: p.chapters });
     } catch {
       // nothing kept
     }
-  }, [work]);
+  }, [work, kept]);
   const first = here ? undefined : sources[0];
   const current = sources.find((s) => s.key === open);
   const label = first?.full ? "Read it free" : "Read a preview";

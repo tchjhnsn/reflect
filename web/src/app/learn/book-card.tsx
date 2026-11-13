@@ -5,21 +5,21 @@ import { Badge } from "@/components/ui/badge";
 import { AddBook } from "./add-book";
 
 // Also rendered in the browser (More), so it imports nothing from openlibrary.ts at run time: that module reads files.
-const coverUrl = (e: Pick<CatalogEntry, "cover">) => (e.cover ? `https://covers.openlibrary.org/b/id/${e.cover}-M.jpg` : null);
+const coverUrl = (e: Pick<CatalogEntry, "cover">, size: "M" | "L" = "M") => (e.cover ? `https://covers.openlibrary.org/b/id/${e.cover}-${size}.jpg` : null);
 
 export const STATUS: Record<string, string> = { want: "Want to read", reading: "Reading", read: "Read", abandoned: "Set aside", referenced: "Referenced" };
 
 /** One book from the library: its cover and title open its book page; below, add it or see it is yours. */
-export function BookCard({ b, have }: { b: CatalogEntry; have: string | undefined }) {
+export function BookCard({ b, have, className = "" }: { b: CatalogEntry; have: string | undefined; className?: string }) {
   const cover = coverUrl(b);
   return (
-    <li className="flex flex-col gap-2">
+    <li className={`flex flex-col gap-2 ${className}`}>
       <Link href={`/learn/works/${b.work}`} className="group flex flex-col gap-2">
         <div className="bg-muted relative aspect-[2/3] overflow-hidden rounded-md border transition group-hover:opacity-90">
           {cover ? (
             // Open Library's covers; next/image would need its host configured, a plain img is enough here.
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={cover} alt="" loading="lazy" className="size-full object-cover" />
+            <img src={cover} srcSet={`${cover} 1x, ${coverUrl(b, "L")} 2x`} alt="" loading="lazy" decoding="async" className="size-full object-cover" />
           ) : (
             <div className="text-muted-foreground flex size-full flex-col items-center justify-center gap-2 p-3 text-center"><BookIcon className="size-6" /><span className="line-clamp-4 text-xs">{b.title}</span></div>
           )}
@@ -45,7 +45,14 @@ export function AuthorName({ name, id, className }: { name: string | undefined; 
 }
 
 /** A grid of books, as many columns as the page allows. */
-export function BookGrid({ books, mine, cols = "md:grid-cols-4 lg:grid-cols-6" }: { books: CatalogEntry[]; mine: Map<string, string>; /** Column classes from md up, for a grid in a narrower column. */ cols?: string }) {
+export function BookGrid({ books, mine, cols = "md:grid-cols-4 lg:grid-cols-6", row = false }: { books: CatalogEntry[]; mine: Map<string, string>; /** Column classes from md up, for a grid in a narrower column. */ cols?: string; /** On a phone, one row to swipe through instead of a grid. */ row?: boolean }) {
+  if (row) {
+    return (
+      <ul className={`-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-x-5 sm:gap-y-8 sm:overflow-visible sm:px-0 sm:pb-0 ${cols}`}>
+        {books.map((b) => <BookCard key={b.work} b={b} have={mine.get(b.work)} className="w-36 shrink-0 snap-start sm:w-auto" />)}
+      </ul>
+    );
+  }
   return (
     <ul className={`grid grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-3 ${cols}`}>
       {books.map((b) => <BookCard key={b.work} b={b} have={mine.get(b.work)} />)}

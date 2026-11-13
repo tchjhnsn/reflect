@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { db } from "@/db/pool";
-import { addBook, addSubjects, getBook, keepRecall, learnView, rateSubject, setBookStatus } from "./learn-store";
+import { addBook, addSubjects, getBook, keepPlace, keepRecall, learnView, rateSubject, setBookStatus } from "./learn-store";
 import { logActs } from "./log-store";
 import { actText } from "@reflect/core/log";
 
@@ -15,6 +15,19 @@ async function newUser(name: string): Promise<string> {
 
 describe.skipIf(!live)("learning on Neon", () => {
   afterAll(() => db().end());
+
+  it("keeps one place per book, replaced as the person reads, only on their own shelves", async () => {
+    const user = await newUser("Place Test");
+    const other = await newUser("Other Test");
+    const id = await addBook(user, { title: "Pride and Prejudice", status: "reading" });
+    expect((await getBook(user, id))?.place).toBeNull();
+    await keepPlace(user, id, { chapter: 2, chapters: 62, at: 0.4 });
+    await keepPlace(user, id, { chapter: 5, chapters: 62, at: 1.7 });
+    expect((await getBook(user, id))?.place).toEqual({ chapter: 5, chapters: 62, at: 1 });
+    expect((await db().query("SELECT count(*)::int AS n FROM learn_book_place WHERE book_id = $1", [id])).rows[0].n).toBe(1);
+    await expect(keepPlace(user, id, { chapter: 63, chapters: 62, at: 0 })).rejects.toThrow(/chapter/);
+    await expect(keepPlace(other, id, { chapter: 1, chapters: 62, at: 0 })).rejects.toThrow(/no such book/);
+  });
 
   it("keeps every status change, never edited, and the log shows each one", async () => {
     const user = await newUser("Log Test");
