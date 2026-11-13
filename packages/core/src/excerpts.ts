@@ -81,3 +81,30 @@ export function cutRuns(runs: readonly Run[], cuts: readonly number[]): PlacedRu
   }
   return out;
 }
+
+/** Highlight colours a person can pick; yellow when none is kept. */
+export const HIGHLIGHT_COLORS = ["yellow", "green", "blue", "pink"] as const;
+export type HighlightColor = (typeof HIGHLIGHT_COLORS)[number];
+export const isHighlightColor = (c: unknown): c is HighlightColor => typeof c === "string" && (HIGHLIGHT_COLORS as readonly string[]).includes(c);
+
+/** One book's excerpts for export: its title and author, and each excerpt's words, place and note. */
+export type ExportBook = { title: string; author: string; excerpts: { quote: string; where?: string | null; note?: string | null }[] };
+
+/**
+ * A person's excerpts as Markdown: a heading per book with its author, each excerpt as a quote with its place,
+ * and its note under it. Books in the order given.
+ */
+export function excerptsMarkdown(books: readonly ExportBook[], title = "Highlights"): string {
+  const out = [`# ${title}`, ""];
+  for (const b of books) {
+    if (!b.excerpts.length) continue;
+    out.push(`## ${b.title}${b.author ? ` — ${b.author}` : ""}`, "");
+    for (const e of b.excerpts) {
+      out.push(`> ${e.quote.replace(/\s+/g, " ").trim()}`);
+      if (e.where) out.push(">", `> — ${e.where}`);
+      out.push("");
+      if (e.note?.trim()) out.push(e.note.trim(), "");
+    }
+  }
+  return `${out.join("\n").trimEnd()}\n`;
+}

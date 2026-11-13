@@ -1,7 +1,8 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { db } from "@/db/pool";
-import { addExcerpt, cleanAnchor, excerptsOf, removeExcerpt } from "./excerpt-store";
+import { addExcerpt, allExcerpts, cleanAnchor, excerptsOf, removeExcerpt, reviseExcerpt } from "./excerpt-store";
+import { publishedBy, publishedQuote, publishQuote, unpublishQuote } from "./published-store";
 
 const live = Boolean(process.env.DATABASE_URL && process.env.REFLECT_DATA_KEY);
 const anchor = { source: "gutenberg:1342", chapter: 1, chapterTitle: "Chapter I", from: [0, 0] as [number, number], to: [0, 54] as [number, number] };
@@ -44,5 +45,33 @@ describe.skipIf(!live)("excerpts on Neon", () => {
     expect((await excerptsOf(user, "OL66554W")).length).toBe(1);
     await expect(addExcerpt(user, { work: "OL66554W", quote: "x", anchor: { ...anchor, to: [0, 0] } })).rejects.toThrow(/not valid/);
     await expect(addExcerpt(user, { work: "nope", quote: "x" })).rejects.toThrow(/no such book/);
+  });
+
+  it("changes a highlight's colour and note as a new row with the same date, and lists every book's excerpts", async () => {
+    const user = await newUser("Revise Test");
+    const id = await addExcerpt(user, { work: "OL66554W", quote: "Coloured.", anchor, color: "green" });
+    const before = (await excerptsOf(user, "OL66554W"))[0]!;
+    expect(before.color).toBe("green");
+    const next = await reviseExcerpt(user, id, { note: "  My note " });
+    expect(next).not.toBe(id);
+    const after = (await excerptsOf(user, "OL66554W"))[0]!;
+    expect([after.id, after.color, after.note, after.at, after.anchor]).toEqual([next, "green", "My note", before.at, anchor]);
+    const third = await reviseExcerpt(user, next, { color: "yellow", note: "" });
+    expect((await excerptsOf(user, "OL66554W")).map((e) => [e.id, e.color, e.note])).toEqual([[third, "yellow", null]]);
+    await expect(reviseExcerpt(user, id, { note: "x" })).rejects.toThrow(/no such excerpt/);
+    await addExcerpt(user, { work: "OL1W", quote: "Other book." });
+    expect((await allExcerpts(user)).map((e) => e.work).sort()).toEqual(["OL1W", "OL66554W"]);
+  });
+
+  it("publishes a quote only on request and takes it down", async () => {
+    const user = await newUser("Publish Test");
+    const other = await newUser("Other Publish Test");
+    const id = await publishQuote(user, { quote: " It is a  truth ", author: "Jane Austen", title: "Pride and Prejudice", place: "Chapter I", work: "OL66554W" });
+    expect(await publishedQuote(id)).toMatchObject({ quote: "It is a truth", author: "Jane Austen", place: "Chapter I", work: "OL66554W" });
+    expect((await publishedBy(user)).map((q) => q.id)).toEqual([id]);
+    await expect(unpublishQuote(other, id)).rejects.toThrow(/no such quote/);
+    await unpublishQuote(user, id);
+    expect(await publishedQuote(id)).toBeNull();
+    expect(await publishedQuote("../../x")).toBeNull();
   });
 });

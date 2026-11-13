@@ -20,6 +20,8 @@ import { Reader, type ReadLink } from "./reader";
 import { textSource } from "@/server/texts";
 import { librivoxId } from "@/server/free";
 import { excerptsOf } from "@/server/excerpt-store";
+import { publishedBy } from "@/server/published-store";
+import { whereOf } from "@/server/highlights";
 import { Excerpts } from "./excerpts";
 import { Listen } from "./listen";
 import { AuthorName, BookGrid } from "../../book-card";
@@ -46,13 +48,14 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
   const user = await requireUser();
   const { work } = await params;
   if (!/^OL\d+W$/.test(work)) notFound();
-  const [entry, details, access, view, claims, excerpts] = await Promise.all([
+  const [entry, details, access, view, claims, excerpts, published] = await Promise.all([
     workEntry(work, cached).catch(() => null),
     workDetails(work, cached).catch(() => null),
     workAccess(work, cached).catch(() => null),
     learnView(user.id),
     listClaims(user.id).catch((): ClaimOut[] => []),
     excerptsOf(user.id, work).catch(() => []),
+    publishedBy(user.id).catch(() => []),
   ]);
   if (!entry && !details) notFound();
   const mine = view.books.find((b) => b.catalog?.work === work);
@@ -117,7 +120,7 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
           </div>
           {text || preview || links.length ? <Reader links={links} work={work} kept={mine?.place ?? null} preview={preview} {...(text ? { here: `/learn/works/${work}/read` } : {})} /> : null}
           {audio ? <Listen book={audio} /> : null}
-          <Excerpts work={work} title={title} author={authors[0] ?? ""} rows={excerpts.map((e) => ({ id: e.id, quote: e.quote, where: e.anchor?.chapterTitle || e.place, chapter: e.anchor?.chapter ?? null, note: e.note }))} {...(text ? { reader: `/learn/works/${work}/read` } : {})} />
+          <Excerpts work={work} rows={excerpts.map((e) => ({ id: e.id, work, title, author: authors[0] ?? "", quote: e.quote, where: whereOf(e), chapter: e.anchor?.chapter ?? null, note: e.note, color: e.color, published: published.find((p) => p.work === work && p.quote === e.quote.replace(/\s+/g, " ").trim())?.id ?? null }))} {...(text ? { reader: `/learn/works/${work}/read` } : {})} />
           <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
             <div><dt className="text-muted-foreground text-xs">Category</dt><dd>{category ? <Link className="underline-offset-4 hover:underline" href={`/learn/browse?cat=${category.code}`}>{category.heading}</Link> : "Not yet placed"}</dd></div>
             <div><dt className="text-muted-foreground text-xs">Library of Congress call number</dt><dd>{entry?.lcc?.[0] ? showCall(entry.lcc[0]) : "None in the catalog"}</dd></div>

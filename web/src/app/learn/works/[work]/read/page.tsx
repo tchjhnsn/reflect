@@ -54,7 +54,7 @@ export default async function ReadPage({ params, searchParams }: { params: Promi
   const marks: Mark[] = (await excerptsOf(user.id, work).catch(() => [])).flatMap((e) => {
     if (!e.anchor || e.anchor.chapter !== n) return [];
     const s = locate(chapter.paragraphs, e.anchor, e.quote);
-    return s ? [{ id: e.id, quote: e.quote, ...s }] : [];
+    return s ? [{ id: e.id, quote: e.quote, color: e.color, note: e.note, ...s }] : [];
   });
   const href = (c: number) => `/learn/works/${work}/read?c=${c}`;
   const notes = chapter.notes ?? [];
