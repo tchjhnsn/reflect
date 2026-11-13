@@ -132,7 +132,7 @@ describe("open library", () => {
     const seen: string[] = [];
     const f: Fetch = async (url) => {
       seen.push(url);
-      if (url.includes("ebook_access")) return { ok: true, status: 200, json: async () => ({ docs: [{ ebook_access: "public", lending_identifier_s: "prideprejudice00aust", lending_edition_s: "OL1M", id_project_gutenberg: ["1342", "x/y"], id_standard_ebooks: ["jane-austen/pride-and-prejudice", "../bad"], id_librivox: ["253", "orgullo"] }] }) };
+      if (url.includes("lending_identifier_s")) return { ok: true, status: 200, json: async () => ({ docs: [{ ebook_access: "public", lending_identifier_s: "prideprejudice00aust", lending_edition_s: "OL1M", id_project_gutenberg: ["1342", "x/y"], id_standard_ebooks: ["jane-austen/pride-and-prejudice", "../bad"], id_librivox: ["253", "orgullo"] }] }) };
       return { ok: true, status: 200, json: async () => ({ docs: [{ key: "/works/OL1W", title: "Self" }, { key: "/works/OL2W", title: "Emma" }] }) };
     };
     expect(await workAccess("OL1W", f)).toEqual({ access: "public", archive: "prideprejudice00aust", edition: "OL1M", gutenberg: ["1342"], standardEbooks: ["jane-austen/pride-and-prejudice"], librivox: ["253"] });

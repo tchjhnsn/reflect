@@ -7,7 +7,9 @@ import { BOOKS, cleanIsbn, slugOf } from "./learning.ts";
 import { readRecord, writeRecord } from "./record-io.ts";
 
 export type Fetch = (url: string) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
-export type CatalogEntry = { work: string; title: string; authors: string[]; /** Open Library author ids (OL...A), in the order of `authors`. */ authorKeys?: string[]; year?: number; isbn?: string; subjects: string[]; contents: string[]; lcc?: string[]; /** Open Library cover id. */ cover?: number; /** Open Library readers' star rating, 1 to 5, when shown in a list. */ rating?: { average: number; count: number } };
+export type CatalogEntry = { work: string; title: string; authors: string[]; /** Open Library author ids (OL...A), in the order of `authors`. */ authorKeys?: string[]; year?: number; isbn?: string; subjects: string[]; contents: string[]; lcc?: string[]; /** Open Library cover id. */ cover?: number; /** Open Library readers' star rating, 1 to 5, when shown in a list. */ rating?: { average: number; count: number }; /** Whether the book can be read (its text) or heard (an audiobook) in Reflect, when the app has said so. */ free?: Free };
+/** What of a book is free in Reflect: its text to read, an audiobook to hear. */
+export type Free = { read?: true; listen?: true };
 
 /** The cover image for an entry, from Open Library's covers service, or null when it has none. */
 export const coverUrl = (e: Pick<CatalogEntry, "cover">, size: "S" | "M" | "L" = "M"): string | null => (e.cover ? `https://covers.openlibrary.org/b/id/${e.cover}-${size}.jpg` : null);
@@ -18,12 +20,12 @@ const BASE = "https://openlibrary.org";
  * shows that edition's title and cover (a work's own title and cover are often another language's).
  */
 export const LANGUAGE = { code: "eng", ui: "en", name: "English" } as const;
-const FIELDS = "key,title,author_name,author_key,first_publish_year,isbn,subject,lcc,cover_i,ratings_average,ratings_count,language,editions,editions.key,editions.title,editions.cover_i,editions.language";
+const FIELDS = "key,title,ebook_access,id_project_gutenberg,id_standard_ebooks,id_librivox,author_name,author_key,first_publish_year,isbn,subject,lcc,cover_i,ratings_average,ratings_count,language,editions,editions.key,editions.title,editions.cover_i,editions.language";
 const LANG = `&lang=${LANGUAGE.ui}`;
 /** A search kept to works with an edition in Reflect's language. */
 const inLanguage = (q: string) => `(${q}) language:${LANGUAGE.code}`;
 type EditionDoc = { key?: string; title?: string; cover_i?: number; language?: string[] };
-type Doc = { key?: string; title?: string; author_name?: string[]; author_key?: string[]; first_publish_year?: number; isbn?: string[]; subject?: string[]; lcc?: string[]; cover_i?: number; ratings_average?: number; ratings_count?: number; language?: string[]; editions?: { docs?: EditionDoc[] } };
+type Doc = { key?: string; title?: string; author_name?: string[]; author_key?: string[]; first_publish_year?: number; isbn?: string[]; subject?: string[]; lcc?: string[]; cover_i?: number; ratings_average?: number; ratings_count?: number; language?: string[]; ebook_access?: string; id_project_gutenberg?: string[]; id_standard_ebooks?: string[]; id_librivox?: string[]; editions?: { docs?: EditionDoc[] } };
 
 async function get(fetcher: Fetch, path: string): Promise<unknown> {
   const r = await fetcher(`${BASE}${path}`);
@@ -60,7 +62,21 @@ function coverOf(d: Doc): number | undefined {
   return Number.isInteger(c) && c! > 0 ? c : undefined;
 }
 
-const fromDoc = (d: Doc, isbn?: string): CatalogEntry => ({
+/** What the app says is free of a book in Reflect; none until it says (`knowFree`). */
+let freeOf: ((b: { title: string; authors: string[]; year?: number; ebook?: string; gutenberg: boolean; standard: boolean; librivox: boolean }) => Free | null) | null = null;
+/** Tell the catalog how to know whether a book can be read or heard in Reflect; every entry made after carries `free`. */
+export function knowFree(f: typeof freeOf): void {
+  freeOf = f;
+}
+function freeFor(d: Doc): Free | null {
+  if (!freeOf) return null;
+  const f = freeOf({ title: titleOf(d), authors: d.author_name ?? [], ...(d.first_publish_year ? { year: d.first_publish_year } : {}), ...(d.ebook_access ? { ebook: d.ebook_access } : {}), gutenberg: Boolean(d.id_project_gutenberg?.length), standard: Boolean(d.id_standard_ebooks?.length), librivox: Boolean(d.id_librivox?.length) });
+  return f && (f.read || f.listen) ? f : null;
+}
+
+const fromDoc = (d: Doc, isbn?: string): CatalogEntry => {
+  const free = freeFor(d);
+  return {
   work: (d.key ?? "").replace("/works/", ""),
   title: titleOf(d),
   authors: d.author_name ?? [],
@@ -72,7 +88,9 @@ const fromDoc = (d: Doc, isbn?: string): CatalogEntry => ({
   ...(d.lcc?.length ? { lcc: d.lcc.slice(0, 20) } : {}),
   ...(coverOf(d) ? { cover: coverOf(d) } : {}),
   ...(d.ratings_count && d.ratings_average ? { rating: { average: Math.round(d.ratings_average * 100) / 100, count: d.ratings_count } } : {}),
-});
+  ...(free ? { free } : {}),
+  };
+};
 
 /** An Open Library author id. */
 export const AUTHOR_ID = /^OL\d+A$/;

@@ -18,6 +18,7 @@ import { LearnHeader } from "../../header";
 import { AddBook } from "../../add-book";
 import { Reader, type ReadLink } from "./reader";
 import { textSource } from "@/server/texts";
+import { librivoxId } from "@/server/free";
 import { excerptsOf } from "@/server/excerpt-store";
 import { Excerpts } from "./excerpts";
 import { Listen } from "./listen";
@@ -58,10 +59,14 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
   const title = entry?.title ?? mine?.title ?? "Untitled";
   const authors = entry?.authors ?? mine?.authors ?? [];
   const authorKeys = entry?.authorKeys ?? mine?.catalog?.authorKeys ?? [];
+  // LibriVox recordings: the catalog's links, else the book found in LibriVox's catalog when it is old enough to be free.
+  const oldEnough = access?.access === "public" || (entry?.year ?? 9999) < 1930;
+  const found = !access?.librivox.length && oldEnough ? librivoxId({ title, authors }) : null;
+  const recordings = access?.librivox.length ? access.librivox : found ? [found] : [];
   const [google, byAuthor, audio, like, text] = await Promise.all([
     googleVolume({ title, authors, ...(entry?.isbn ? { isbn: entry.isbn } : {}) }, cached, process.env.GOOGLE_BOOKS_API_KEY).catch(() => null),
     authorKeys[0] ? authorWorks(authorKeys[0], cached, { limit: 7, sort: "rating" }).then((b) => b.filter((x) => x.work !== work).slice(0, 6)).catch((): CatalogEntry[] => []) : Promise.resolve([] as CatalogEntry[]),
-    access?.librivox.length ? librivoxBook(access.librivox, slow).catch((): Audiobook | null => null) : Promise.resolve(null),
+    recordings.length ? librivoxBook(recordings, slow).catch((): Audiobook | null => null) : Promise.resolve(null),
     entry ? booksLike({ work, subjects: details?.subjects.length ? details.subjects : entry.subjects }, cached).catch((): CatalogEntry[] => []) : Promise.resolve([] as CatalogEntry[]),
     access?.access === "public" || access?.gutenberg.length || access?.standardEbooks.length || (entry?.year ?? 9999) < 1930 ? textSource({ title, authors }, access) : Promise.resolve(null),
   ]);

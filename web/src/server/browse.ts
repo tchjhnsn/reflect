@@ -1,8 +1,9 @@
+import "./free";
 import { AUTHOR_ID, authorWorks, browseQuery, searchBooks, type CatalogEntry, type Sort } from "@reflect/core/openlibrary";
 import { themaCategory, themaQuery, themaSection } from "@reflect/core/thema";
 
 /** What a list of books on Browse or an author page is drawn from: a search, a Thema section or category, or an author. */
-export type BookSource = { kind: "q"; q: string } | { kind: "cat"; code: string } | { kind: "author"; id: string } | { kind: "new" };
+export type BookSource = { kind: "q"; q: string } | { kind: "cat"; code: string } | { kind: "author"; id: string } | { kind: "new" } | { kind: "free" };
 
 /** Books first published this year or last: the query behind New this year. */
 export const newQuery = () => `first_publish_year:[${new Date().getUTCFullYear() - 1} TO *]`;
@@ -28,6 +29,7 @@ export function cleanSource(raw: unknown): BookSource | null {
   if (s.kind === "cat" && typeof s.code === "string" && (themaCategory(s.code) || themaSection(s.code))) return { kind: "cat", code: s.code.toUpperCase() };
   if (s.kind === "author" && typeof s.id === "string" && AUTHOR_ID.test(s.id)) return { kind: "author", id: s.id };
   if (s.kind === "new") return { kind: "new" };
+  if (s.kind === "free") return { kind: "free" };
   return null;
 }
 
@@ -36,6 +38,7 @@ export async function listBooks(source: BookSource, page: number, sort?: Sort, f
   const f = clause(filter);
   if (source.kind === "q") return /^isbn:/i.test(source.q) ? searchBooks(source.q, openLibrary, PER, page, sort) : searchBooks(`${source.q}${f}`, openLibrary, PER, page, sort);
   if (source.kind === "author") return f ? browseQuery(`author_key:${source.id}${f}`, openLibrary, { limit: PER, page, ...(sort ? { sort } : {}) }) : authorWorks(source.id, openLibrary, { limit: PER, page, ...(sort ? { sort } : {}) });
+  if (source.kind === "free") return browseQuery(`ebook_access:public${f}`, openLibrary, { limit: PER, page, sort: sort ?? "readinglog" });
   if (source.kind === "new") return browseQuery(`${newQuery()}${f}`, openLibrary, { limit: PER, page, sort: sort ?? "readinglog" });
   const query = themaQuery(source.code);
   return query ? browseQuery(f ? `(${query})${f}` : query, openLibrary, { limit: PER, page, sort: sort ?? "rating" }) : [];

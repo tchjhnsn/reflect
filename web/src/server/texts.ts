@@ -1,6 +1,7 @@
 import { findGutenberg, gutenbergBook, type Chapter } from "@reflect/core/gutenberg";
 import { standardBook } from "@reflect/core/standardebooks";
 import type { WorkAccess } from "@reflect/core/openlibrary";
+import { gutenbergId } from "./free";
 
 /** Where a public-domain book's text comes from: Standard Ebooks (proofread and typeset) or Project Gutenberg. */
 export type TextSource = { kind: "standard"; id: string } | { kind: "gutenberg"; id: string };
@@ -10,12 +11,12 @@ const cached = (url: string) => fetch(url, { headers: { "user-agent": "reflect-a
 
 /**
  * Where to read a book's text in Reflect: its Standard Ebooks edition when the catalog links one, else its
- * Gutenberg text linked from the catalog, else the book found in Gutenberg's own catalog by title and author.
+ * Gutenberg text linked from the catalog, else the book found in Gutenberg's own catalog by title and author (the catalog file first, then Gutenberg's search).
  */
 export async function textSource(book: { title: string; authors: readonly string[] }, access: WorkAccess | null): Promise<TextSource | null> {
   if (access?.standardEbooks[0]) return { kind: "standard", id: access.standardEbooks[0] };
   if (access?.gutenberg[0]) return { kind: "gutenberg", id: access.gutenberg[0] };
-  const id = await findGutenberg(book, cached).catch(() => null);
+  const id = gutenbergId(book) ?? (await findGutenberg(book, cached).catch(() => null));
   return id ? { kind: "gutenberg", id } : null;
 }
 
