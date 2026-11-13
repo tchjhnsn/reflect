@@ -50,3 +50,9 @@ export async function learnIn(userId: string, domain: Domain): Promise<{ subject
     unplaced: ids.filter((id) => !placed.has(id)).map((id) => ({ id, name: nameOf.get(id)! })).sort(byName),
   };
 }
+
+/** The names of the person's Learn subjects, in order, for choosing one. */
+export async function subjectNames(userId: string): Promise<string[]> {
+  const r = await db().query("SELECT name_ct FROM learn_subject WHERE user_id = $1", [userId]);
+  return r.rows.map((x) => open(userId, x.name_ct as string)).sort((a, b) => a.localeCompare(b));
+}

@@ -150,3 +150,28 @@ export async function domainView(userId: string, domain: Domain) {
   const [book, works] = await Promise.all([bookOf(userId), listWorks(userId)]);
   return { chapter: book.chapters.find((c) => c.domain === domain)!, works: works.filter((w) => w.domain === domain) };
 }
+
+/**
+ * Send a passage the person wrote to Learn: it becomes a claim with their stance, filed under a Learn
+ * subject (so it reaches whatever domain the subject is placed in), and tied back to the work it came from.
+ */
+export async function claimFromWork(userId: string, workId: string, passage: string, subject: string, stance: string): Promise<string> {
+  const work = await getWork(userId, workId);
+  if (!work) throw new Error("No such work.");
+  const text = passage.replace(/\s+/g, " ").trim();
+  if (!text) throw new Error("Select the passage first.");
+  if (!subject.trim()) throw new Error("Name the subject it belongs under.");
+  const claimId = await keepClaim(userId, { text, stance, subject });
+  await db().query("INSERT INTO claim_source (id, user_id, claim_id, work_id, passage_ct) VALUES ($1, $2, $3, $4, $5)", [randomUUID(), userId, claimId, workId, seal(userId, text)]);
+  return claimId;
+}
+
+/** The work each claim was first sent or marked from, by claim id. */
+export async function claimWorks(userId: string): Promise<Map<string, { workId: string; title: string }>> {
+  const [rows, works] = await Promise.all([
+    db().query("SELECT DISTINCT ON (claim_id) claim_id, work_id FROM claim_source WHERE user_id = $1 ORDER BY claim_id, created_at", [userId]),
+    listWorks(userId),
+  ]);
+  const titles = new Map(works.map((w) => [w.id, workTitle(w)]));
+  return new Map(rows.rows.map((r) => [r.claim_id as string, { workId: r.work_id as string, title: titles.get(r.work_id as string) ?? "a work" }]));
+}

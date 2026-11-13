@@ -7,7 +7,7 @@ import { IMPORTABLE, MAX_IMPORT_BYTES } from "@reflect/core/works";
 import type { Holder } from "@reflect/core/claims";
 import { createWork, fileWork, importWork, saveWork } from "@/server/work-store";
 import { placeSubject } from "@/server/subject-domain-store";
-import { beliefFromWork, compileEdition, markBelief, placeClaim, type Marking } from "@/server/book-store";
+import { claimFromWork, beliefFromWork, compileEdition, markBelief, placeClaim, type Marking } from "@/server/book-store";
 
 /** Start a work from a template of the prompt library, filed in a domain when started from one, and open it. */
 export async function createWorkAction(templateId: string, about: string | null, domain: string | null = null): Promise<void> {
@@ -60,6 +60,12 @@ const attempt = async (run: () => Promise<unknown>, paths: string[]): Promise<Do
 export async function beliefFromWorkAction(workId: string, passage: string, domain: string, m: Marking & { holders?: Holder[] }): Promise<Done> {
   const user = await requireUser();
   return attempt(() => beliefFromWork(user.id, workId, passage, domain, m), ["/journal/book", "/journal/d/[domain]"]);
+}
+
+/** Send a selected passage to Learn as a claim under a subject, with the person's stance. */
+export async function sendToLearnAction(workId: string, passage: string, subject: string, stance: string): Promise<Done> {
+  const user = await requireUser();
+  return attempt(() => claimFromWork(user.id, workId, passage, subject, stance), ["/learn", "/journal/book", "/journal/d/[domain]"]);
 }
 
 /** Mark a belief already kept an ideal or a practical belief, with its origins. */

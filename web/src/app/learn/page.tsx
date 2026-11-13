@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { requireUser } from "@/server/session";
 import { learnView, type LearnView } from "@/server/learn-store";
 import { listClaims, type ClaimOut } from "@/server/claims-store";
+import { claimWorks } from "@/server/book-store";
 import { shelvesOf } from "@/server/learn-shelves";
 import { addFromLibraryAction, keepClaimAction, setBookStatusAction, setStanceAction } from "./actions";
 import { bookTone, subjectTone, type ShelfTone } from "./tones";
@@ -58,7 +59,7 @@ export default async function LearnPage({ searchParams }: { searchParams: Promis
       <div className="mt-6">
         {tab === "shelves" ? <Shelves view={view} all={one(sp.all) === "1"} open={one(sp.book)} /> : null}
         {tab === "library" ? <Library view={view} cls={one(sp.class).toUpperCase()} q={one(sp.q).trim()} /> : null}
-        {tab === "claims" ? <Claims claims={await listClaims(user.id).catch((): ClaimOut[] | null => null)} /> : null}
+        {tab === "claims" ? <Claims claims={await listClaims(user.id).catch((): ClaimOut[] | null => null)} works={await claimWorks(user.id).catch(() => new Map<string, { workId: string; title: string }>())} /> : null}
       </div>
       {tab === "shelves" ? (
         <footer className="text-muted-foreground mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs">
@@ -213,7 +214,7 @@ async function Library({ view, cls, q }: { view: LearnView; cls: string; q: stri
   );
 }
 
-function Claims({ claims }: { claims: ClaimOut[] | null }) {
+function Claims({ claims, works }: { claims: ClaimOut[] | null; works: Map<string, { workId: string; title: string }> }) {
   if (!claims) return <Note>Claims are not set up on this database yet.</Note>;
   return (
     <section className="space-y-4">
@@ -231,7 +232,8 @@ function Claims({ claims }: { claims: ClaimOut[] | null }) {
                 <div key={c.id} className={cn("flex flex-wrap items-center justify-between gap-3 py-3", i > 0 && "border-t")}>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium">{c.text}</p>
-                    <p className="text-muted-foreground text-xs">{[c.subject?.name, c.holders.map((h) => (h.citation ? `${h.name} (${h.citation})` : h.name)).join("; ")].filter(Boolean).join(" · ") || "No holder named"}</p>
+                    <p className="text-muted-foreground text-xs">{[c.subject?.name, c.holders.map((h) => (h.citation ? `${h.name} (${h.citation})` : h.name)).join("; ")].filter(Boolean).join(" · ") || "No holder named"}
+                      {works.get(c.id) ? <> · from <Link href={`/journal/w/${works.get(c.id)!.workId}`} className="underline underline-offset-2">{works.get(c.id)!.title}</Link></> : null}</p>
                   </div>
                   <form action={setStanceAction} className="flex flex-wrap gap-2">
                     <input type="hidden" name="claim" value={c.id} />
