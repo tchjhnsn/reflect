@@ -2,6 +2,8 @@
 
 // The same cards as ../../chat/registry.tsx, drawn with shadcn instead of the app's own CSS.
 import { useState } from "react";
+import Link from "next/link";
+import { ArrowRightIcon } from "lucide-react";
 import { defineRegistry } from "@json-render/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -71,6 +73,11 @@ export const { registry } = defineRegistry(catalog, {
         <p className="text-muted-foreground mt-1 mb-3 text-sm">{[props.subject ? `Under ${props.subject}` : "", props.holders ? `held by ${props.holders}` : ""].filter(Boolean).join(" · ")}</p>
         <Tap label="Accept" doneText="Kept in Learn" run={() => keepClaimFromChat(props.claim)} />
       </div>
+    ),
+    BrowseLink: ({ props }) => (
+      <Button asChild variant="ghost" size="sm" className="w-fit">
+        <Link href={props.href}>{props.label}<ArrowRightIcon /></Link>
+      </Button>
     ),
     Note: ({ props }) => <p className="text-muted-foreground text-sm">{props.text}</p>,
   },

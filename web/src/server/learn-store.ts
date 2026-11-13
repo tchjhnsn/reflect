@@ -12,7 +12,9 @@ import { open, seal, tag } from "./crypto";
  * grasp counts, and recalls and grasps are never changed.
  */
 
-export type BookOut = { id: string; title: string; authors: string[]; isbn: string | null; status: BookStatus; startedOn: string | null; finishedOn: string | null; subjects: SubjectOut[]; catalog: CatalogEntry | null; recalls: { at: string; text: string }[] };
+export type BookOut = { id: string; title: string; authors: string[]; isbn: string | null; status: BookStatus; startedOn: string | null; finishedOn: string | null; subjects: SubjectOut[]; catalog: CatalogEntry | null; recalls: { at: string; text: string }[]; /** Where the person is in it, when they read it in Reflect (migration 0019). */ place: BookPlace | null };
+/** A chapter of a book and how far down it, from 0 to 1. */
+export type BookPlace = { chapter: number; chapters: number; at: number };
 export type SubjectOut = { id: string; name: string; vouches: number; shown: number; suggested: number; grasp: { grasp: Grasp; at: string; bookId: string | null } | null };
 export type LearnView = { known: SubjectOut[]; shown: SubjectOut[]; vouched: SubjectOut[]; suggested: SubjectOut[]; books: (BookOut & { unrated: string[] })[] };
 
@@ -89,6 +91,21 @@ export async function setBookStatus(userId: string, bookId: string, status: Book
   });
 }
 
+/** Keep where the person is in a book on their shelves, replacing the place kept before (migration 0019). */
+export async function keepPlace(userId: string, bookId: string, p: BookPlace): Promise<void> {
+  const chapters = Math.floor(p.chapters);
+  const chapter = Math.floor(p.chapter);
+  if (!(chapters >= 1 && chapters <= 10000 && chapter >= 1 && chapter <= chapters)) throw new Error("chapter is a whole number from 1 to the number of chapters");
+  const at = Number.isFinite(p.at) ? Math.min(1, Math.max(0, p.at)) : 0;
+  await tx(async (c) => {
+    await ownBook(c, userId, bookId);
+    await c.query(
+      "INSERT INTO learn_book_place (book_id, user_id, chapter, chapters, at, updated_at) VALUES ($1, $2, $3, $4, $5, now()) ON CONFLICT (book_id) DO UPDATE SET chapter = $3, chapters = $4, at = $5, updated_at = now()",
+      [bookId, userId, chapter, chapters, at],
+    );
+  });
+}
+
 /** Keep one status change in the book's history (migration 0013): never changed, the log reads it. */
 async function keepStatus(c: PoolClient, userId: string, bookId: string, status: BookStatus, day: string): Promise<void> {
   await c.query("INSERT INTO learn_book_status (id, user_id, book_id, status, on_day) VALUES ($1, $2, $3, $4, $5)", [randomUUID(), userId, bookId, status, day]);
@@ -147,6 +164,7 @@ async function books(userId: string, only?: string): Promise<BookOut[]> {
   for (const b of r.rows) {
     const links = await db().query("SELECT subject_id FROM learn_book_subject WHERE book_id = $1", [b.id]);
     const recalls = await db().query("SELECT text_ct, created_at FROM learn_recall WHERE book_id = $1 ORDER BY created_at", [b.id]);
+    const place = await db().query("SELECT chapter, chapters, at FROM learn_book_place WHERE book_id = $1", [b.id]);
     out.push({
       id: b.id,
       title: open(userId, b.title_ct),
@@ -158,6 +176,7 @@ async function books(userId: string, only?: string): Promise<BookOut[]> {
       subjects: links.rows.map((l) => subs.get(l.subject_id as string)!).filter(Boolean).sort((a, c) => a.name.localeCompare(c.name)),
       catalog: b.catalog_ct ? (JSON.parse(open(userId, b.catalog_ct)) as CatalogEntry) : null,
       recalls: recalls.rows.map((x) => ({ at: new Date(x.created_at as string).toISOString(), text: open(userId, x.text_ct as string) })),
+      place: place.rows[0] ? { chapter: Number(place.rows[0].chapter), chapters: Number(place.rows[0].chapters), at: Number(place.rows[0].at) } : null,
     });
   }
   return out;

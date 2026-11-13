@@ -61,6 +61,16 @@ export default async function LearnPage({ searchParams }: { searchParams: Promis
   );
 }
 
+/** How far through a book the person is, by chapter and how far down it, read in Reflect. */
+function Progress({ place, className }: { place: { chapter: number; chapters: number; at: number }; className: string }) {
+  const share = Math.min(1, (place.chapter - 1 + place.at) / place.chapters);
+  return (
+    <span className={cn("bg-muted block h-1 overflow-hidden rounded-full", className)} role="progressbar" aria-label={`Chapter ${place.chapter} of ${place.chapters}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(share * 100)}>
+      <span className="bg-foreground block h-full" style={{ width: `${Math.max(2, share * 100)}%` }} />
+    </span>
+  );
+}
+
 function Glyph({ d, tone, className }: { d: string; tone: ShelfTone; className: string }) {
   return <svg className={className} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d={d} className={TONE[tone]} /></svg>;
 }
@@ -85,6 +95,7 @@ function Shelves({ view, all, open }: { view: LearnView; all: boolean; open: str
                 <Glyph d={BOOK} tone={bookTone(full.status)} className="h-1.5 w-14" />
               </span>
             ) : <Glyph d={BOOK} tone={bookTone(full.status)} className="h-20 w-14 rounded-sm" />}
+            {full.place && full.status !== "read" ? <Progress place={full.place} className="w-14" /> : null}
             <span className="line-clamp-2 text-xs font-medium">{b.title}</span>
             {b.category ? <span className="text-muted-foreground -mt-1 line-clamp-1 text-[11px]">{themaCategory(b.category)?.short}</span> : null}
           </Link>
@@ -131,6 +142,12 @@ function Shelves({ view, all, open }: { view: LearnView; all: boolean; open: str
               {themaCategory(categoryOf(book.catalog) ?? "")?.heading ?? "Not yet placed"}
               {book.catalog.lcc?.[0] ? <> · Call number {showCall(book.catalog.lcc[0])}</> : null}
             </p>
+          ) : null}
+          {book.place && book.catalog?.work ? (
+            <div className="space-y-2">
+              <Progress place={book.place} className="w-full" />
+              <Button asChild size="sm"><Link href={`/learn/works/${book.catalog.work}/read?c=${book.place.chapter}`}>Continue reading · {book.place.chapter} of {book.place.chapters}</Link></Button>
+            </div>
           ) : null}
           {book.catalog?.work ? <Button asChild variant="outline" size="sm"><Link href={`/learn/works/${book.catalog.work}`}>Open the book page</Link></Button> : null}
           <form action={setBookStatusAction} className="flex flex-wrap gap-2">

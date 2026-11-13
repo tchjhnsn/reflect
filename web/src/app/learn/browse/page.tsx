@@ -13,7 +13,8 @@ import { GoodreadsImport } from "../goodreads";
 import { BookGrid } from "../book-card";
 import { Menu } from "./category-menu";
 import { MoreBooks } from "./more-books";
-import { listBooks, openLibrary, PER, type BookSource } from "@/server/browse";
+import { FilterMenu, SortMenu, type ListState } from "./list-menus";
+import { isFilter, listBooks, newQuery, openLibrary, PER, type BookSource, type Filter } from "@/server/browse";
 
 export const metadata: Metadata = { title: "Browse books" };
 export const dynamic = "force-dynamic";
@@ -33,26 +34,31 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
   const section = code ? themaSection(code) : undefined;
   const category = code.length === 2 ? themaCategory(code) : undefined;
   const week = !q && !section && one(sp.view) === "week";
+  const fresh = !q && !section && one(sp.view) === "new";
   const sort: Sort | undefined = isSort(one(sp.sort)) ? (one(sp.sort) as Sort) : undefined;
+  const state: ListState = { ...(sort ? { sort } : {}), ...(isFilter(one(sp.filter)) ? { filter: one(sp.filter) as Filter } : {}), hide: one(sp.hide) === "1" };
   const view = await learnView(user.id);
   const mine = new Map(view.books.filter((b) => b.catalog?.work).map((b) => [b.catalog!.work, b.status]));
 
   let body: ReactNode;
-  if (q || section) {
-    const source: BookSource = q ? { kind: "q", q } : { kind: "cat", code: category?.code ?? section!.code };
-    const [books, authors] = await Promise.all([listBooks(source, 1, sort).catch(() => null), q ? searchAuthors(q, openLibrary).catch((): AuthorHit[] => []) : Promise.resolve([])]);
-    const title = q ? `Results for “${q}”` : `${(category ?? section)!.heading}, ${SORTS[sort ?? "rating"].toLowerCase()}`;
-    const base: Record<string, string> = q ? { q } : { cat: code };
+  if (q || section || fresh) {
+    const source: BookSource = q ? { kind: "q", q } : fresh ? { kind: "new" } : { kind: "cat", code: category?.code ?? section!.code };
+    const [books, authors] = await Promise.all([listBooks(source, 1, sort, state.filter).catch(() => null), q ? searchAuthors(q, openLibrary).catch((): AuthorHit[] => []) : Promise.resolve([])]);
+    const title = q ? `Results for “${q}”` : fresh ? `New this year, ${SORTS[sort ?? "readinglog"].toLowerCase()}` : `${(category ?? section)!.heading}, ${SORTS[sort ?? "rating"].toLowerCase()}`;
+    const base: Record<string, string> = q ? { q } : fresh ? { view: "new" } : { cat: code };
     body = (
       <>
         {authors.length ? <Authors authors={authors} /> : null}
         <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
           <h2 className="text-lg font-semibold">{title}</h2>
-          <SortMenu base={base} sort={sort} match={Boolean(q)} />
+          <div className="flex flex-wrap gap-2">
+            <FilterMenu path="/learn/browse" base={base} state={state} />
+            <SortMenu path="/learn/browse" base={base} state={state} match={Boolean(q)} fallback={fresh ? "readinglog" : "rating"} />
+          </div>
         </div>
         <div className="space-y-8">
-          <Books books={books} mine={mine} />
-          {books?.length ? <MoreBooks key={`${JSON.stringify(source)}-${sort ?? ""}`} source={source} {...(sort ? { sort } : {})} per={PER} first={books.length} /> : null}
+          <Books books={books && state.hide ? books.filter((b) => !mine.has(b.work)) : books} mine={mine} />
+          {books?.length ? <MoreBooks key={JSON.stringify([source, state])} source={source} {...(sort ? { sort } : {})} {...(state.filter ? { filter: state.filter } : {})} hide={state.hide} per={PER} first={books.length} /> : null}
         </div>
       </>
     );
@@ -80,10 +86,12 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
           </form>
           <Menu
             label="Browse"
-            lead={2}
+            lead={4}
             items={[
-              { href: "/learn/browse", label: "For you", on: !q && !section && !week },
+              { href: "/learn/browse", label: "For you", on: !q && !section && !week && !fresh },
               { href: "/learn/browse?view=week", label: "This week", on: week },
+              { href: "/learn/browse?view=new", label: "New this year", on: fresh },
+              { href: "/learn/lists", label: "Lists", on: false },
               ...THEMA.map((x) => ({ href: `/learn/browse?cat=${x.code}`, label: x.short, on: x.code === section?.code })),
             ]}
           />
@@ -105,13 +113,6 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
       </div>
     </main>
   );
-}
-
-/** The orders a list can be in, as a menu; a search can also be in best-match order, its default. */
-function SortMenu({ base, sort, match }: { base: Record<string, string>; sort: Sort | undefined; match: boolean }) {
-  const href = (s?: Sort) => `/learn/browse?${new URLSearchParams({ ...base, ...(s ? { sort: s } : {}) })}`;
-  const items = (Object.keys(SORTS) as Sort[]).filter((s) => match || s !== "rating").map((s) => ({ href: href(s), label: SORTS[s], on: s === sort }));
-  return <Menu label="Sort" items={[{ href: href(), label: match ? "Best match" : SORTS.rating, on: !sort }, ...items]} />;
 }
 
 /** Authors whose name matches a search, each opening their page. */
@@ -158,7 +159,20 @@ async function ForYou({ view, mine }: { view: LearnView; mine: Map<string, strin
     seedSubject ? browseQuery(`subject:"${seedSubject.replace(/"/g, "")}"`, openLibrary, { limit: ROW * 2, sort: "readinglog" }).then(fresh).catch(() => null) : Promise.resolve(null),
     ...learning.map((name) => searchBooks(name, openLibrary, ROW * 2).then(fresh).catch(() => null)),
   ]);
-  const week = await trendingBooks(openLibrary, ROW * 2).then((b) => b.slice(0, ROW * 2)).catch(() => null);
+  const [week, recent] = await Promise.all([
+    trendingBooks(openLibrary, ROW * 2).then((b) => b.slice(0, ROW * 2)).catch(() => null),
+    browseQuery(newQuery(), openLibrary, { limit: ROW, sort: "readinglog" }).catch(() => null),
+  ]);
+  // The authors of the person's own books, most books first.
+  const authors = new Map<string, { name: string; id?: string; n: number }>();
+  for (const b of view.books) {
+    const name = b.catalog?.authors[0] ?? b.authors[0];
+    if (!name) continue;
+    const id = b.catalog?.authorKeys?.[0];
+    const a = authors.get(name) ?? { name, n: 0, ...(id ? { id } : {}) };
+    authors.set(name, { ...a, n: a.n + 1, ...(id && !a.id ? { id } : {}) });
+  }
+  const yours = [...authors.values()].sort((a, b) => b.n - a.n || a.name.localeCompare(b.name)).slice(0, 12);
   const row = (title: ReactNode, books: CatalogEntry[] | null, href?: string) =>
     books?.length ? (
       <section key={String(href ?? title)} className="space-y-4">
@@ -166,14 +180,31 @@ async function ForYou({ view, mine }: { view: LearnView; mine: Map<string, strin
           <h2 className="text-lg font-semibold">{title}</h2>
           {href ? <Link href={href} className="text-muted-foreground shrink-0 text-sm underline-offset-4 hover:underline">See all</Link> : null}
         </div>
-        <BookGrid books={books} mine={mine} />
+        <BookGrid books={books} mine={mine} row />
       </section>
     ) : null;
   return (
     <div className="space-y-8">
       {seed && seedSubject ? row(<>Because you shelved <em className="font-serif">{seed.title}</em></>, like, `/learn/browse?q=${encodeURIComponent(seedSubject)}`) : null}
       {learning.map((name, i) => row(<>On {name}, one of your subjects</>, bySubject[i] ?? null, `/learn/browse?q=${encodeURIComponent(name)}`))}
+      {yours.length ? (
+        <section className="space-y-3">
+          <h2 className="pt-2 text-lg font-semibold">Your authors</h2>
+          <ul className="flex flex-wrap gap-2">
+            {yours.map((a) => (
+              <li key={a.name}>
+                <Link href={a.id ? `/learn/authors/${a.id}` : `/learn/browse?q=${encodeURIComponent(a.name)}`} className="hover:bg-muted flex items-center gap-2 rounded-full border py-1 pr-3 pl-1 text-sm transition">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {a.id ? <img src={`https://covers.openlibrary.org/a/olid/${a.id}-S.jpg`} alt="" loading="lazy" className="bg-muted size-7 rounded-full object-cover" /> : <span className="bg-muted size-7 rounded-full" />}
+                  {a.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       {row("Read this week", week, "/learn/browse?view=week")}
+      {row("New this year", recent, "/learn/browse?view=new")}
       {!week ? <p className="text-muted-foreground text-sm">The open library did not answer. Try again in a moment.</p> : null}
     </div>
   );

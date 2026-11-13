@@ -60,13 +60,13 @@ export async function POST(req: Request) {
         const spec = buildSpec(pieces);
         if (spec) writer.write({ type: SPEC_DATA_PART_TYPE, id: "cards", data: { type: "flat", spec } });
       };
-      const library = async (label: string, run: () => Promise<Awaited<ReturnType<typeof searchBooks>>>) => {
+      const library = async (label: string, run: () => Promise<Awaited<ReturnType<typeof searchBooks>>>, href: string) => {
         const books = await run().catch(() => null);
         if (!books) {
           show({ kind: "note", text: "The open library did not answer." });
           return "The open library did not answer.";
         }
-        show({ kind: "library", label, books, kept });
+        show({ kind: "library", label, books, kept, href });
         return books.length ? `Shown: ${books.map((b) => `${b.title} by ${b.authors.join(", ") || "unknown"}${kept.has(b.work) ? " (already on their shelves)" : ""}`).join("; ")}` : "Nothing found.";
       };
       const result = streamText({
@@ -101,7 +101,7 @@ export async function POST(req: Request) {
           search_library: tool({
             description: "Search the open library by title, author or topic; the person can add a result to their shelves.",
             inputSchema: z.object({ query: z.string().min(1).max(200) }),
-            execute: async ({ query }) => library(`"${query}"`, () => searchBooks(query, openLibrary, 5)),
+            execute: async ({ query }) => library(`"${query}"`, () => searchBooks(query, openLibrary, 5), `/learn/browse?q=${encodeURIComponent(query)}`),
           }),
           browse_category: tool({
             description: "Show the best rated books in one Thema section (one letter) or category (two letters).",
@@ -110,7 +110,7 @@ export async function POST(req: Request) {
               const c = themaCode(input.code);
               const q = c ? themaQuery(c) : null;
               if (!c || !q) return "That is not a Thema section or category Reflect knows.";
-              return library((themaCategory(c) ?? themaSection(c))!.short, () => browseQuery(q, openLibrary, { limit: 5 }));
+              return library((themaCategory(c) ?? themaSection(c))!.short, () => browseQuery(q, openLibrary, { limit: 5 }), `/learn/browse?cat=${c}`);
             },
           }),
           propose_claim: tool({

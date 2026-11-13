@@ -8,8 +8,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 export type MenuItem = { href: string; label: string; on: boolean };
 
 /** One quiet button that opens a list of choices, each a link; the button names the current one. */
-export function Menu({ label, items, lead = 0 }: { label: string; items: MenuItem[]; /** How many items come before a separator. */ lead?: number }) {
-  const current = items.find((i) => i.on)?.label ?? items[0]?.label ?? label;
+export function Menu({ label, items, lead = 0, shown }: { label: string; items: MenuItem[]; /** How many items come before a separator. */ lead?: number; /** What the button says, when not the chosen item. */ shown?: string }) {
+  const current = shown ?? items.find((i) => i.on)?.label ?? items[0]?.label ?? label;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>

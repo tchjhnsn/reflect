@@ -2,15 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ExternalLinkIcon, UserIcon } from "lucide-react";
-import { AUTHOR_ID, authorDetails, authorPhotoUrl, isSort, SORTS, type Sort } from "@reflect/core/openlibrary";
+import { AUTHOR_ID, authorDetails, authorPhotoUrl, booksLike, isSort, SORTS, type CatalogEntry, type Sort } from "@reflect/core/openlibrary";
 import { Button } from "@/components/ui/button";
 import { PAGE } from "@/components/page-header";
 import { requireUser } from "@/server/session";
 import { learnView } from "@/server/learn-store";
-import { listBooks, openLibrary, PER, type BookSource } from "@/server/browse";
+import { isFilter, listBooks, openLibrary, PER, type BookSource, type Filter } from "@/server/browse";
 import { LearnHeader } from "../../header";
 import { BookGrid } from "../../book-card";
-import { Menu } from "../../browse/category-menu";
+import { FilterMenu, SortMenu, type ListState } from "../../browse/list-menus";
 import { MoreBooks } from "../../browse/more-books";
 
 export const metadata: Metadata = { title: "Author" };
@@ -25,12 +25,15 @@ export default async function AuthorPage({ params, searchParams }: { params: Pro
   if (!AUTHOR_ID.test(author)) notFound();
   const sp = await searchParams;
   const sort: Sort | undefined = isSort(one(sp.sort)) ? (one(sp.sort) as Sort) : undefined;
+  const state: ListState = { ...(sort ? { sort } : {}), ...(isFilter(one(sp.filter)) ? { filter: one(sp.filter) as Filter } : {}), hide: one(sp.hide) === "1" };
   const source: BookSource = { kind: "author", id: author };
-  const [a, books, view] = await Promise.all([authorDetails(author, openLibrary).catch(() => null), listBooks(source, 1, sort ?? "rating").catch(() => null), learnView(user.id)]);
+  const [a, books, view] = await Promise.all([authorDetails(author, openLibrary).catch(() => null), listBooks(source, 1, sort ?? "rating", state.filter).catch(() => null), learnView(user.id)]);
   if (!a) notFound();
+  // Authors near this one: the authors of the most read books on the subject of their best rated book.
+  const near = books?.[0] ? await booksLike(books[0], openLibrary, 24).catch((): CatalogEntry[] => []) : [];
+  const related = [...new Map(near.flatMap((b) => (b.authorKeys?.[0] && b.authors[0] && b.authorKeys[0] !== author ? [[b.authorKeys[0], b.authors[0]] as const] : []))).entries()].slice(0, 8);
   const mine = new Map(view.books.filter((b) => b.catalog?.work).map((b) => [b.catalog!.work, b.status]));
   const photo = authorPhotoUrl(a.photo, "L");
-  const href = (s: Sort) => `/learn/authors/${author}${s === "rating" ? "" : `?sort=${s}`}`;
 
   return (
     <main className={PAGE}>
@@ -59,14 +62,33 @@ export default async function AuthorPage({ params, searchParams }: { params: Pro
       <section className="mt-10 space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">Books by {a.name}, {SORTS[sort ?? "rating"].toLowerCase()}</h2>
-          <Menu label="Sort" items={(Object.keys(SORTS) as Sort[]).map((s) => ({ href: href(s), label: SORTS[s], on: s === (sort ?? "rating") }))} />
+          <div className="flex flex-wrap gap-2">
+            <FilterMenu path={`/learn/authors/${author}`} base={{}} state={state} />
+            <SortMenu path={`/learn/authors/${author}`} base={{}} state={state} />
+          </div>
         </div>
         {books === null ? <p className="text-muted-foreground text-sm">The open library did not answer. Try again in a moment.</p> : !books.length ? <p className="text-muted-foreground text-sm">No books in English by this author in the catalog.</p> : (
           <div className="space-y-8">
-            <BookGrid books={books} mine={mine} />
-            <MoreBooks key={sort ?? "rating"} source={source} sort={sort ?? "rating"} per={PER} first={books.length} />
+            <BookGrid books={state.hide ? books.filter((b) => !mine.has(b.work)) : books} mine={mine} />
+            <MoreBooks key={JSON.stringify(state)} source={source} sort={sort ?? "rating"} {...(state.filter ? { filter: state.filter } : {})} hide={state.hide} per={PER} first={books.length} />
           </div>
         )}
+        {related.length ? (
+          <div className="space-y-3 pt-4">
+            <h2 className="text-lg font-semibold">Authors on the same subjects</h2>
+            <ul className="flex flex-wrap gap-2">
+              {related.map(([id, name]) => (
+                <li key={id}>
+                  <Link href={`/learn/authors/${id}`} className="hover:bg-muted flex items-center gap-2 rounded-full border py-1 pr-3 pl-1 text-sm transition">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={`https://covers.openlibrary.org/a/olid/${id}-S.jpg`} alt="" loading="lazy" className="bg-muted size-7 rounded-full object-cover" />
+                    {name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         <p className="text-muted-foreground pt-4 text-xs">Biography, photo and books from Open Library, written by its contributors. <Link href="/learn/browse" className="underline underline-offset-2">Browse more books</Link></p>
       </section>
     </main>

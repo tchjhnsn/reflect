@@ -6,6 +6,7 @@ import { gutenbergBook } from "@reflect/core/gutenberg";
 import { workAccess, workEntry } from "@reflect/core/openlibrary";
 import { Button } from "@/components/ui/button";
 import { requireUser } from "@/server/session";
+import { learnView } from "@/server/learn-store";
 import { Menu } from "../../../browse/category-menu";
 import { Page } from "./page-text";
 
@@ -17,18 +18,21 @@ const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) 
 
 /**
  * A public-domain book read inside Reflect, one chapter at a time, from Project Gutenberg's text. Where you
- * are is kept in this browser; a passage you select can be kept as a claim, cited to the book and chapter.
+ * are is kept in this browser, and with your account when the book is on your shelves; a passage you select can be kept as a claim, cited to the book and chapter.
  */
 export default async function ReadPage({ params, searchParams }: { params: Promise<{ work: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  await requireUser();
+  const user = await requireUser();
   const { work } = await params;
   if (!/^OL\d+W$/.test(work)) notFound();
-  const [entry, access] = await Promise.all([workEntry(work, cached).catch(() => null), workAccess(work, cached).catch(() => null)]);
+  const [entry, access, view] = await Promise.all([workEntry(work, cached).catch(() => null), workAccess(work, cached).catch(() => null), learnView(user.id)]);
+  // The book on the person's shelves, when it is there: its place is kept with their account and shown on the shelf.
+  const shelved = view.books.find((b) => b.catalog?.work === work);
   const id = access?.gutenberg[0];
   if (!entry || !id) notFound();
   const book = await gutenbergBook(id, cached).catch(() => null);
   if (!book) notFound();
-  const n = Math.min(Math.max(Number(one((await searchParams).c)) || 1, 1), book.chapters.length);
+  const asked = Number(one((await searchParams).c));
+  const n = Math.min(Math.max(asked || shelved?.place?.chapter || 1, 1), book.chapters.length);
   const chapter = book.chapters[n - 1]!;
   const href = (c: number) => `/learn/works/${work}/read?c=${c}`;
 
@@ -40,7 +44,7 @@ export default async function ReadPage({ params, searchParams }: { params: Promi
       </div>
       <p className="text-muted-foreground mt-8 text-center text-xs tracking-wide uppercase">{entry.authors[0] ?? ""}{entry.authors[0] ? " · " : ""}{n} of {book.chapters.length}</p>
       <h1 className="mt-2 text-center font-serif text-3xl font-medium">{chapter.title}</h1>
-      <Page work={work} chapter={n} chapters={book.chapters.length} title={entry.title} author={entry.authors[0] ?? ""} chapterTitle={chapter.title} paragraphs={chapter.paragraphs} />
+      <Page work={work} chapter={n} chapters={book.chapters.length} title={entry.title} author={entry.authors[0] ?? ""} chapterTitle={chapter.title} paragraphs={chapter.paragraphs} {...(shelved ? { bookId: shelved.id, kept: shelved.place } : {})} />
       <nav className="mt-12 flex items-center justify-between gap-3 border-t pt-6">
         {n > 1 ? <Button asChild variant="outline"><Link href={href(n - 1)}><ChevronLeftIcon />Previous</Link></Button> : <span />}
         {n < book.chapters.length ? <Button asChild variant="outline"><Link href={href(n + 1)}>Next<ChevronRightIcon /></Link></Button> : <Button asChild variant="outline"><Link href={`/learn/works/${work}`}>Back to the book</Link></Button>}

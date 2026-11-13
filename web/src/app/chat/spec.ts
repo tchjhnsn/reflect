@@ -8,7 +8,7 @@ import { categoryOf, themaCategory } from "@reflect/core/thema";
 export type Piece =
   | { kind: "shelves"; shelves: { id: string; name: string; books: string[]; subjects: string[] }[] }
   | { kind: "claims"; claims: { text: string; stance: string | null; holders: Holder[] }[] }
-  | { kind: "library"; label: string; books: CatalogEntry[]; kept: ReadonlySet<string> }
+  | { kind: "library"; label: string; books: CatalogEntry[]; kept: ReadonlySet<string>; /** The same list on Browse, where it goes on. */ href?: string }
   | { kind: "propose_claim"; text: string; subject?: string; holders: Holder[]; stance: string }
   | { kind: "note"; text: string };
 
@@ -46,6 +46,7 @@ export function buildSpec(pieces: readonly Piece[]): Spec | null {
           props: { title: b.title, by: b.authors.join(", ") || "unknown author", shelf: shelfName(b), onShelves: p.kept.has(b.work), entry: JSON.stringify(b) },
         });
       }
+      if (p.books.length && p.href?.startsWith("/learn/browse")) add({ type: "BrowseLink", props: { href: p.href, label: `See more of ${p.label} on Browse` } });
     } else {
       const claim = { text: p.text, holders: p.holders, stance: p.stance, ...(p.subject ? { subject: p.subject } : {}) };
       add({

@@ -107,7 +107,7 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
             ) : entry ? <AddBook entry={entry} /> : null}
             {mine ? <span className="text-muted-foreground text-xs">On your shelves</span> : null}
           </div>
-          {sources.length || links.length ? <Reader sources={sources} links={links} work={work} {...(access?.gutenberg[0] ? { here: `/learn/works/${work}/read` } : {})} /> : null}
+          {sources.length || links.length || access?.gutenberg[0] ? <Reader sources={sources} links={links} work={work} kept={mine?.place ?? null} {...(access?.gutenberg[0] ? { here: `/learn/works/${work}/read` } : {})} /> : null}
           {audio ? <Listen book={audio} /> : null}
           <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
             <div><dt className="text-muted-foreground text-xs">Category</dt><dd>{category ? <Link className="underline-offset-4 hover:underline" href={`/learn/browse?cat=${category.code}`}>{category.heading}</Link> : "Not yet placed"}</dd></div>

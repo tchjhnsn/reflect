@@ -13,6 +13,7 @@ export const catalog = defineCatalog(schema, {
     LibraryBook: { props: z.object({ title: z.string(), by: z.string(), shelf: z.string(), onShelves: z.boolean(), entry: z.string() }), description: "A book from the open library, with Add to shelves (entry is the catalog entry as JSON)" },
     Claim: { props: z.object({ text: z.string(), stance: z.string(), holders: z.string() }), description: "A claim the person keeps, with their stance" },
     ProposeClaim: { props: z.object({ text: z.string(), stance: z.string(), holders: z.string(), subject: z.string().nullable(), claim: z.string() }), description: "A claim to keep, which the person accepts with one tap (claim is the proposal as JSON)" },
+    BrowseLink: { props: z.object({ href: z.string().regex(/^\/learn\/browse(\?[^\s]*)?$/), label: z.string() }), description: "A link to the same list of books on Learn's Browse page" },
     Note: { props: z.object({ text: z.string() }), description: "A short line from Reflect, such as nothing found" },
   },
   // No json-render actions: a card's one tap calls Reflect's server action itself (registry.tsx).

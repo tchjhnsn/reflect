@@ -5,7 +5,7 @@ import { BOOK_STATUS, type BookStatus } from "@reflect/core/learning";
 import { cleanEntry, workEntry } from "@reflect/core/openlibrary";
 import { importGoodreads, type ImportReport } from "@/server/goodreads-import";
 import { requireUser } from "@/server/session";
-import { addBook, setBookStatus } from "@/server/learn-store";
+import { addBook, keepPlace, setBookStatus, type BookPlace } from "@/server/learn-store";
 import { keepClaim, setStance } from "@/server/claims-store";
 
 const openLibrary = (url: string) => fetch(url, { headers: { "user-agent": "reflect-app" }, cache: "no-store" });
@@ -71,3 +71,9 @@ export async function importGoodreadsAction(text: string): Promise<{ error: stri
   }
 }
 
+
+/** Keep where the person is in a book on their shelves that they are reading in Reflect. Nothing is revalidated: the reader keeps its own place. */
+export async function keepPlaceAction(bookId: string, place: BookPlace): Promise<void> {
+  const user = await requireUser();
+  await keepPlace(user.id, bookId, { chapter: Number(place?.chapter), chapters: Number(place?.chapters), at: Number(place?.at) });
+}
