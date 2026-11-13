@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeftIcon, BookCopyIcon } from "lucide-react";
+import { BookCopyIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PAGE, PageHeader } from "@/components/page-header";
 import { requireUser } from "@/server/session";
 import { bookOf } from "@/server/book-store";
 import { compileEditionAction } from "../actions";
@@ -17,14 +18,11 @@ export default async function BookPage() {
   const { chapters, unplaced } = await bookOf(user.id).catch(() => ({ chapters: [], unplaced: [] }));
   const any = chapters.some((c) => c.entries.length);
   return (
-    <main className="mx-auto max-w-2xl px-6 py-6">
-      <header className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Button asChild variant="ghost" size="icon" aria-label="Journal"><Link href="/journal"><ArrowLeftIcon /></Link></Button>
-          <h1 className="font-serif text-2xl font-semibold tracking-tight">The book of your life</h1>
-        </div>
+    <main className={PAGE}>
+      <PageHeader back="/journal" backLabel="Journal" title="The book of your life">
         {any ? <form action={compileEditionAction}><Button variant="outline" size="sm"><BookCopyIcon />Compile an edition</Button></form> : null}
-      </header>
+      </PageHeader>
+      <div className="max-w-2xl">
       <p className="text-muted-foreground mt-3 text-sm">What you believe, domain by domain: your ideals, and the practical beliefs by which you live toward them. Select a passage in anything you write and mark it as a belief to add it.</p>
       <div className="mt-10 space-y-12">
         {chapters.map((c, i) => (
@@ -54,6 +52,7 @@ export default async function BookPage() {
           </ul>
         </section>
       ) : null}
+      </div>
     </main>
   );
 }

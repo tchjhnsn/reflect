@@ -7,11 +7,14 @@ import { BOOKS, cleanIsbn, slugOf } from "./learning.ts";
 import { readRecord, writeRecord } from "./record-io.ts";
 
 export type Fetch = (url: string) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
-export type CatalogEntry = { work: string; title: string; authors: string[]; year?: number; isbn?: string; subjects: string[]; contents: string[]; lcc?: string[] };
+export type CatalogEntry = { work: string; title: string; authors: string[]; year?: number; isbn?: string; subjects: string[]; contents: string[]; lcc?: string[]; /** Open Library cover id. */ cover?: number };
+
+/** The cover image for an entry, from Open Library's covers service, or null when it has none. */
+export const coverUrl = (e: Pick<CatalogEntry, "cover">, size: "S" | "M" | "L" = "M"): string | null => (e.cover ? `https://covers.openlibrary.org/b/id/${e.cover}-${size}.jpg` : null);
 
 const BASE = "https://openlibrary.org";
-const FIELDS = "key,title,author_name,first_publish_year,isbn,subject,lcc";
-type Doc = { key?: string; title?: string; author_name?: string[]; first_publish_year?: number; isbn?: string[]; subject?: string[]; lcc?: string[] };
+const FIELDS = "key,title,author_name,first_publish_year,isbn,subject,lcc,cover_i";
+type Doc = { key?: string; title?: string; author_name?: string[]; first_publish_year?: number; isbn?: string[]; subject?: string[]; lcc?: string[]; cover_i?: number };
 
 async function get(fetcher: Fetch, path: string): Promise<unknown> {
   const r = await fetcher(`${BASE}${path}`);
@@ -43,12 +46,27 @@ const fromDoc = (d: Doc, isbn?: string): CatalogEntry => ({
   subjects: topSubjects(d.subject),
   contents: [],
   ...(d.lcc?.length ? { lcc: d.lcc.slice(0, 20) } : {}),
+  ...(Number.isInteger(d.cover_i) && d.cover_i! > 0 ? { cover: d.cover_i } : {}),
 });
 
 /** Books whose title or author matches, best first. */
-export async function searchBooks(query: string, fetcher: Fetch, limit = 5): Promise<CatalogEntry[]> {
-  const body = (await get(fetcher, `/search.json?q=${encodeURIComponent(query)}&fields=${FIELDS}&limit=${limit}`)) as { docs?: Doc[] } | null;
+export async function searchBooks(query: string, fetcher: Fetch, limit = 5, page = 1): Promise<CatalogEntry[]> {
+  const body = (await get(fetcher, `/search.json?q=${encodeURIComponent(query)}&fields=${FIELDS}&limit=${limit}${page > 1 ? `&page=${page}` : ""}`)) as { docs?: Doc[] } | null;
   return (body?.docs ?? []).filter((d) => d.key && d.title).map((d) => fromDoc(d));
+}
+
+/** What people are reading on Open Library this week. The trending list carries no call numbers; `workEntry` fills them in. */
+export async function trendingBooks(fetcher: Fetch, limit = 24): Promise<CatalogEntry[]> {
+  const body = (await get(fetcher, `/trending/weekly.json?limit=${Math.min(Math.max(limit, 1), 50)}`)) as { works?: Doc[] } | null;
+  return (body?.works ?? []).filter((d) => d.key && d.title).map((d) => fromDoc(d));
+}
+
+/** One work by its id (OL...W), with its subjects and call numbers. */
+export async function workEntry(work: string, fetcher: Fetch): Promise<CatalogEntry | null> {
+  if (!/^OL\d+W$/.test(work)) return null;
+  const body = (await get(fetcher, `/search.json?q=${encodeURIComponent(`key:/works/${work}`)}&fields=${FIELDS}&limit=1`)) as { docs?: Doc[] } | null;
+  const d = body?.docs?.[0];
+  return d?.key && d.title ? fromDoc(d) : null;
 }
 
 /** Browse one Library of Congress main class (a letter, as in shelves.ts), best rated first. */
@@ -98,6 +116,7 @@ export function cleanEntry(raw: unknown): CatalogEntry | null {
   if (!work || !title) return null;
   const year = Number(e.year);
   const lcc = strs(e.lcc, 20, 60);
+  const cover = Number(e.cover);
   return {
     work,
     title,
@@ -107,5 +126,6 @@ export function cleanEntry(raw: unknown): CatalogEntry | null {
     subjects: strs(e.subjects, 15, 200),
     contents: [],
     ...(lcc.length ? { lcc } : {}),
+    ...(Number.isInteger(cover) && cover > 0 ? { cover } : {}),
   };
 }

@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ArrowLeftIcon, FileIcon } from "lucide-react";
+import { FileIcon } from "lucide-react";
 import { KINDS, TEMPLATES } from "@reflect/core/works";
 import { DOMAINS, isDomain } from "@reflect/core/book";
-import { Button } from "@/components/ui/button";
+import { PAGE, PageHeader } from "@/components/page-header";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireUser } from "@/server/session";
 import { createWorkAction } from "../actions";
@@ -18,11 +17,8 @@ export default async function NewWorkPage({ searchParams }: { searchParams: Prom
   const domain = isDomain(q.domain) ? q.domain : null;
   const back = domain ? `/journal/d/${domain}` : "/journal";
   return (
-    <main className="mx-auto max-w-4xl px-6 py-6">
-      <header className="flex items-center gap-3">
-        <Button asChild variant="ghost" size="icon" aria-label="Back"><Link href={back}><ArrowLeftIcon /></Link></Button>
-        <h1 className="text-2xl font-semibold tracking-tight">Create{domain ? <span className="text-muted-foreground font-normal"> in {DOMAINS.find((d) => d.id === domain)!.title}</span> : null}</h1>
-      </header>
+    <main className={PAGE}>
+      <PageHeader back={back} backLabel="Back" title={<>Create{domain ? <span className="text-muted-foreground font-normal"> in {DOMAINS.find((d) => d.id === domain)!.title}</span> : null}</>}></PageHeader>
       {about ? <blockquote className="text-muted-foreground mt-6 border-l-2 pl-3 text-sm">Writing about: {about}</blockquote> : null}
       <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {TEMPLATES.map((t) => (
