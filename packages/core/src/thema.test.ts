@@ -16,6 +16,7 @@ describe("thema", () => {
     expect(readCall("IX-1")).toBeNull();
     expect(showCall("BF-0335.30000000.C54")).toBe("BF335.3 .C54");
     expect(showCall("B--0383.00000000")).toBe("B383");
+    expect(showCall("PA-4279.00000000 R4 1969")).toBe("PA4279 .R4 1969");
     expect(showCall("BS2625.3 .M6")).toBe("BS2625.3 .M6");
   });
 
