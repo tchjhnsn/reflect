@@ -5,7 +5,7 @@ import { BOOK_STATUS, type BookStatus } from "@reflect/core/learning";
 import { cleanEntry, workEntry } from "@reflect/core/openlibrary";
 import { importGoodreads, type ImportReport } from "@/server/goodreads-import";
 import { requireUser } from "@/server/session";
-import { addBook, keepPlace, setBookStatus, type BookPlace } from "@/server/learn-store";
+import { addBook, keepPlace, rankWant, setBookStatus, setFinishedOn, setGoal, type BookPlace } from "@/server/learn-store";
 import { keepClaim, setStance } from "@/server/claims-store";
 import { addExcerpt, allExcerpts, removeExcerpt, reviseExcerpt, type Anchor } from "@/server/excerpt-store";
 import { importKindle, type KindleReport } from "@/server/kindle-import";
@@ -80,9 +80,30 @@ export async function importGoodreadsAction(text: string): Promise<{ error: stri
 
 
 /** Keep where the person is in a book on their shelves that they are reading in Reflect. Nothing is revalidated: the reader keeps its own place. */
-export async function keepPlaceAction(bookId: string, place: BookPlace): Promise<void> {
+export async function keepPlaceAction(bookId: string, place: BookPlace, day?: string): Promise<void> {
   const user = await requireUser();
-  await keepPlace(user.id, bookId, { chapter: Number(place?.chapter), chapters: Number(place?.chapters), at: Number(place?.at) });
+  await keepPlace(user.id, bookId, { chapter: Number(place?.chapter), chapters: Number(place?.chapters), at: Number(place?.at) }, typeof day === "string" ? day : undefined);
+}
+
+/** Set the day the person finished a read book. */
+export async function setFinishedAction(bookId: string, day: string): Promise<void> {
+  const user = await requireUser();
+  await setFinishedOn(user.id, String(bookId), String(day));
+  revalidatePath("/learn/reading");
+}
+
+/** Order Want to read as the person dragged it. */
+export async function rankWantAction(ids: string[]): Promise<void> {
+  const user = await requireUser();
+  await rankWant(user.id, Array.isArray(ids) ? ids.map(String) : []);
+  revalidatePath("/learn/reading");
+}
+
+/** Set or clear the person's reading goal for a year. */
+export async function setGoalAction(year: number, books: number | null): Promise<void> {
+  const user = await requireUser();
+  await setGoal(user.id, Number(year), books === null ? null : Number(books));
+  revalidatePath("/learn/reading");
 }
 
 /** Keep an excerpt from a book: a highlight in a text read in Reflect, or words typed with a page or place. Returns its id. */

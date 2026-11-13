@@ -5,16 +5,17 @@ import { PageHeader } from "@/components/page-header";
 import { Segmented } from "@/components/segmented";
 
 /**
- * Learn's one header on every Learn page: your own catalog (shelves, highlights, claims) as tabs, and Browse apart from
+ * Learn's one header on every Learn page: your own catalog (shelves, reading, highlights, claims) as tabs, and Browse apart from
  * them, since browsing is for books that are not yours yet.
  */
-export function LearnHeader({ on }: { on: "shelves" | "claims" | "highlights" | "browse" }) {
+export function LearnHeader({ on }: { on: "shelves" | "reading" | "claims" | "highlights" | "browse" }) {
   return (
     <PageHeader back="/" backLabel="Home" title="Learn">
       <Segmented
         label="Your catalog"
         items={[
           { label: "My shelves", href: "/learn", on: on === "shelves" },
+          { label: "Reading", href: "/learn/reading", on: on === "reading" },
           { label: "Highlights", href: "/learn/highlights", on: on === "highlights" },
           { label: "Claims", href: "/learn?tab=claims", on: on === "claims" },
         ]}

@@ -66,7 +66,11 @@ export function Page({ work, chapter, chapters, title, author, chapterTitle, par
       return { chapter, chapters, at: h > 0 ? Math.min(1, window.scrollY / h) : 0 };
     };
     const send = () => {
-      if (bookId) keepPlaceAction(bookId, here()).catch(() => undefined);
+      if (bookId) {
+        const d = new Date();
+        const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        keepPlaceAction(bookId, here(), day).catch(() => undefined);
+      }
     };
     const save = () => {
       setAt(here().at);

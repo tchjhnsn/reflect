@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { db } from "@/db/pool";
-import { addBook, addSubjects, getBook, keepPlace, keepRecall, learnView, rateSubject, setBookStatus } from "./learn-store";
+import { addBook, addSubjects, getBook, goalFor, keepPlace, keepRecall, learnView, rankWant, rateSubject, readingDays, setBookStatus, setFinishedOn, setGoal } from "./learn-store";
 import { logActs } from "./log-store";
 import { actText } from "@reflect/core/log";
 
@@ -15,6 +15,33 @@ async function newUser(name: string): Promise<string> {
 
 describe.skipIf(!live)("learning on Neon", () => {
   afterAll(() => db().end());
+
+  it("keeps reading days, a yearly goal, the order of Want to read and the day a book was finished", async () => {
+    const user = await newUser("Habits Test");
+    const a = await addBook(user, { title: "A", status: "reading" });
+    const now = new Date("2026-11-13T15:00:00Z");
+    await keepPlace(user, a, { chapter: 1, chapters: 3, at: 0.2 }, "2026-11-13", now);
+    await keepPlace(user, a, { chapter: 1, chapters: 3, at: 0.4 }, "2026-11-13", now);
+    await keepPlace(user, a, { chapter: 2, chapters: 3, at: 0 }, "1999-01-01", now);
+    expect(await readingDays(user, "2026-01-01", "2026-12-31")).toEqual(["2026-11-13"]);
+    await setGoal(user, 2026, 24);
+    expect(await goalFor(user, 2026)).toBe(24);
+    await setGoal(user, 2026, 30);
+    expect(await goalFor(user, 2026)).toBe(30);
+    await setGoal(user, 2026, null);
+    expect(await goalFor(user, 2026)).toBeNull();
+    await expect(setGoal(user, 2026, 0)).rejects.toThrow(/1 to 1,000/);
+    const w1 = await addBook(user, { title: "W1" });
+    const w2 = await addBook(user, { title: "W2" });
+    await rankWant(user, [w2, w1]);
+    const view = await learnView(user);
+    expect([view.books.find((b) => b.id === w2)!.wantRank, view.books.find((b) => b.id === w1)!.wantRank]).toEqual([0, 1]);
+    await expect(setFinishedOn(user, a, "2026-05-01")).rejects.toThrow(/only a read book/);
+    await setBookStatus(user, a, "read");
+    await setFinishedOn(user, a, "2026-05-01");
+    expect((await getBook(user, a))!.finishedOn).toBe("2026-05-01");
+    await expect(setFinishedOn(user, a, "3000-01-01")).rejects.toThrow(/to today/);
+  });
 
   it("keeps one place per book, replaced as the person reads, only on their own shelves", async () => {
     const user = await newUser("Place Test");
