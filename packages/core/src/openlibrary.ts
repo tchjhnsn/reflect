@@ -7,14 +7,14 @@ import { BOOKS, cleanIsbn, slugOf } from "./learning.ts";
 import { readRecord, writeRecord } from "./record-io.ts";
 
 export type Fetch = (url: string) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
-export type CatalogEntry = { work: string; title: string; authors: string[]; year?: number; isbn?: string; subjects: string[]; contents: string[]; lcc?: string[]; /** Open Library cover id. */ cover?: number };
+export type CatalogEntry = { work: string; title: string; authors: string[]; year?: number; isbn?: string; subjects: string[]; contents: string[]; lcc?: string[]; /** Open Library cover id. */ cover?: number; /** Open Library readers' star rating, 1 to 5, when shown in a list. */ rating?: { average: number; count: number } };
 
 /** The cover image for an entry, from Open Library's covers service, or null when it has none. */
 export const coverUrl = (e: Pick<CatalogEntry, "cover">, size: "S" | "M" | "L" = "M"): string | null => (e.cover ? `https://covers.openlibrary.org/b/id/${e.cover}-${size}.jpg` : null);
 
 const BASE = "https://openlibrary.org";
-const FIELDS = "key,title,author_name,first_publish_year,isbn,subject,lcc,cover_i";
-type Doc = { key?: string; title?: string; author_name?: string[]; first_publish_year?: number; isbn?: string[]; subject?: string[]; lcc?: string[]; cover_i?: number };
+const FIELDS = "key,title,author_name,first_publish_year,isbn,subject,lcc,cover_i,ratings_average,ratings_count";
+type Doc = { key?: string; title?: string; author_name?: string[]; first_publish_year?: number; isbn?: string[]; subject?: string[]; lcc?: string[]; cover_i?: number; ratings_average?: number; ratings_count?: number };
 
 async function get(fetcher: Fetch, path: string): Promise<unknown> {
   const r = await fetcher(`${BASE}${path}`);
@@ -47,6 +47,7 @@ const fromDoc = (d: Doc, isbn?: string): CatalogEntry => ({
   contents: [],
   ...(d.lcc?.length ? { lcc: d.lcc.slice(0, 20) } : {}),
   ...(Number.isInteger(d.cover_i) && d.cover_i! > 0 ? { cover: d.cover_i } : {}),
+  ...(d.ratings_count && d.ratings_average ? { rating: { average: Math.round(d.ratings_average * 100) / 100, count: d.ratings_count } } : {}),
 });
 
 /** Books whose title or author matches, best first. */
@@ -76,6 +77,49 @@ export async function browseClass(lccClass: string, fetcher: Fetch, opts: { page
   const page = Math.max(opts.page ?? 1, 1);
   const body = (await get(fetcher, `/search.json?q=${encodeURIComponent(`lcc:${lccClass}*`)}&sort=rating&fields=${FIELDS}&limit=${limit}&page=${page}`)) as { docs?: Doc[] } | null;
   return (body?.docs ?? []).filter((d) => d.key && d.title).map((d) => fromDoc(d));
+}
+
+/**
+ * Books matching an Open Library search query (as `themaQuery` writes them): best rated first, or, with
+ * `sort: "readinglog"`, the ones most readers have logged, which keeps a narrow subject's list to known books.
+ */
+export async function browseQuery(query: string, fetcher: Fetch, opts: { page?: number; limit?: number; sort?: "rating" | "readinglog" } = {}): Promise<CatalogEntry[]> {
+  const limit = Math.min(Math.max(opts.limit ?? 24, 1), 50);
+  const page = Math.max(opts.page ?? 1, 1);
+  const body = (await get(fetcher, `/search.json?q=${encodeURIComponent(query)}&sort=${opts.sort ?? "rating"}&fields=${FIELDS}&limit=${limit}&page=${page}`)) as { docs?: Doc[] } | null;
+  return (body?.docs ?? []).filter((d) => d.key && d.title).map((d) => fromDoc(d));
+}
+
+export type Edition = { title: string; year?: number; publisher?: string; isbn?: string; language?: string };
+export type WorkDetails = { description: string | null; subjects: string[]; rating: { average: number; count: number } | null; editions: { count: number; first: Edition[] } };
+
+/** What a book page shows beyond its catalog entry: the work's description, its readers' rating and its editions. */
+export async function workDetails(work: string, fetcher: Fetch): Promise<WorkDetails | null> {
+  if (!/^OL\d+W$/.test(work)) return null;
+  const [w, r, e] = await Promise.all([
+    get(fetcher, `/works/${work}.json`) as Promise<{ description?: string | { value?: string }; subjects?: string[] } | null>,
+    get(fetcher, `/works/${work}/ratings.json`).catch(() => null) as Promise<{ summary?: { average?: number; count?: number } } | null>,
+    get(fetcher, `/works/${work}/editions.json?limit=6`).catch(() => null) as Promise<{ size?: number; entries?: { title?: string; publish_date?: string; publishers?: string[]; isbn_13?: string[]; isbn_10?: string[]; languages?: { key?: string }[] }[] } | null>,
+  ]);
+  if (!w) return null;
+  const raw = typeof w.description === "string" ? w.description : w.description?.value ?? "";
+  // Descriptions are community-written Markdown; keep the text, drop link targets and the trailing source lines.
+  const description = raw.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/\r/g, "").split(/\n-{3,}\n|\n\(\[source\]/)[0]!.trim().slice(0, 4000);
+  const avg = r?.summary?.average;
+  return {
+    description: description || null,
+    subjects: topSubjects(w.subjects, 20),
+    rating: avg && r?.summary?.count ? { average: Math.round(avg * 100) / 100, count: r.summary.count } : null,
+    editions: {
+      count: e?.size ?? 0,
+      first: (e?.entries ?? []).filter((x) => x.title).map((x) => {
+        const year = Number(/\d{4}/.exec(x.publish_date ?? "")?.[0]);
+        const isbn = x.isbn_13?.[0] ?? x.isbn_10?.[0];
+        const language = x.languages?.[0]?.key?.replace("/languages/", "");
+        return { title: x.title!, ...(year ? { year } : {}), ...(x.publishers?.[0] ? { publisher: x.publishers[0] } : {}), ...(isbn ? { isbn } : {}), ...(language ? { language } : {}) };
+      }),
+    },
+  };
 }
 
 /** One edition by ISBN, with its work's subjects and, when the catalog has it, its table of contents. */

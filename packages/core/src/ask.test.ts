@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ASK_SYSTEM, cleanProposal, lccClass, learnSummary } from "./ask.ts";
+import { ASK_SYSTEM, cleanProposal, learnSummary, themaCode } from "./ask.ts";
 
 describe("ask", () => {
   it("proposes a claim only with a stance it can keep, holders cleaned, never the person", () => {
@@ -12,8 +12,8 @@ describe("ask", () => {
     });
   });
 
-  it("takes only a real Library of Congress class letter", () => {
-    expect([lccClass("t"), lccClass("I"), lccClass(3)]).toEqual(["T", null, null]);
+  it("takes only a Thema section or category Reflect knows", () => {
+    expect([themaCode("t"), themaCode("jm"), themaCode("I"), themaCode("JZ"), themaCode(3)]).toEqual(["T", "JM", null, null, null]);
   });
 
   it("tells the model it never answers from memory or claims to save, and summarizes only titles and names", () => {

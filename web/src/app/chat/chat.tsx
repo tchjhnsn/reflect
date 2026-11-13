@@ -24,7 +24,7 @@ const TITLE: Record<string, string> = {
   show_shelves: "Looked at your shelves",
   show_claims: "Looked at your claims",
   search_library: "Searched the library",
-  browse_library_class: "Browsed a shelf of the library",
+  browse_category: "Browsed a category of the library",
   propose_claim: "Proposed a claim",
 };
 const STARTERS = ["What's on my shelves?", "Find me a good introduction to Aristotle", "Show my claims"];

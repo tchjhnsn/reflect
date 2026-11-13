@@ -5,10 +5,10 @@
 import { convertToModelMessages, createUIMessageStream, createUIMessageStreamResponse, stepCountIs, streamText, tool, type UIMessage } from "ai";
 import { SPEC_DATA_PART_TYPE } from "@json-render/core";
 import { z } from "zod";
-import { ASK_SYSTEM, cleanProposal, lccClass, learnSummary } from "@reflect/core/ask";
+import { ASK_SYSTEM, cleanProposal, learnSummary, themaCode } from "@reflect/core/ask";
 import { STANCES } from "@reflect/core/claims";
-import { browseClass, searchBooks } from "@reflect/core/openlibrary";
-import { LCC_CLASSES } from "@reflect/core/shelves";
+import { browseQuery, searchBooks } from "@reflect/core/openlibrary";
+import { themaCategory, themaQuery, themaSection } from "@reflect/core/thema";
 import { acceptLocalDate, clean } from "@reflect/core/journal";
 import { chatPart, isChatId } from "@reflect/core/chat-journal";
 import { isoDate } from "@reflect/core/person";
@@ -77,7 +77,7 @@ export async function POST(req: Request) {
         onFinish: async ({ steps }) => keep("reflect", steps.map((st) => st.text).filter(Boolean).join("\n\n")),
         tools: {
           show_shelves: tool({
-            description: "Show the person's shelves: their books and subjects by Library of Congress class.",
+            description: "Show the person's shelves: their books and subjects by Thema section.",
             inputSchema: z.object({}),
             execute: async () => {
               const names = new Map(view.books.flatMap((b) => b.subjects).map((x) => [x.id, x.name]));
@@ -103,13 +103,14 @@ export async function POST(req: Request) {
             inputSchema: z.object({ query: z.string().min(1).max(200) }),
             execute: async ({ query }) => library(`"${query}"`, () => searchBooks(query, openLibrary, 5)),
           }),
-          browse_library_class: tool({
-            description: "Show the best rated books in one Library of Congress main class.",
-            inputSchema: z.object({ class: z.string().describe(`One letter: ${LCC_CLASSES.map((c) => c.id).join(" ")}`) }),
+          browse_category: tool({
+            description: "Show the best rated books in one Thema section (one letter) or category (two letters).",
+            inputSchema: z.object({ code: z.string().min(1).max(2).describe("A Thema code, such as F (fiction), FM (fantasy), JM (psychology), JH (sociology), QR (religion)") }),
             execute: async (input) => {
-              const c = lccClass(input.class);
-              if (!c) return "That is not a Library of Congress main class.";
-              return library(LCC_CLASSES.find((x) => x.id === c)!.name, () => browseClass(c, openLibrary, { limit: 5 }));
+              const c = themaCode(input.code);
+              const q = c ? themaQuery(c) : null;
+              if (!c || !q) return "That is not a Thema section or category Reflect knows.";
+              return library((themaCategory(c) ?? themaSection(c))!.short, () => browseQuery(q, openLibrary, { limit: 5 }));
             },
           }),
           propose_claim: tool({

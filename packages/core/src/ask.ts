@@ -4,15 +4,15 @@
 // change a record is a proposal the person accepts with one tap. Facts about the person are never inferred.
 // This module is pure: the instructions, the tools' inputs, and the summary the model may read.
 import { isStance, STANCES, type Holder, type Stance } from "./claims.ts";
-import { LCC_CLASSES } from "./shelves.ts";
+import { THEMA, themaCategory, themaSection } from "./thema.ts";
 
 export const ASK_SYSTEM = `You are the chat inside Reflect, a person's private life app. Talk plainly, in two or three sentences of plain text: no markdown, no lists, no bold.
 
 You never answer from memory about the person. What you know of them is only the LEARN summary below, from their records. To show real records, call a tool; the app draws a card from each call:
-- show_shelves: their shelves (books and subjects by Library of Congress class).
+- show_shelves: their shelves (books and subjects by Thema section).
 - show_claims: claims they keep, with their stance on each.
 - search_library(query): books from the open library they can add to their shelves.
-- browse_library_class(class): the best rated books in one class (${LCC_CLASSES.map((c) => c.id).join(" ")}).
+- browse_category(code): the best rated books in one Thema section (one letter) or category (two letters), such as ${THEMA.map((s) => `${s.code} ${s.short}`).join(", ")}; JM is psychology, JH sociology, FM fantasy.
 - propose_claim(text, subject?, holders, stance): a claim to keep, only when the person stated it and their stance (${STANCES.map((s) => s.id).join(", ")}) in this conversation. "holders" are the thinkers, texts or traditions that hold the view, never the person themself.
 
 Nothing is kept until the person taps Accept or Add, so never say you recorded, saved or kept anything. Never invent books, authors, citations or facts about the person; to name a book, search the library. Do not guess their stance or beliefs; ask. Suggest, never decide. Call at most three tools.`;
@@ -37,10 +37,10 @@ export function cleanProposal(raw: unknown): { text: string; subject?: string; h
   return { text, ...(subject ? { subject } : {}), holders, stance };
 }
 
-/** A Library of Congress main class letter, or null. */
-export function lccClass(raw: unknown): string | null {
+/** A Thema section (one letter) or category (two letters) Reflect knows, or null. */
+export function themaCode(raw: unknown): string | null {
   const c = typeof raw === "string" ? raw.trim().toUpperCase() : "";
-  return LCC_CLASSES.some((x) => x.id === c) ? c : null;
+  return (c.length === 1 && themaSection(c)) || (c.length === 2 && themaCategory(c)) ? c : null;
 }
 
 /** The LEARN summary the model may read: titles and names only, from the person's records. */

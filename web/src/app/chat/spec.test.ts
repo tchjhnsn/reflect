@@ -14,8 +14,8 @@ describe("chat cards", () => {
     expect(spec.root).toBe("root");
     expect(spec.elements.root!.children).toEqual(["e0", "e1"]);
     const a = spec.elements.e0!;
-    expect(a.props).toMatchObject({ title: "Wiring", by: "A. Writer", shelf: "T Technology", onShelves: false, entry: expect.stringContaining('"work":"OL1W"') });
-    expect(spec.elements.e1!.props).toMatchObject({ by: "unknown author", shelf: "not yet shelved", onShelves: true });
+    expect(a.props).toMatchObject({ title: "Wiring", by: "A. Writer", shelf: "Electronics", onShelves: false, entry: expect.stringContaining('"work":"OL1W"') });
+    expect(spec.elements.e1!.props).toMatchObject({ by: "unknown author", shelf: "not yet placed", onShelves: true });
   });
 
   it("proposes a claim the person accepts, and says plainly when a list is empty", () => {
