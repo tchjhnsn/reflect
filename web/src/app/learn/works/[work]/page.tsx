@@ -66,7 +66,6 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
   ].sort((a, b) => Number(b.full) - Number(a.full));
   const links: ReadLink[] = [
     ...(access?.standardEbooks[0] ? [{ name: "Standard Ebooks", href: `https://standardebooks.org/ebooks/${access.standardEbooks[0]}` }] : []),
-    ...(access?.gutenberg[0] ? [{ name: "Project Gutenberg", href: `https://www.gutenberg.org/ebooks/${access.gutenberg[0]}` }] : []),
     ...(access?.access === "borrowable" && access.edition ? [{ name: "Borrow from Open Library", href: `https://openlibrary.org/books/${access.edition}` }] : []),
   ];
   const shelved = new Map(view.books.filter((b) => b.catalog?.work).map((b) => [b.catalog!.work, b.status]));
@@ -108,7 +107,7 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
             ) : entry ? <AddBook entry={entry} /> : null}
             {mine ? <span className="text-muted-foreground text-xs">On your shelves</span> : null}
           </div>
-          {sources.length || links.length ? <Reader sources={sources} links={links} /> : null}
+          {sources.length || links.length ? <Reader sources={sources} links={links} work={work} {...(access?.gutenberg[0] ? { here: `/learn/works/${work}/read` } : {})} /> : null}
           {audio ? <Listen book={audio} /> : null}
           <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
             <div><dt className="text-muted-foreground text-xs">Category</dt><dd>{category ? <Link className="underline-offset-4 hover:underline" href={`/learn/browse?cat=${category.code}`}>{category.heading}</Link> : "Not yet placed"}</dd></div>
