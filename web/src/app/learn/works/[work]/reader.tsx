@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { BookOpenIcon, ExternalLinkIcon, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -13,16 +14,30 @@ export type ReadLink = { name: string; href: string };
  * Reading the book: the first reader opens on the page when the person asks, the whole book when one has it
  * free and a preview otherwise; the other readers and the places off the page sit beside it.
  */
-export function Reader({ sources, links }: { sources: ReadSource[]; links: ReadLink[] }) {
+export function Reader({ sources, links, here, work }: { sources: ReadSource[]; links: ReadLink[]; /** Reflect's own reader for the book, when it has a text for it. */ here?: string; work: string }) {
   const [open, setOpen] = useState<string | null>(null);
-  const first = sources[0];
+  const [place, setPlace] = useState<{ chapter: number; chapters: number } | null>(null);
+  useEffect(() => {
+    try {
+      const p = JSON.parse(window.localStorage.getItem(`reflect:read:${work}`) ?? "null") as { chapter?: number; chapters?: number } | null;
+      if (p?.chapter && p.chapters) setPlace({ chapter: p.chapter, chapters: p.chapters });
+    } catch {
+      // nothing kept
+    }
+  }, [work]);
+  const first = here ? undefined : sources[0];
   const current = sources.find((s) => s.key === open);
   const label = first?.full ? "Read it free" : "Read a preview";
   return (
     <section className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
+        {here ? (
+          <Button asChild variant="outline">
+            <Link href={place ? `${here}?c=${place.chapter}` : here}><BookOpenIcon />{place ? `Continue reading · ${place.chapter} of ${place.chapters}` : "Read it free"}</Link>
+          </Button>
+        ) : null}
         {first && !current ? <Button variant="outline" onClick={() => setOpen(first.key)}><BookOpenIcon />{label}</Button> : null}
-        {current ? sources.filter((s) => s.key !== current.key).map((s) => <Button key={s.key} variant="ghost" size="sm" onClick={() => setOpen(s.key)}>{s.full ? "Whole book" : "Preview"} at {s.name}</Button>) : null}
+        {sources.filter((s) => s.key !== current?.key && s.key !== first?.key).map((s) => <Button key={s.key} variant="ghost" size="sm" onClick={() => setOpen(s.key)}>{s.key === "archive" ? "Scanned book" : s.full ? "Whole book" : "Preview"} at {s.name}</Button>)}
         {links.map((l) => <Button key={l.href} asChild variant="ghost" size="sm"><a href={l.href} target="_blank" rel="noreferrer">{l.name}<ExternalLinkIcon /></a></Button>)}
       </div>
       {current ? (
