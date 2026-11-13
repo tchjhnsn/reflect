@@ -6,6 +6,8 @@ import type { IsoDate } from "@reflect/core/person";
 import type { Journal } from "@reflect/core/store";
 import { makeBundle, type Bundle } from "@reflect/core/bundle";
 import { open, seal } from "./crypto";
+import { CHAT_PROMPT } from "@reflect/core/chat-journal";
+import { listWorks } from "./work-store";
 
 type EntryRow = { id: string; local_date: Date | string; prompt_id: string | null; created_at: Date; closed_at: Date | null };
 type PartRow = { entry_id: string; seq: number; text_ct: string; created_at: Date };
@@ -37,6 +39,15 @@ export async function addPart(userId: string, entryId: string, text: string): Pr
     [entryId, userId, seal(userId, text)],
   );
   if (r.rowCount === 0) throw new Error("no such entry");
+}
+
+/**
+ * Keep one chat message in the journal. The chat's id is its entry's id: the entry is made, marked as a chat,
+ * with the first message, and later messages are added to it. Another person's entry with that id is refused.
+ */
+export async function keepChatMessage(userId: string, chatId: string, localDate: IsoDate, text: string): Promise<void> {
+  await db().query("INSERT INTO journal_entry (id, user_id, local_date, prompt_id) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING", [chatId, userId, localDate, CHAT_PROMPT]);
+  await addPart(userId, chatId, text);
 }
 
 export async function closeEntry(userId: string, entryId: string): Promise<void> {
@@ -158,7 +169,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 /** The person's whole journal as a bundle, to move it to another host. */
 export async function exportJournal(userId: string): Promise<Bundle> {
-  return makeBundle(await listEntries(userId, 100_000), new Date().toISOString());
+  const [entries, works] = await Promise.all([listEntries(userId, 100_000), listWorks(userId).catch(() => [])]);
+  const b = makeBundle(entries, new Date().toISOString());
+  return { ...b, works: works.map(({ template: _t, ...w }) => w).sort((a, z) => a.createdAt.localeCompare(z.createdAt)) };
 }
 
 /**

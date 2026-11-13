@@ -7,7 +7,7 @@ import { filesJournal } from "@reflect/core/files-journal";
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { addPart, closeEntry, exportJournal, importJournal, postgresJournal, createEntry, entryText, keepAnswer, listEntries, researchAllowed, setResearchAllowed, startReflection } from "./journal-store";
+import { addPart, closeEntry, exportJournal, importJournal, keepChatMessage, postgresJournal, createEntry, entryText, keepAnswer, listEntries, researchAllowed, setResearchAllowed, startReflection } from "./journal-store";
 
 const live = Boolean(process.env.DATABASE_URL && process.env.REFLECT_DATA_KEY);
 const DAY = "2026-11-09" as IsoDate;
@@ -68,6 +68,18 @@ describe.skipIf(!live)("journal store on Neon", () => {
     await closeEntry(user, id);
     await expect(addPart(user, id, "late")).rejects.toThrow(/closed/);
     expect((await listEntries(user))[0]?.closedAt).not.toBeNull();
+  });
+
+  it("keeps a chat as one entry, message by message, for its owner only", async () => {
+    const user = await newUser();
+    const chat = randomUUID();
+    await keepChatMessage(user, chat, DAY, "You: Find me a book on Aristotle");
+    await keepChatMessage(user, chat, DAY, "Reflect: Try the Nicomachean Ethics.");
+    const [entry] = await listEntries(user);
+    expect(entry?.id).toBe(chat);
+    expect(entry?.promptId).toBe("chat");
+    expect(entry?.parts.map((p) => p.text)).toEqual(["You: Find me a book on Aristotle", "Reflect: Try the Nicomachean Ethics."]);
+    await expect(keepChatMessage(await newUser(), chat, DAY, "You: not mine")).rejects.toThrow();
   });
 
   it("refuses edits, deletes and another person's entry", async () => {

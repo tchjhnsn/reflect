@@ -7,11 +7,11 @@ import { BOOKS, cleanIsbn, slugOf } from "./learning.ts";
 import { readRecord, writeRecord } from "./record-io.ts";
 
 export type Fetch = (url: string) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
-export type CatalogEntry = { work: string; title: string; authors: string[]; year?: number; isbn?: string; subjects: string[]; contents: string[] };
+export type CatalogEntry = { work: string; title: string; authors: string[]; year?: number; isbn?: string; subjects: string[]; contents: string[]; lcc?: string[] };
 
 const BASE = "https://openlibrary.org";
-const FIELDS = "key,title,author_name,first_publish_year,isbn,subject";
-type Doc = { key?: string; title?: string; author_name?: string[]; first_publish_year?: number; isbn?: string[]; subject?: string[] };
+const FIELDS = "key,title,author_name,first_publish_year,isbn,subject,lcc";
+type Doc = { key?: string; title?: string; author_name?: string[]; first_publish_year?: number; isbn?: string[]; subject?: string[]; lcc?: string[] };
 
 async function get(fetcher: Fetch, path: string): Promise<unknown> {
   const r = await fetcher(`${BASE}${path}`);
@@ -42,11 +42,21 @@ const fromDoc = (d: Doc, isbn?: string): CatalogEntry => ({
   ...(isbn ? { isbn } : d.isbn?.find((i) => i.length === 13) ? { isbn: d.isbn.find((i) => i.length === 13) } : {}),
   subjects: topSubjects(d.subject),
   contents: [],
+  ...(d.lcc?.length ? { lcc: d.lcc.slice(0, 20) } : {}),
 });
 
 /** Books whose title or author matches, best first. */
 export async function searchBooks(query: string, fetcher: Fetch, limit = 5): Promise<CatalogEntry[]> {
   const body = (await get(fetcher, `/search.json?q=${encodeURIComponent(query)}&fields=${FIELDS}&limit=${limit}`)) as { docs?: Doc[] } | null;
+  return (body?.docs ?? []).filter((d) => d.key && d.title).map((d) => fromDoc(d));
+}
+
+/** Browse one Library of Congress main class (a letter, as in shelves.ts), best rated first. */
+export async function browseClass(lccClass: string, fetcher: Fetch, opts: { page?: number; limit?: number } = {}): Promise<CatalogEntry[]> {
+  if (!/^[A-Z]$/.test(lccClass)) throw new Error("a class is one capital letter of the Library of Congress Classification");
+  const limit = Math.min(Math.max(opts.limit ?? 24, 1), 50);
+  const page = Math.max(opts.page ?? 1, 1);
+  const body = (await get(fetcher, `/search.json?q=${encodeURIComponent(`lcc:${lccClass}*`)}&sort=rating&fields=${FIELDS}&limit=${limit}&page=${page}`)) as { docs?: Doc[] } | null;
   return (body?.docs ?? []).filter((d) => d.key && d.title).map((d) => fromDoc(d));
 }
 
@@ -74,4 +84,28 @@ export async function saveCatalogEntry(root: string, book: string, entry: Catalo
 export async function readCatalogEntry(root: string, book: string): Promise<CatalogEntry | null> {
   const t = await readRecord(root, join(BOOKS, `${slugOf(book)}.openlibrary.json`));
   return t ? (JSON.parse(t) as CatalogEntry) : null;
+}
+
+/**
+ * A catalog entry that came back from a browser (a hidden form field, a chat card), cut to the fields and
+ * sizes Reflect keeps. Returns null when it has no work id or title. Contents are never taken from a client.
+ */
+export function cleanEntry(raw: unknown): CatalogEntry | null {
+  const e = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const strs = (v: unknown, n: number, max: number) => (Array.isArray(v) ? v.filter((x) => typeof x === "string" || typeof x === "number").map((x) => String(x).slice(0, max)).slice(0, n) : []);
+  const work = typeof e.work === "string" ? e.work.trim().slice(0, 40) : "";
+  const title = typeof e.title === "string" ? e.title.trim().slice(0, 300) : "";
+  if (!work || !title) return null;
+  const year = Number(e.year);
+  const lcc = strs(e.lcc, 20, 60);
+  return {
+    work,
+    title,
+    authors: strs(e.authors, 10, 200),
+    ...(Number.isInteger(year) && year > 0 ? { year } : {}),
+    ...(typeof e.isbn === "string" && e.isbn.trim() ? { isbn: e.isbn.trim().slice(0, 20) } : {}),
+    subjects: strs(e.subjects, 15, 200),
+    contents: [],
+    ...(lcc.length ? { lcc } : {}),
+  };
 }

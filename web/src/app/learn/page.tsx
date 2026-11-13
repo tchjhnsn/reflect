@@ -1,235 +1,261 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Link from "next/link";
-import { BOOK_STATUS, FILM_KINDS, FILM_STATUS, GRASP, RESOURCE_KINDS } from "@reflect/core/learning";
-import { SWEEP_PROMPT } from "@reflect/core/sweep";
-import { inputTitle, listInputs } from "@/server/ideas-store";
+import { ArrowLeftIcon, XIcon } from "lucide-react";
+import { STANCES } from "@reflect/core/claims";
+import { browseClass, searchBooks, type CatalogEntry } from "@reflect/core/openlibrary";
+import { LCC_CLASSES } from "@reflect/core/shelves";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Segmented } from "@/components/segmented";
+import { cn } from "@/lib/utils";
 import { requireUser } from "@/server/session";
-import { currentName } from "@/server/person-store";
-import { learnView } from "@/server/learn-store";
-import { initialOf, Nav } from "../nav";
-import { addBookAction, addCredentialAction, addInputAction, rateCoursesAction, sweepAction, uploadLinkedInAction, uploadTranscriptAction } from "./actions";
-import { listCourses, listCredentials, recommendations } from "@/server/learn-sources-store";
+import { learnView, type LearnView } from "@/server/learn-store";
+import { listClaims, type ClaimOut } from "@/server/claims-store";
+import { shelvesOf } from "@/server/learn-shelves";
+import { addFromLibraryAction, keepClaimAction, setBookStatusAction, setStanceAction } from "./actions";
+import { bookTone, subjectTone, type ShelfTone } from "./tones";
 
 export const metadata: Metadata = { title: "Learn" };
 export const dynamic = "force-dynamic";
 
-const graspText = (g: string) => GRASP.find((x) => x.id === g)?.text ?? g;
+type Tab = "shelves" | "library" | "claims";
+const BOOK = "M8 4 h84 v92 h-84 z";
+const SUBJ = "M50 4 A46 46 0 1 1 49.99 4 Z";
+const STATUS = [["want", "Want to read"], ["reading", "Reading"], ["read", "Read"]] as const;
+const openLibrary = (url: string) => fetch(url, { headers: { "user-agent": "reflect-app" }, cache: "no-store" });
+const STANCE_LABEL: Record<string, string> = { belief: "Belief", disbelief: "Disbelief", suspension: "Suspension of judgment" };
+const TONE: Record<ShelfTone, string> = { known: "fill-foreground", learning: "fill-neutral-400", registered: "fill-neutral-200" };
+const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
+const Note = ({ children }: { children: ReactNode }) => <p className="text-muted-foreground text-sm">{children}</p>;
 
-export default async function LearnPage() {
+/** Learn: your shelves by Library of Congress class, the whole library, and your claims. */
+export default async function LearnPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const user = await requireUser();
-  const [v, courses, credentials, recs, inputs] = await Promise.all([learnView(user.id), listCourses(user.id), listCredentials(user.id), recommendations(user.id), listInputs(user.id)]);
+  const sp = await searchParams;
+  const tab: Tab = one(sp.tab) === "library" ? "library" : one(sp.tab) === "claims" ? "claims" : "shelves";
+  const view = await learnView(user.id);
+  const href = (t: Tab) => `/learn?tab=${t}`;
   return (
-    <main className="page">
-      <Nav current="learn" eyebrow="Learn" initial={initialOf(await currentName(user.id))} />
-      <h1 className="title">What you know</h1>
-      <p className="sec-note">What you take in: books, films, talks, conversations, links and the subjects you study. Nothing here is known until you say how well you grasp it. Your own ideas are outputs and live in <Link href="/ideas">Ideas</Link>.</p>
-
-      <section className="sec" aria-labelledby="h-known">
-        <div className="sec-head"><h2 id="h-known" className="lbl">Known</h2></div>
-        {v.known.length ? (
-          <dl className="facts" style={{ borderTop: 0 }}>
-            {v.known.map((s) => (
-              <div className="fact" key={s.id}><dt>{s.name}</dt><dd>{graspText(s.grasp!.grasp)}{s.vouches ? `; vouched for by ${s.vouches}` : ""}</dd></div>
-            ))}
-          </dl>
-        ) : (
-          <p className="sec-note">Nothing rated yet. Open a book you have read and name what you remember of it.</p>
-        )}
-      </section>
-
-      <section className="sec" aria-labelledby="h-books">
-        <div className="sec-head"><h2 id="h-books" className="lbl">Books</h2></div>
-        {v.books.length ? (
-          <ul className="note learn-list">
-            {v.books.map((b) => (
-              <li key={b.id}>
-                <Link href={`/learn/book/${b.id}`}>{b.title}</Link>
-                {b.authors.length ? `, ${b.authors.join(", ")}` : ""} <span className="muted">({b.status}{b.finishedOn ? ` ${b.finishedOn}` : ""})</span>
-                {b.unrated.length ? <span className="muted">. Not yet rated: {b.unrated.join(", ")}</span> : null}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="sec-note">No books yet.</p>
-        )}
-      </section>
-
-      {v.shown.length ? (
-        <section className="sec" aria-labelledby="h-shown">
-          <div className="sec-head"><h2 id="h-shown" className="lbl">Shown, not yet rated by you</h2></div>
-          <p className="sec-note">Someone saw you show knowledge of these. Rate them yourself to count them as known.</p>
-          <ul className="note learn-list">{v.shown.map((s) => <li key={s.id}>{s.name}</li>)}</ul>
-        </section>
+    <main className="mx-auto max-w-5xl px-6 py-6">
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Button asChild variant="ghost" size="icon" aria-label="Home"><Link href="/"><ArrowLeftIcon /></Link></Button>
+          <h1 className="text-2xl font-semibold tracking-tight">Learn</h1>
+        </div>
+        <Segmented
+          label="Learn"
+          items={[
+            { label: "My shelves", href: href("shelves"), on: tab === "shelves" },
+            { label: "Library", href: href("library"), on: tab === "library" },
+            { label: "Claims", href: href("claims"), on: tab === "claims" },
+          ]}
+        />
+      </header>
+      <div className="mt-6">
+        {tab === "shelves" ? <Shelves view={view} all={one(sp.all) === "1"} open={one(sp.book)} /> : null}
+        {tab === "library" ? <Library view={view} cls={one(sp.class).toUpperCase()} q={one(sp.q).trim()} /> : null}
+        {tab === "claims" ? <Claims claims={await listClaims(user.id).catch((): ClaimOut[] | null => null)} /> : null}
+      </div>
+      {tab === "shelves" ? (
+        <footer className="text-muted-foreground mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs">
+          <span>■ Book</span>
+          <span>● Subject</span>
+          <span>Dark = known · grey = learning · light = registered</span>
+          <span>Library of Congress Classification</span>
+        </footer>
       ) : null}
-
-      {v.vouched.length ? (
-        <section className="sec" aria-labelledby="h-vouched">
-          <div className="sec-head"><h2 id="h-vouched" className="lbl">Vouched for by others</h2></div>
-          <p className="sec-note">Others say you know these. They stay apart from what you know until you rate them yourself.</p>
-          <ul className="note learn-list">{v.vouched.map((s) => <li key={s.id}>{s.name}, by {s.vouches}</li>)}</ul>
-        </section>
-      ) : null}
-
-      {v.suggested.length ? (
-        <section className="sec" aria-labelledby="h-suggested">
-          <div className="sec-head"><h2 id="h-suggested" className="lbl">Suggested, not known</h2></div>
-          <p className="sec-note">Someone thinks these relate to you. They are places to look, not what you know.</p>
-          <ul className="note learn-list">{v.suggested.map((s) => <li key={s.id}>{s.name}</li>)}</ul>
-        </section>
-      ) : null}
-
-      <section className="sec" aria-labelledby="h-inputs">
-        <div className="sec-head"><h2 id="h-inputs" className="lbl">Films, talks, conversations and links</h2></div>
-        {inputs.length ? (
-          <ul className="note learn-list">
-            {inputs.map((i) => (
-              <li key={i.id}>
-                {i.body.kind === "link" && i.body.url ? <a href={i.body.url} rel="noreferrer">{inputTitle(i.body)}</a> : inputTitle(i.body)}{" "}
-                <span className="muted">
-                  ({i.body.kind === "film" ? `${i.body.film}${i.body.year ? ` ${i.body.year}` : ""}, ${i.body.status}` : i.body.kind === "talk" ? `talk by ${i.body.speaker}` : i.body.kind === "conversation" ? i.body.on : `${i.body.link}${i.body.source ? ` on ${i.body.source}` : ""}`})
-                  {i.subjects.length ? `. ${i.subjects.join(", ")}` : ""}
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="sec-note">Nothing yet beside your books.</p>
-        )}
-        <form action={addInputAction} className="add">
-          <label className="lbl" htmlFor="ikind">What it is</label>
-          <select id="ikind" name="kind" defaultValue="film" className="learn-select">
-            <option value="film">a film, documentary or series</option>
-            <option value="talk">a talk: someone you saw speak</option>
-            <option value="conversation">a conversation</option>
-            <option value="link">a link: a post, thread, video or article</option>
-          </select>
-          <label className="lbl" htmlFor="ititle">Title, or for a conversation what it was about</label>
-          <input id="ititle" name="title" maxLength={300} />
-          <label className="lbl" htmlFor="iwho">Who: the speaker, the people you talked with (separated by ;), or the author</label>
-          <input id="iwho" name="who" maxLength={300} />
-          <label className="lbl" htmlFor="iurl">Link (optional)</label>
-          <input id="iurl" name="url" type="url" maxLength={2000} />
-          <label className="lbl" htmlFor="ion">When (YYYY-MM-DD, optional)</label>
-          <input id="ion" name="on" maxLength={10} />
-          <label className="lbl" htmlFor="ifilm">For a film</label>
-          <div className="choices">
-            <select id="ifilm" name="film" defaultValue="film" className="learn-select" aria-label="Kind of film">{FILM_KINDS.map((k) => <option key={k} value={k}>{k}</option>)}</select>
-            <select name="status" defaultValue="watched" className="learn-select" aria-label="Whether you watched it">{FILM_STATUS.map((k) => <option key={k} value={k}>{k}</option>)}</select>
-            <input name="year" inputMode="numeric" maxLength={4} placeholder="year" aria-label="Year" />
-          </div>
-          <label className="lbl" htmlFor="ilink">For a link</label>
-          <select id="ilink" name="link" defaultValue="post" className="learn-select">{RESOURCE_KINDS.map((k) => <option key={k} value={k}>{k}</option>)}</select>
-          <label className="lbl" htmlFor="isubjects">What it touches on, as subjects (comma separated, optional)</label>
-          <input id="isubjects" name="subjects" maxLength={2000} />
-          <div className="actions"><button type="submit" className="primary">Keep it</button></div>
-        </form>
-      </section>
-
-      <section className="sec" aria-labelledby="h-sweep">
-        <div className="sec-head"><h2 id="h-sweep" className="lbl">From your AI&apos;s memory</h2></div>
-        <p className="sec-note">Paste this into the AI you talk to most. It lists from what it already knows of you what you read, watched and heard, subjects you showed or it suggests, and your own ideas with what fed them. You keep items one by one.</p>
-        <details className="note">
-          <summary>The prompt</summary>
-          <textarea readOnly className="learn-prompt" rows={12} defaultValue={SWEEP_PROMPT} aria-label="The prompt" />
-        </details>
-        <form action={sweepAction} className="add">
-          <label className="lbl" htmlFor="reply">Its reply</label>
-          <textarea id="reply" name="reply" rows={5} maxLength={2_000_000} />
-          <label className="lbl" htmlFor="replyfile">Or the file it is in</label>
-          <input id="replyfile" name="file" type="file" accept=".json,.md,.txt,application/json,text/plain,text/markdown" />
-          <div className="actions"><button type="submit" className="primary">Read the reply</button></div>
-        </form>
-      </section>
-
-      <section className="sec" aria-labelledby="h-courses">
-        <div className="sec-head"><h2 id="h-courses" className="lbl">Courses</h2></div>
-        {courses.length ? (
-          <form action={rateCoursesAction}>
-            {courses.map((c) => (
-              <fieldset key={c.id} className="learn-grasp">
-                <legend>
-                  {c.row.term} {c.row.code ? `${c.row.code} ` : ""}{c.row.title}
-                  <span className="muted">{c.row.grade ? `; grade ${c.row.grade}` : ""}{c.subject.grasp ? `; you say: ${graspText(c.subject.grasp.grasp)}` : "; not yet rated by you"}</span>
-                </legend>
-                <div className="choices">
-                  {GRASP.map((g) => (
-                    <label key={g.id} className="chip"><input type="radio" name={`grasp-${c.id}`} value={g.id} /> {g.text}</label>
-                  ))}
-                </div>
-              </fieldset>
-            ))}
-            <div className="actions"><button type="submit" className="primary">Keep my ratings</button></div>
-          </form>
-        ) : (
-          <p className="sec-note">Upload a transcript to look back over what you studied and say what you kept of it, whatever the grade.</p>
-        )}
-        <form action={uploadTranscriptAction} className="add">
-          <label className="lbl" htmlFor="transcript">Transcript (PDF or text)</label>
-          <input id="transcript" name="file" type="file" accept=".pdf,.txt,application/pdf,text/plain" required />
-          <p className="sec-note">A model drafts its courses; only rows really in your transcript are offered, and you choose which to keep.</p>
-          <div className="actions"><button type="submit" className="primary">Read my transcript</button></div>
-        </form>
-      </section>
-
-      <section className="sec" aria-labelledby="h-creds">
-        <div className="sec-head"><h2 id="h-creds" className="lbl">Credentials</h2></div>
-        {credentials.length ? (
-          <ul className="note learn-list">
-            {credentials.map((c) => (
-              <li key={c.id}>
-                {c.name}, {c.issuer}{c.issued ? `, ${c.issued}` : ""}{c.subjects.length ? `. Covers ${c.subjects.join(", ")}` : ""}
-                {c.checked ? <span className="muted">. The issuer&apos;s badge says {c.checked.name}</span> : null}
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        <form action={addCredentialAction} className="add">
-          <label className="lbl" htmlFor="cname">Name</label>
-          <input id="cname" name="name" maxLength={300} />
-          <label className="lbl" htmlFor="issuer">Issuer</label>
-          <input id="issuer" name="issuer" maxLength={300} />
-          <label className="lbl" htmlFor="issued">Issued (YYYY-MM, optional)</label>
-          <input id="issued" name="issued" maxLength={10} />
-          <label className="lbl" htmlFor="curl">Link to the badge or certificate (optional)</label>
-          <input id="curl" name="url" type="url" maxLength={2000} />
-          <label className="chip"><input type="checkbox" name="check" /> Check the badge with its issuer</label>
-          <label className="lbl" htmlFor="csubjects">Subjects it covers (comma separated, optional)</label>
-          <input id="csubjects" name="subjects" maxLength={2000} />
-          <div className="actions"><button type="submit" className="primary">Keep the credential</button></div>
-        </form>
-      </section>
-
-      <section className="sec" aria-labelledby="h-li">
-        <div className="sec-head"><h2 id="h-li" className="lbl">From LinkedIn</h2></div>
-        {recs.length ? (
-          recs.map((r, i) => (
-            <blockquote key={i} className="note learn-recall">{r.text} <span className="muted">({r.by}{r.role ? `, ${r.role}` : ""})</span></blockquote>
-          ))
-        ) : null}
-        <form action={uploadLinkedInAction} className="add">
-          <label className="lbl" htmlFor="linkedin">Your LinkedIn data export (the zip)</label>
-          <input id="linkedin" name="file" type="file" accept=".zip,application/zip" required />
-          <p className="sec-note">Ask LinkedIn for a copy of your data under Settings, Data privacy. You see what it holds before anything is kept.</p>
-          <div className="actions"><button type="submit" className="primary">Read the export</button></div>
-        </form>
-      </section>
-
-      <section className="sec" aria-labelledby="h-add">
-        <div className="sec-head"><h2 id="h-add" className="lbl">Add a book</h2></div>
-        <form action={addBookAction} className="add">
-          <label className="lbl" htmlFor="title">Title</label>
-          <input id="title" name="title" required maxLength={300} />
-          <label className="lbl" htmlFor="isbn">ISBN, to look it up in Open Library (optional)</label>
-          <input id="isbn" name="isbn" inputMode="numeric" maxLength={20} />
-          <label className="lbl" htmlFor="status">Where you are with it</label>
-          <select id="status" name="status" defaultValue="read" className="learn-select">
-            {BOOK_STATUS.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-          <label className="lbl" htmlFor="subjects">Its key subjects, as you would name them (comma separated, optional)</label>
-          <input id="subjects" name="subjects" maxLength={2000} />
-          <div className="actions"><button type="submit" className="primary">Keep the book</button></div>
-        </form>
-      </section>
     </main>
+  );
+}
+
+function Glyph({ d, tone, className }: { d: string; tone: ShelfTone; className: string }) {
+  return <svg className={className} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d={d} className={TONE[tone]} /></svg>;
+}
+
+function Shelves({ view, all, open }: { view: LearnView; all: boolean; open: string }) {
+  const sh = shelvesOf(view, all);
+  const byId = new Map(view.books.map((b) => [b.id, b]));
+  const subjectBooks = new Map<string, LearnView["books"]>();
+  for (const b of view.books) for (const s of b.subjects) subjectBooks.set(s.id, [...(subjectBooks.get(s.id) ?? []), b]);
+  const grasp = new Map(view.books.flatMap((b) => b.subjects).concat(view.known).map((s) => [s.id, s.grasp?.grasp ?? null]));
+  const book = open ? byId.get(open) : undefined;
+  const items = (books: { id: string; title: string }[], subjects: { id: string; name: string }[]) => (
+    <div className="flex flex-wrap gap-4">
+      {books.map((b) => {
+        const full = byId.get(b.id)!;
+        return (
+          <Link key={b.id} href={`/learn?tab=shelves&book=${b.id}${all ? "&all=1" : ""}`} className={cn("hover:bg-accent flex w-24 flex-col items-center gap-2 rounded-lg p-2 text-center transition", open === b.id && "bg-accent")} aria-label={`${b.title}, book, ${full.status}`}>
+            <Glyph d={BOOK} tone={bookTone(full.status)} className="h-20 w-14 rounded-sm" />
+            <span className="line-clamp-2 text-xs font-medium">{b.title}</span>
+          </Link>
+        );
+      })}
+      {subjects.map((s) => (
+        <span key={s.id} className="flex w-24 flex-col items-center gap-2 p-2 text-center" aria-label={`${s.name}, subject`}>
+          <Glyph d={SUBJ} tone={subjectTone(grasp.get(s.id), (subjectBooks.get(s.id) ?? []).map((b) => b.status))} className="size-20" />
+          <span className="line-clamp-2 text-xs">{s.name}</span>
+        </span>
+      ))}
+    </div>
+  );
+  const shelf = (id: string, name: string, filled: boolean, body: ReactNode) => (
+    <Card key={id} className="gap-4 py-5">
+      <CardHeader className="px-5">
+        <CardTitle className="flex items-center gap-3 text-sm">
+          <Badge variant={filled ? "default" : "outline"} className="size-6 justify-center rounded-md p-0">{id}</Badge>
+          {name}
+        </CardTitle>
+      </CardHeader>
+      {filled ? <CardContent className="px-5">{body}</CardContent> : null}
+    </Card>
+  );
+  return (
+    <section className="space-y-4">
+      <div className="flex items-center justify-between">
+        {sh.shelves.length ? <Note>Books and subjects on their Library of Congress shelves.</Note> : <Note>No shelves yet. Find a book in the <Link className="underline underline-offset-4" href="/learn?tab=library">library</Link> and it goes on its shelf.</Note>}
+        <Button asChild variant="ghost" size="sm"><Link href={all ? "/learn?tab=shelves" : "/learn?tab=shelves&all=1"}>{all ? "Only filled shelves" : "All 21 shelves"}</Link></Button>
+      </div>
+      {sh.shelves.map((s) => shelf(s.id, s.name, Boolean(s.books.length || s.subjects.length), items(s.books, s.subjects)))}
+      {sh.unshelved.books.length || sh.unshelved.subjects.length ? shelf("?", "Not yet shelved (no call number)", true, items(sh.unshelved.books, sh.unshelved.subjects)) : null}
+      {book ? (
+        <>
+        <Link href={`/learn?tab=shelves${all ? "&all=1" : ""}`} aria-label="Close" tabIndex={-1} className="fixed inset-0 z-10 bg-black/40" />
+        <aside className="bg-background fixed inset-y-0 right-0 z-20 w-full max-w-80 space-y-4 overflow-y-auto border-l p-6 shadow-lg" aria-label={book.title}>
+          <div className="flex items-start justify-between gap-2">
+            <h2 className="text-lg font-semibold leading-tight">{book.title}</h2>
+            <Button asChild variant="ghost" size="icon" aria-label="Close"><Link href={`/learn?tab=shelves${all ? "&all=1" : ""}`}><XIcon /></Link></Button>
+          </div>
+          <Note>{book.authors.join(", ") || "Author not given"}{book.catalog?.year ? ` · ${book.catalog.year}` : ""}</Note>
+          <form action={setBookStatusAction} className="flex flex-wrap gap-2">
+            <input type="hidden" name="book" value={book.id} />
+            {STATUS.map(([id, label]) => (
+              <Button key={id} size="sm" name="status" value={id} variant={book.status === id ? "default" : "outline"} aria-pressed={book.status === id}>{label}</Button>
+            ))}
+          </form>
+          {book.subjects.length ? (
+            <div className="space-y-2">
+              <p className="text-xs font-medium">Subjects</p>
+              <div className="flex flex-wrap gap-1.5">{book.subjects.map((s) => <Badge key={s.id} variant="secondary">{s.name}</Badge>)}</div>
+            </div>
+          ) : null}
+          {book.catalog?.subjects.length ? (
+            <div className="space-y-2">
+              <p className="text-muted-foreground text-xs font-medium">The catalog suggests</p>
+              <div className="flex flex-wrap gap-1.5">{book.catalog.subjects.slice(0, 8).map((s) => <Badge key={s} variant="outline">{s}</Badge>)}</div>
+            </div>
+          ) : null}
+        </aside>
+        </>
+      ) : null}
+    </section>
+  );
+}
+
+async function Library({ view, cls, q }: { view: LearnView; cls: string; q: string }) {
+  const pick = LCC_CLASSES.find((c) => c.id === cls);
+  let books: CatalogEntry[] | null = [];
+  let title = "Search the library, or pick a shelf";
+  if (q) {
+    books = await searchBooks(q, openLibrary, 12).catch(() => null);
+    title = `Results for “${q}”`;
+  } else if (pick) {
+    books = await browseClass(pick.id, openLibrary, { limit: 12 }).catch(() => null);
+    title = `${pick.id} · ${pick.name} · best rated`;
+  }
+  const kept = new Set(view.books.map((b) => b.catalog?.work).filter(Boolean));
+  return (
+    <section className="grid gap-6 md:grid-cols-[16rem_1fr]">
+      <nav className="flex flex-col gap-0.5" aria-label="Shelves">
+        {LCC_CLASSES.map((c) => (
+          <Link key={c.id} href={`/learn?tab=library&class=${c.id}`} aria-current={c.id === pick?.id ? "page" : undefined} className={cn("hover:bg-accent flex gap-3 rounded-md px-3 py-1.5 text-sm transition", c.id === pick?.id && "bg-accent font-medium")}>
+            <span className="text-muted-foreground w-4">{c.id}</span><span className="truncate">{c.name}</span>
+          </Link>
+        ))}
+      </nav>
+      <div className="min-w-0 space-y-4">
+        <form action="/learn" className="space-y-3">
+          <input type="hidden" name="tab" value="library" />
+          <h2 className="font-semibold">{title}</h2>
+          <label htmlFor="q" className="sr-only">Search titles or authors</label>
+          <Input id="q" name="q" defaultValue={q} placeholder="Search titles or authors..." />
+        </form>
+        {books === null ? <Note>The open library did not answer. Try again in a moment.</Note> : null}
+        {books && (q || pick) && !books.length ? <Note>Nothing found.</Note> : null}
+        {books?.length ? (
+          <Card className="gap-0 py-0">
+            {books.map((b, i) => (
+              <div key={b.work} className={cn("flex items-center gap-4 px-4 py-3", i > 0 && "border-t")}>
+                <Glyph d={BOOK} tone={kept.has(b.work) ? "known" : "registered"} className="h-11 w-8 shrink-0 rounded-sm" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{b.title}</p>
+                  <p className="text-muted-foreground truncate text-xs">{b.authors.join(", ") || "Author not given"}{b.year ? ` · ${b.year}` : ""}</p>
+                </div>
+                {kept.has(b.work) ? (
+                  <Badge variant="secondary">On your shelves</Badge>
+                ) : (
+                  <form action={addFromLibraryAction}>
+                    <input type="hidden" name="entry" value={JSON.stringify(b)} />
+                    <input type="hidden" name="status" value="want" />
+                    <Button size="sm">Add to shelves</Button>
+                  </form>
+                )}
+              </div>
+            ))}
+          </Card>
+        ) : null}
+        <p className="text-muted-foreground text-xs">From Open Library</p>
+      </div>
+    </section>
+  );
+}
+
+function Claims({ claims }: { claims: ClaimOut[] | null }) {
+  if (!claims) return <Note>Claims are not set up on this database yet.</Note>;
+  return (
+    <section className="space-y-4">
+      <Note>What you believe, disbelieve, or suspend judgment on, with who holds each view. Your latest stance counts; earlier ones are kept.</Note>
+      {STANCES.map((st) => {
+        const here = claims.filter((c) => c.stance?.stance === st.id);
+        return (
+          <Card key={st.id} className="gap-3 py-5">
+            <CardHeader className="px-5">
+              <CardTitle className="flex items-center gap-2 text-sm">{STANCE_LABEL[st.id]}<Badge variant="secondary">{here.length}</Badge></CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-0 px-5">
+              {here.length ? null : <Note>None</Note>}
+              {here.map((c, i) => (
+                <div key={c.id} className={cn("flex flex-wrap items-center justify-between gap-3 py-3", i > 0 && "border-t")}>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium">{c.text}</p>
+                    <p className="text-muted-foreground text-xs">{[c.subject?.name, c.holders.map((h) => (h.citation ? `${h.name} (${h.citation})` : h.name)).join("; ")].filter(Boolean).join(" · ") || "No holder named"}</p>
+                  </div>
+                  <form action={setStanceAction} className="flex flex-wrap gap-2">
+                    <input type="hidden" name="claim" value={c.id} />
+                    {STANCES.filter((x) => x.id !== st.id).map((x) => <Button key={x.id} size="sm" variant="outline" name="stance" value={x.id}>{STANCE_LABEL[x.id]}</Button>)}
+                  </form>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        );
+      })}
+      <Card className="py-5">
+        <CardHeader className="px-5"><CardTitle className="text-sm">Keep a claim</CardTitle></CardHeader>
+        <CardContent className="px-5">
+          <form action={keepClaimAction} className="space-y-4">
+            <label className="block space-y-1.5 text-sm font-medium">Claim<Input name="claim" required maxLength={500} /></label>
+            <label className="block space-y-1.5 text-sm font-medium">Subject (optional)<Input name="subject" maxLength={120} /></label>
+            <label className="block space-y-1.5 text-sm font-medium">Who holds it, one per line: name | citation<Textarea name="holders" rows={2} /></label>
+            <div className="flex flex-wrap gap-2">
+              {STANCES.map((x) => <Button key={x.id} size="sm" variant="outline" name="stance" value={x.id}>Keep as {(STANCE_LABEL[x.id] ?? x.id).toLowerCase()}</Button>)}
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </section>
   );
 }

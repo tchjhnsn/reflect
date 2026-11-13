@@ -2,6 +2,8 @@ import { afterAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { db } from "@/db/pool";
 import { addBook, addSubjects, getBook, keepRecall, learnView, rateSubject, setBookStatus } from "./learn-store";
+import { logActs } from "./log-store";
+import { actText } from "@reflect/core/log";
 
 const live = Boolean(process.env.DATABASE_URL && process.env.REFLECT_DATA_KEY);
 
@@ -13,6 +15,18 @@ async function newUser(name: string): Promise<string> {
 
 describe.skipIf(!live)("learning on Neon", () => {
   afterAll(() => db().end());
+
+  it("keeps every status change, never edited, and the log shows each one", async () => {
+    const user = await newUser("Log Test");
+    const id = await addBook(user, { title: "Ulysses", status: "want" });
+    await setBookStatus(user, id, "reading");
+    await setBookStatus(user, id, "reading");
+    await setBookStatus(user, id, "abandoned");
+    const rows = (await db().query("SELECT status FROM learn_book_status WHERE book_id = $1 ORDER BY created_at", [id])).rows.map((r) => r.status);
+    expect(rows).toEqual(["want", "reading", "abandoned"]);
+    await expect(db().query("UPDATE learn_book_status SET status = 'read' WHERE book_id = $1", [id])).rejects.toThrow(/append-only|never edited/);
+    expect((await logActs(user)).map(actText)).toEqual(["Put Ulysses on your shelves", "Started reading Ulysses", "Put down Ulysses"]);
+  });
 
   it("keeps a book, a recall without looking, and the person's own grasp; read but unrated is not known", async () => {
     const user = await newUser("Reader Test");

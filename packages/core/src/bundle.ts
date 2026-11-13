@@ -9,6 +9,8 @@ export type Bundle = {
   exported_at: string;
   /** Oldest first, each with its parts and reflections. */
   entries: Entry[];
+  /** The journal's works (the editor), each as its latest Markdown; absent in bundles made before works. */
+  works?: { id: string; kind: string; title: string; body: string; createdAt: string; savedAt: string; versions: number }[];
 };
 
 export function makeBundle(entries: readonly Entry[], exportedAt: string): Bundle {

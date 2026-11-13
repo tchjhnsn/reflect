@@ -1,20 +1,21 @@
 import "./globals.css";
 import type { ReactNode } from "react";
-import { cookies } from "next/headers";
-import { Fraunces, Inter, Newsreader } from "next/font/google";
-import { THEME_COOKIE, asTheme } from "@reflect/core/theme";
+import { Inter, Newsreader } from "next/font/google";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
-const serif = Newsreader({ subsets: ["latin"], style: ["normal", "italic"], variable: "--font-serif", display: "swap" });
 const sans = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
-const display = Fraunces({ subsets: ["latin"], weight: ["600"], variable: "--font-display", display: "swap" });
+// The journal's writing face.
+const serif = Newsreader({ subsets: ["latin"], variable: "--font-serif", display: "swap", style: ["normal", "italic"] });
 
-export const metadata = { title: "Reflect", description: "A private journal." };
+export const metadata = { title: "Reflect", description: "Your life, in your own records." };
 
-export default async function RootLayout({ children }: { children: ReactNode }) {
-  const theme = asTheme((await cookies()).get(THEME_COOKIE)?.value);
+/** Every page in shadcn's look (src/app/globals.css). */
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" data-theme={theme} className={`${serif.variable} ${sans.variable} ${display.variable}`}>
-      <body>{children}</body>
+    <html lang="en" className={`${sans.variable} ${serif.variable}`}>
+      <body className="min-h-screen">
+        <TooltipProvider>{children}</TooltipProvider>
+      </body>
     </html>
   );
 }

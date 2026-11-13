@@ -65,6 +65,7 @@ export async function addBook(userId: string, b: BookInput, now = new Date()): P
       "INSERT INTO learn_book (id, user_id, title_ct, authors_ct, isbn_ct, catalog_ct, status, started_on, finished_on) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
       [id, userId, seal(userId, title), seal(userId, JSON.stringify(b.authors ?? [])), isbn ? seal(userId, isbn) : null, b.catalog ? seal(userId, JSON.stringify(b.catalog)) : null, status, status === "reading" || status === "read" ? day : null, status === "read" ? day : null],
     );
+    await keepStatus(c, userId, id, status, day);
     for (const s of b.subjects ?? []) if (normName(s)) await c.query("INSERT INTO learn_book_subject (book_id, subject_id) VALUES ($1, $2) ON CONFLICT DO NOTHING", [id, await subjectId(c, userId, s)]);
   });
   return id;
@@ -84,7 +85,13 @@ export async function setBookStatus(userId: string, bookId: string, status: Book
   await tx(async (c) => {
     const b = await ownBook(c, userId, bookId);
     await c.query("UPDATE learn_book SET status = $3, started_on = $4, finished_on = $5 WHERE id = $1 AND user_id = $2", [bookId, userId, status, b.started_on ?? (status === "reading" || status === "read" ? day : null), status === "read" ? day : null]);
+    if (b.status !== status) await keepStatus(c, userId, bookId, status, day);
   });
+}
+
+/** Keep one status change in the book's history (migration 0013): never changed, the log reads it. */
+async function keepStatus(c: PoolClient, userId: string, bookId: string, status: BookStatus, day: string): Promise<void> {
+  await c.query("INSERT INTO learn_book_status (id, user_id, book_id, status, on_day) VALUES ($1, $2, $3, $4, $5)", [randomUUID(), userId, bookId, status, day]);
 }
 
 /** Add subjects the person chose to a book. */
