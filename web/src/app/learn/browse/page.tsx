@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { BROAD_SUBJECT as BROAD, browseQuery, isSort, searchAuthors, searchBooks, SORTS, trendingBooks, type AuthorHit, type CatalogEntry, type Sort } from "@reflect/core/openlibrary";
 import { THEMA, themaCategory, themaQuery, themaSection } from "@reflect/core/thema";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import { GoodreadsImport } from "../goodreads";
 import { BookGrid } from "../book-card";
 import { Menu } from "./category-menu";
 import { MoreBooks } from "./more-books";
+import { BookRow, MoreRows, RowsLoading } from "./more-rows";
+import { rowsAt } from "@/server/rows";
 import { FilterMenu, SortMenu, type ListState } from "./list-menus";
 import { isFilter, listBooks, newQuery, openLibrary, PER, type BookSource, type Filter } from "@/server/browse";
 
@@ -35,17 +37,18 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
   const category = code.length === 2 ? themaCategory(code) : undefined;
   const week = !q && !section && one(sp.view) === "week";
   const fresh = !q && !section && one(sp.view) === "new";
+  const free = !q && !section && one(sp.view) === "free";
   const sort: Sort | undefined = isSort(one(sp.sort)) ? (one(sp.sort) as Sort) : undefined;
   const state: ListState = { ...(sort ? { sort } : {}), ...(isFilter(one(sp.filter)) ? { filter: one(sp.filter) as Filter } : {}), hide: one(sp.hide) === "1" };
   const view = await learnView(user.id);
   const mine = new Map(view.books.filter((b) => b.catalog?.work).map((b) => [b.catalog!.work, b.status]));
 
   let body: ReactNode;
-  if (q || section || fresh) {
-    const source: BookSource = q ? { kind: "q", q } : fresh ? { kind: "new" } : { kind: "cat", code: category?.code ?? section!.code };
+  if (q || section || fresh || free) {
+    const source: BookSource = q ? { kind: "q", q } : fresh ? { kind: "new" } : free ? { kind: "free" } : { kind: "cat", code: category?.code ?? section!.code };
     const [books, authors] = await Promise.all([listBooks(source, 1, sort, state.filter).catch(() => null), q ? searchAuthors(q, openLibrary).catch((): AuthorHit[] => []) : Promise.resolve([])]);
-    const title = q ? `Results for “${q}”` : fresh ? `New this year, ${SORTS[sort ?? "readinglog"].toLowerCase()}` : `${(category ?? section)!.heading}, ${SORTS[sort ?? "rating"].toLowerCase()}`;
-    const base: Record<string, string> = q ? { q } : fresh ? { view: "new" } : { cat: code };
+    const title = q ? `Results for “${q}”` : free ? `Free in the public domain, ${SORTS[sort ?? "readinglog"].toLowerCase()}` : fresh ? `New this year, ${SORTS[sort ?? "readinglog"].toLowerCase()}` : `${(category ?? section)!.heading}, ${SORTS[sort ?? "rating"].toLowerCase()}`;
+    const base: Record<string, string> = q ? { q } : fresh ? { view: "new" } : free ? { view: "free" } : { cat: code };
     body = (
       <>
         {authors.length ? <Authors authors={authors} /> : null}
@@ -53,7 +56,7 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
           <h2 className="text-lg font-semibold">{title}</h2>
           <div className="flex flex-wrap gap-2">
             <FilterMenu path="/learn/browse" base={base} state={state} />
-            <SortMenu path="/learn/browse" base={base} state={state} match={Boolean(q)} fallback={fresh ? "readinglog" : "rating"} />
+            <SortMenu path="/learn/browse" base={base} state={state} match={Boolean(q)} fallback={fresh || free ? "readinglog" : "rating"} />
           </div>
         </div>
         <div className="space-y-8">
@@ -86,11 +89,12 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
           </form>
           <Menu
             label="Browse"
-            lead={4}
+            lead={5}
             items={[
-              { href: "/learn/browse", label: "For you", on: !q && !section && !week && !fresh },
+              { href: "/learn/browse", label: "For you", on: !q && !section && !week && !fresh && !free },
               { href: "/learn/browse?view=week", label: "This week", on: week },
               { href: "/learn/browse?view=new", label: "New this year", on: fresh },
+              { href: "/learn/browse?view=free", label: "Free in the public domain", on: free },
               { href: "/learn/lists", label: "Lists", on: false },
               ...THEMA.map((x) => ({ href: `/learn/browse?cat=${x.code}`, label: x.short, on: x.code === section?.code })),
             ]}
@@ -146,7 +150,8 @@ function Books({ books, mine }: { books: CatalogEntry[] | null; mine: Map<string
 
 /**
  * Lists made from the person's own records: books like the one they are reading or read last, books on the
- * subjects they are learning, then this week's reads. Books already on their shelves stay in, marked as theirs.
+ * subjects they are learning, their authors, this week's reads and new books; then rows for everyone, loading
+ * as the person scrolls (`src/server/rows.ts`). Books already on their shelves stay in, marked as theirs.
  */
 async function ForYou({ view, mine }: { view: LearnView; mine: Map<string, string> }) {
   const rank = { reading: 0, read: 1, want: 2 } as Record<string, number>;
@@ -206,6 +211,19 @@ async function ForYou({ view, mine }: { view: LearnView; mine: Map<string, strin
       {row("Read this week", week, "/learn/browse?view=week")}
       {row("New this year", recent, "/learn/browse?view=new")}
       {!week ? <p className="text-muted-foreground text-sm">The open library did not answer. Try again in a moment.</p> : null}
+      <Suspense fallback={<RowsLoading />}>
+        <FirstRows mine={mine} />
+      </Suspense>
+      <MoreRows from={FIRST} />
     </div>
   );
+}
+
+/** How many of the rows below the person's own are made with the page; the rest load as the person scrolls. */
+const FIRST = 3;
+
+/** The first rows below the person's own: free to read, free to hear, and a list. */
+async function FirstRows({ mine }: { mine: Map<string, string> }) {
+  const rows = await rowsAt(0, FIRST).catch(() => []);
+  return <>{rows.map((r) => <BookRow key={r.key} row={r} mine={mine} />)}</>;
 }

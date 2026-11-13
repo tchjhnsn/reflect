@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookIcon, StarIcon } from "lucide-react";
+import { BookIcon, BookOpenIcon, HeadphonesIcon, StarIcon } from "lucide-react";
 import type { CatalogEntry } from "@reflect/core/openlibrary";
 import { Badge } from "@/components/ui/badge";
 import { AddBook } from "./add-book";
@@ -23,6 +23,7 @@ export function BookCard({ b, have, className = "" }: { b: CatalogEntry; have: s
           ) : (
             <div className="text-muted-foreground flex size-full flex-col items-center justify-center gap-2 p-3 text-center"><BookIcon className="size-6" /><span className="line-clamp-4 text-xs">{b.title}</span></div>
           )}
+          <FreeMarks free={b.free} />
         </div>
         <p className="line-clamp-2 text-sm leading-snug font-medium group-hover:underline group-hover:underline-offset-2">{b.title}</p>
       </Link>
@@ -35,6 +36,17 @@ export function BookCard({ b, have, className = "" }: { b: CatalogEntry; have: s
       </div>
       {have ? <Badge variant="secondary" className="h-8 w-fit max-w-full truncate">On your shelf · {STATUS[have] ?? have}</Badge> : <AddBook entry={b} />}
     </li>
+  );
+}
+
+/** On a cover: whether the book can be read in Reflect (its text) and whether its audiobook plays in Reflect. */
+export function FreeMarks({ free }: { free: CatalogEntry["free"] }) {
+  if (!free) return null;
+  return (
+    <div className="absolute bottom-1.5 left-1.5 flex gap-1">
+      {free.read ? <span className="bg-background/90 text-foreground flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-medium shadow-sm" title="Read it in Reflect"><BookOpenIcon className="size-3" />Read</span> : null}
+      {free.listen ? <span className="bg-background/90 text-foreground flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-medium shadow-sm" title="Listen to it in Reflect"><HeadphonesIcon className="size-3" />Listen</span> : null}
+    </div>
   );
 }
 
