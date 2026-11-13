@@ -13,6 +13,9 @@ import { readText, textSource } from "@/server/texts";
 import { excerptsOf } from "@/server/excerpt-store";
 import { Page, type Mark } from "./page-text";
 import { Contents, ReaderFrame, ReaderSettings, TimeLeft } from "./reader-frame";
+import { ListenAlong } from "./listen-along";
+import { audiobookFor } from "@/server/audio";
+import { matchSections } from "@reflect/core/listening";
 
 export const metadata: Metadata = { title: "Reading" };
 export const dynamic = "force-dynamic";
@@ -38,7 +41,10 @@ export default async function ReadPage({ params, searchParams }: { params: Promi
   if (!entry) notFound();
   const source = await textSource(entry, access);
   // A Standard Ebooks edition that cannot be read falls back to the Gutenberg text the catalog links.
-  const book = source ? await readText(source, access?.gutenberg[0] ? { kind: "gutenberg", id: access.gutenberg[0] } : null) : null;
+  const [book, audio] = await Promise.all([
+    source ? readText(source, access?.gutenberg[0] ? { kind: "gutenberg", id: access.gutenberg[0] } : null) : Promise.resolve(null),
+    audiobookFor(entry, access),
+  ]);
   if (!book) notFound();
   const total = book.chapters.length;
   // A place kept against another text of the book (another chapter count) is carried to this one.
@@ -60,6 +66,8 @@ export default async function ReadPage({ params, searchParams }: { params: Promi
   const notes = chapter.notes ?? [];
   const noteText = Object.fromEntries(notes.map((x) => [x.id, book.notes[x.id] ?? ""]));
   const results = q ? searchBook(book.chapters, q) : null;
+  // Which recorded part of the free audiobook reads each chapter, where they line up.
+  const map = audio ? matchSections(book.chapters.map((c) => c.title), audio.chapters.map((c) => c.title)) : [];
 
   return (
     <ReaderFrame>
@@ -67,6 +75,7 @@ export default async function ReadPage({ params, searchParams }: { params: Promi
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Button asChild variant="ghost" size="sm" className="max-w-[50%]"><Link href={`/learn/works/${work}`}><ArrowLeftIcon /><span className="truncate">{entry.title}</span></Link></Button>
           <div className="flex items-center gap-1">
+            {audio ? <ListenAlong book={audio} work={work} title={entry.title} map={map} chapter={n} /> : null}
             <Contents work={work} current={n} chapters={book.chapters.map((c, i) => ({ title: c.title, words: words[i]! }))} />
             <ReaderSettings />
           </div>

@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { BookIcon, ExternalLinkIcon, StarIcon } from "lucide-react";
 import { googleVolume, readerUrl } from "@reflect/core/googlebooks";
-import { librivoxBook, type Audiobook } from "@reflect/core/librivox";
 import { authorWorks, booksLike, coverUrl, workAccess, workDetails, workEntry, type CatalogEntry } from "@reflect/core/openlibrary";
 import { categoryOf, showCall, themaCategory } from "@reflect/core/thema";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +17,7 @@ import { LearnHeader } from "../../header";
 import { AddBook } from "../../add-book";
 import { Reader, type ReadLink } from "./reader";
 import { textSource } from "@/server/texts";
-import { librivoxId } from "@/server/free";
+import { audiobookFor } from "@/server/audio";
 import { excerptsOf } from "@/server/excerpt-store";
 import { publishedBy } from "@/server/published-store";
 import { whereOf } from "@/server/highlights";
@@ -33,8 +32,6 @@ export const dynamic = "force-dynamic";
 const STATUS = [["want", "Want to read"], ["reading", "Reading"], ["read", "Read"]] as const;
 const STANCE: Record<string, string> = { belief: "Belief", disbelief: "Disbelief", suspension: "Suspension of judgment" };
 const cached = (url: string) => fetch(url, { headers: { "user-agent": "reflect-app" }, next: { revalidate: 86400 } });
-// LibriVox can be slow to answer; the page does not wait on it for long.
-const slow = (url: string) => fetch(url, { headers: { "user-agent": "reflect-app" }, next: { revalidate: 86400 }, signal: AbortSignal.timeout(6000) });
 const Label = ({ children }: { children: ReactNode }) => <h3 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{children}</h3>;
 
 /**
@@ -62,14 +59,10 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
   const title = entry?.title ?? mine?.title ?? "Untitled";
   const authors = entry?.authors ?? mine?.authors ?? [];
   const authorKeys = entry?.authorKeys ?? mine?.catalog?.authorKeys ?? [];
-  // LibriVox recordings: the catalog's links, else the book found in LibriVox's catalog when it is old enough to be free.
-  const oldEnough = access?.access === "public" || (entry?.year ?? 9999) < 1930;
-  const found = !access?.librivox.length && oldEnough ? librivoxId({ title, authors }) : null;
-  const recordings = access?.librivox.length ? access.librivox : found ? [found] : [];
   const [google, byAuthor, audio, like, text] = await Promise.all([
     googleVolume({ title, authors, ...(entry?.isbn ? { isbn: entry.isbn } : {}) }, cached, process.env.GOOGLE_BOOKS_API_KEY).catch(() => null),
     authorKeys[0] ? authorWorks(authorKeys[0], cached, { limit: 7, sort: "rating" }).then((b) => b.filter((x) => x.work !== work).slice(0, 6)).catch((): CatalogEntry[] => []) : Promise.resolve([] as CatalogEntry[]),
-    recordings.length ? librivoxBook(recordings, slow).catch((): Audiobook | null => null) : Promise.resolve(null),
+    audiobookFor({ title, authors, ...(entry?.year ? { year: entry.year } : {}) }, access),
     entry ? booksLike({ work, subjects: details?.subjects.length ? details.subjects : entry.subjects }, cached).catch((): CatalogEntry[] => []) : Promise.resolve([] as CatalogEntry[]),
     access?.access === "public" || access?.gutenberg.length || access?.standardEbooks.length || (entry?.year ?? 9999) < 1930 ? textSource({ title, authors }, access) : Promise.resolve(null),
   ]);
@@ -119,7 +112,7 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
             {mine ? <span className="text-muted-foreground text-xs">On your shelves</span> : null}
           </div>
           {text || preview || links.length ? <Reader links={links} work={work} kept={mine?.place ?? null} preview={preview} {...(text ? { here: `/learn/works/${work}/read` } : {})} /> : null}
-          {audio ? <Listen book={audio} /> : null}
+          {audio ? <Listen book={audio} work={work} title={title} /> : null}
           <Excerpts work={work} rows={excerpts.map((e) => ({ id: e.id, work, title, author: authors[0] ?? "", quote: e.quote, where: whereOf(e), chapter: e.anchor?.chapter ?? null, note: e.note, color: e.color, published: published.find((p) => p.work === work && p.quote === e.quote.replace(/\s+/g, " ").trim())?.id ?? null }))} {...(text ? { reader: `/learn/works/${work}/read` } : {})} />
           <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
             <div><dt className="text-muted-foreground text-xs">Category</dt><dd>{category ? <Link className="underline-offset-4 hover:underline" href={`/learn/browse?cat=${category.code}`}>{category.heading}</Link> : "Not yet placed"}</dd></div>

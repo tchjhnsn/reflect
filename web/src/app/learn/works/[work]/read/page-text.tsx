@@ -12,6 +12,7 @@ import { lookupWord, type Definition } from "@reflect/core/wiktionary";
 import { Button } from "@/components/ui/button";
 import { addExcerptAction, defineAction, keepClaimAction, keepPlaceAction, removeExcerptAction, reviseExcerptAction } from "../../../actions";
 import { useReader } from "./reader-frame";
+import { useListen } from "../../../player";
 
 /** A highlight kept in this chapter: its id, its words, and where they sit. */
 export type Mark = Span & { id: string; quote: string; color: HighlightColor; note: string | null };
@@ -37,6 +38,8 @@ export function Page({ work, chapter, chapters, title, author, chapterTitle, par
   const [defined, setDefined] = useState<{ word: string; definitions: Definition[]; lemma?: { word: string; definitions: Definition[] } } | "none" | null>(null);
   const [pending, run] = useTransition();
   const { look, setAt } = useReader();
+  // The bars sit above Learn's audio player when it is open.
+  const lift = useListen()?.book ? "bottom-[60px]" : "bottom-0";
   const router = useRouter();
 
   useEffect(() => {
@@ -280,7 +283,7 @@ export function Page({ work, chapter, chapters, title, author, chapterTitle, par
         })}
       </div>
       {note ? (
-        <div data-bar className="bg-background fixed inset-x-0 bottom-0 z-20 border-t shadow-lg">
+        <div data-bar className={cn("bg-background fixed inset-x-0 z-20 border-t shadow-lg", lift)}>
           <div className="mx-auto flex max-w-3xl items-start justify-between gap-3 px-4 py-3 sm:px-6">
             <p className="max-h-[40svh] overflow-y-auto text-sm"><span className="font-semibold">Note {note.replace("note-", "")}. </span>{noteText[note] ?? "This note is not in the text."}</p>
             <Button variant="ghost" size="icon" className="size-7 shrink-0" onClick={() => setNote(null)} aria-label="Close"><XIcon /></Button>
@@ -288,7 +291,7 @@ export function Page({ work, chapter, chapters, title, author, chapterTitle, par
         </div>
       ) : null}
       {picked ? (
-        <div data-bar className="bg-background fixed inset-x-0 bottom-0 z-20 border-t shadow-lg">
+        <div data-bar className={cn("bg-background fixed inset-x-0 z-20 border-t shadow-lg", lift)}>
           <div className="mx-auto flex max-h-[70svh] max-w-3xl flex-col gap-2 overflow-y-auto px-4 py-3 sm:px-6">
             <div className="flex items-start justify-between gap-3">
               <p className="text-muted-foreground line-clamp-2 text-sm"><QuoteIcon className="mr-1 inline size-3.5" />{picked.text}</p>
