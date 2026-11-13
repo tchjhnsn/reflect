@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeftIcon, PlusIcon } from "lucide-react";
+import { PlusIcon } from "lucide-react";
 import { DOMAINS, isDomain } from "@reflect/core/book";
 import { KINDS, workTitle } from "@reflect/core/works";
 import { Button } from "@/components/ui/button";
+import { PAGE, PageHeader } from "@/components/page-header";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireUser } from "@/server/session";
 import { domainView, idealsOf } from "@/server/book-store";
@@ -30,14 +31,10 @@ export default async function DomainPage({ params }: { params: Promise<{ domain:
   const fromSubjects = new Set(learn.subjects.flatMap((s) => s.claims.map((c) => c.id)));
   const beliefs = groups(chapter.entries.filter((e) => !fromSubjects.has(e.id)));
   return (
-    <main className="mx-auto max-w-4xl px-6 py-6">
-      <header className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Button asChild variant="ghost" size="icon" aria-label="Journal"><Link href="/journal"><ArrowLeftIcon /></Link></Button>
-          <h1 className="font-serif text-2xl font-semibold tracking-tight">{d.title}</h1>
-        </div>
+    <main className={PAGE}>
+      <PageHeader back="/journal" backLabel="Journal" title={d.title}>
         <Button asChild><Link href={`/journal/new?domain=${domain}`}><PlusIcon />Create</Link></Button>
-      </header>
+      </PageHeader>
       <p className="text-muted-foreground mt-2 text-sm">{d.about}</p>
 
       <section className="mt-8">
@@ -84,7 +81,7 @@ export default async function DomainPage({ params }: { params: Promise<{ domain:
                   ) : null}
                   {s.books.length ? (
                     <ul className="text-muted-foreground space-y-0.5">
-                      {s.books.map((b) => <li key={b.id}><Link href={`/learn?tab=shelves&book=${b.id}`} className="hover:text-foreground">{b.title}</Link>{b.authors.length ? `, ${b.authors[0]}` : ""}</li>)}
+                      {s.books.map((b) => <li key={b.id}><Link href={`/learn?book=${b.id}`} className="hover:text-foreground">{b.title}</Link>{b.authors.length ? `, ${b.authors[0]}` : ""}</li>)}
                     </ul>
                   ) : null}
                   {!s.claims.length && !s.books.length ? <p className="text-muted-foreground">Nothing kept under it yet.</p> : null}

@@ -2,11 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { BOOK_STATUS, type BookStatus } from "@reflect/core/learning";
-import { cleanEntry } from "@reflect/core/openlibrary";
+import { cleanEntry, workEntry } from "@reflect/core/openlibrary";
+import { importGoodreads, type ImportReport } from "@/server/goodreads-import";
 import { requireUser } from "@/server/session";
 import { addBook, setBookStatus } from "@/server/learn-store";
 import { keepClaim, setStance } from "@/server/claims-store";
 
+const openLibrary = (url: string) => fetch(url, { headers: { "user-agent": "reflect-app" }, cache: "no-store" });
 const status = (v: FormDataEntryValue | null): BookStatus => ((BOOK_STATUS as readonly string[]).includes(String(v)) ? (String(v) as BookStatus) : "want");
 
 /** Put a library book on the person's shelves. The entry comes back from the page, so it is cleaned again. */
@@ -18,8 +20,13 @@ export async function addFromLibraryAction(form: FormData): Promise<void> {
   } catch {
     throw new Error("that library entry could not be read");
   }
-  const clean = cleanEntry(raw);
+  let clean = cleanEntry(raw);
   if (!clean) throw new Error("that library entry has no title");
+  // Some lists (trending) carry no call numbers; look the work up so the book lands on its shelf.
+  if (!clean.lcc?.length) {
+    const full = await workEntry(clean.work, openLibrary).catch(() => null);
+    if (full) clean = { ...full, ...(clean.cover ? { cover: clean.cover } : {}) };
+  }
   await addBook(user.id, { title: clean.title, authors: clean.authors, ...(clean.isbn ? { isbn: clean.isbn } : {}), status: status(form.get("status")), subjects: [], catalog: clean });
   revalidatePath("/learn");
 }
@@ -49,3 +56,17 @@ export async function setStanceAction(form: FormData): Promise<void> {
   await setStance(user.id, String(form.get("claim") ?? ""), String(form.get("stance") ?? ""));
   revalidatePath("/learn");
 }
+
+/** Bring a Goodreads export in: the browser reads the file and sends its text. */
+export async function importGoodreadsAction(text: string): Promise<{ error: string } | ImportReport> {
+  const user = await requireUser();
+  if (new TextEncoder().encode(text).length > 5_000_000) return { error: "That file is larger than 5 MB." };
+  try {
+    const r = await importGoodreads(user.id, text, openLibrary);
+    revalidatePath("/learn");
+    return r;
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+}
+

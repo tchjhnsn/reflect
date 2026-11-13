@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeftIcon, BookOpenIcon, DownloadIcon, PlusIcon } from "lucide-react";
+import { BookOpenIcon, DownloadIcon, PlusIcon } from "lucide-react";
 import { KINDS, workTitle } from "@reflect/core/works";
 import { DOMAINS } from "@reflect/core/book";
 import { CHAT_PROMPT } from "@reflect/core/chat-journal";
 import { Button } from "@/components/ui/button";
+import { PAGE, PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireUser } from "@/server/session";
 import { listWorks } from "@/server/work-store";
@@ -24,19 +25,13 @@ export default async function JournalPage() {
   // Entries written before the editor, kept as they were (chats live in the chat history).
   const earlier = entries.filter((e) => e.promptId !== CHAT_PROMPT && e.parts.length);
   return (
-    <main className="mx-auto max-w-4xl px-6 py-6">
-      <header className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Button asChild variant="ghost" size="icon" aria-label="Home"><Link href="/"><ArrowLeftIcon /></Link></Button>
-          <h1 className="text-2xl font-semibold tracking-tight">Journal</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button asChild variant="ghost" size="icon" aria-label="Export"><a href="/api/journal/export" download><DownloadIcon /></a></Button>
-          <Button asChild variant="ghost"><Link href="/journal/book"><BookOpenIcon />Book</Link></Button>
-          <ImportButton />
-          <Button asChild><Link href="/journal/new"><PlusIcon />Create</Link></Button>
-        </div>
-      </header>
+    <main className={PAGE}>
+      <PageHeader back="/" backLabel="Home" title="Journal">
+        <Button asChild variant="ghost" size="icon" aria-label="Export"><a href="/api/journal/export" download><DownloadIcon /></a></Button>
+        <Button asChild variant="ghost"><Link href="/journal/book"><BookOpenIcon />Book</Link></Button>
+        <ImportButton />
+        <Button asChild><Link href="/journal/new"><PlusIcon />Create</Link></Button>
+      </PageHeader>
       <nav aria-label="Domains" className="mt-6 flex flex-wrap gap-1.5">
         {DOMAINS.map((d) => {
           const n = works.filter((w) => w.domain === d.id).length;

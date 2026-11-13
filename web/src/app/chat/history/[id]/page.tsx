@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeftIcon } from "lucide-react";
 import { CHAT_PROMPT, isChatId } from "@reflect/core/chat-journal";
-import { Button } from "@/components/ui/button";
+import { PAGE, PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireUser } from "@/server/session";
 import { listEntries } from "@/server/journal-store";
@@ -21,14 +19,13 @@ export default async function PastChatPage({ params }: { params: Promise<{ id: s
   if (!chat) notFound();
   const day = new Date(`${chat.localDate}T12:00:00`).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
   return (
-    <main className="mx-auto max-w-3xl px-6 py-6">
-      <header className="flex items-center gap-3">
-        <Button asChild variant="ghost" size="icon" aria-label="Chat history"><Link href="/chat/history"><ArrowLeftIcon /></Link></Button>
-        <h1 className="text-xl font-semibold tracking-tight">{day}</h1>
-      </header>
+    <main className={PAGE}>
+      <PageHeader back="/chat/history" backLabel="Chat history" title={day}></PageHeader>
+      <div className="max-w-3xl">
       <Card className="mt-6 py-5">
         <CardContent className="px-5"><Transcript entry={chat} /></CardContent>
       </Card>
+      </div>
     </main>
   );
 }

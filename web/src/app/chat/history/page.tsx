@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeftIcon, PlusIcon } from "lucide-react";
+import { PlusIcon } from "lucide-react";
 import { CHAT_PROMPT, readChatPart } from "@reflect/core/chat-journal";
 import { Button } from "@/components/ui/button";
+import { PAGE, PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
 import { requireUser } from "@/server/session";
 import { listEntries } from "@/server/journal-store";
@@ -17,14 +18,11 @@ export default async function ChatHistoryPage() {
   const user = await requireUser();
   const chats = (await listEntries(user.id, 500)).filter((e) => e.promptId === CHAT_PROMPT);
   return (
-    <main className="mx-auto max-w-3xl px-6 py-6">
-      <header className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Button asChild variant="ghost" size="icon" aria-label="Back to the chat"><Link href="/chat"><ArrowLeftIcon /></Link></Button>
-          <h1 className="text-2xl font-semibold tracking-tight">Chat history</h1>
-        </div>
+    <main className={PAGE}>
+      <PageHeader back="/chat" backLabel="Back to the chat" title="Chat history">
         <Button asChild size="sm"><Link href="/chat"><PlusIcon />New chat</Link></Button>
-      </header>
+      </PageHeader>
+      <div className="max-w-3xl">
       {chats.length ? (
         <Card className="mt-6 gap-0 py-0">
           {chats.map((c, i) => {
@@ -40,6 +38,7 @@ export default async function ChatHistoryPage() {
       ) : (
         <p className="text-muted-foreground mt-10 text-center text-sm">No chats yet. Each chat you have is kept here.</p>
       )}
+      </div>
     </main>
   );
 }
