@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { CheckIcon, ChevronDownIcon } from "lucide-react";
 import type { CatalogEntry } from "@reflect/core/openlibrary";
 import { Button } from "@/components/ui/button";
@@ -15,15 +14,13 @@ export function AddBook({ entry }: { entry: CatalogEntry }) {
   const [added, setAdded] = useState<keyof typeof LABEL | null>(null);
   const [error, setError] = useState(false);
   const [pending, run] = useTransition();
-  const router = useRouter();
   const add = (status: keyof typeof LABEL) => run(async () => {
     const f = new FormData();
     f.set("entry", JSON.stringify(entry));
     f.set("status", status);
     try {
       await addFromLibraryAction(f);
-      setAdded(status);
-      router.refresh();
+      setAdded(status); // the page stays as it is: no refresh, so nothing moves
     } catch {
       setError(true);
     }

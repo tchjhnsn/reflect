@@ -20,7 +20,7 @@ const sameTitle = (a: string, b: string) => {
 export async function googleVolume(book: { title: string; authors?: readonly string[]; isbn?: string }, fetcher: Fetch, key: string | undefined): Promise<GoogleVolume | null> {
   if (!key) return null;
   const ask = async (q: string, n: number): Promise<Item[]> => {
-    const r = await fetcher(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=${n}&printType=books&key=${encodeURIComponent(key)}`);
+    const r = await fetcher(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=${n}&printType=books&country=US&key=${encodeURIComponent(key)}`);
     if (!r.ok) throw new Error(`Google Books answered ${r.status}`);
     return ((await r.json()) as { items?: Item[] }).items ?? [];
   };

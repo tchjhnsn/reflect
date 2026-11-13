@@ -6,12 +6,12 @@ import { THEMA, themaCategory, themaQuery, themaSection } from "@reflect/core/th
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PAGE } from "@/components/page-header";
-import { cn } from "@/lib/utils";
 import { requireUser } from "@/server/session";
 import { learnView, type LearnView } from "@/server/learn-store";
 import { LearnHeader } from "../header";
 import { GoodreadsImport } from "../goodreads";
 import { BookGrid } from "../book-card";
+import { Menu } from "./category-menu";
 
 export const metadata: Metadata = { title: "Browse books" };
 export const dynamic = "force-dynamic";
@@ -20,7 +20,6 @@ const PER = 24;
 const ROW = 6;
 const openLibrary = (url: string) => fetch(url, { headers: { "user-agent": "reflect-app" }, next: { revalidate: 3600 } });
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
-const chip = (on: boolean) => cn("shrink-0 rounded-full border px-3 py-1 text-xs transition", on ? "bg-foreground text-background border-foreground" : "hover:border-foreground/30");
 // Catalog subjects too broad to make a list from.
 const BROAD = /^(fiction|nonfiction|history|biography|literature|juvenile fiction|juvenile literature|english language|large type books|textbooks|in library|accessible book)$/i;
 
@@ -70,30 +69,34 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
     <main className={PAGE}>
       <LearnHeader on="browse" />
       <div className="mt-6 space-y-5">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <form action="/learn/browse" className="flex w-full max-w-xl gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <form action="/learn/browse" className="flex min-w-0 flex-1 basis-72 gap-2">
             <label htmlFor="q" className="sr-only">Search books by title, author or ISBN</label>
             <Input id="q" name="q" defaultValue={q} placeholder="Search books by title, author or ISBN" className="h-10" />
             <Button type="submit" className="h-10">Search</Button>
           </form>
+          <Menu
+            label="Browse"
+            lead={2}
+            items={[
+              { href: "/learn/browse", label: "For you", on: !q && !section && !week },
+              { href: "/learn/browse?view=week", label: "This week", on: week },
+              ...THEMA.map((x) => ({ href: `/learn/browse?cat=${x.code}`, label: x.short, on: x.code === section?.code })),
+            ]}
+          />
+          {section && section.children.length > 1 ? (
+            <Menu
+              label={`In ${section.short}`}
+              lead={1}
+              items={[
+                { href: `/learn/browse?cat=${section.code}`, label: `All of ${section.short.toLowerCase()}`, on: !category },
+                ...section.children.map((c) => ({ href: `/learn/browse?cat=${c.code}`, label: c.short, on: c.code === category?.code })),
+              ]}
+            />
+          ) : null}
           <GoodreadsImport />
         </div>
-        <p className="text-muted-foreground text-sm">Books from Open Library that are not on your shelves yet. Add one and it goes in its section in My shelves.</p>
-        <nav aria-label="Browse by category" className="-mx-6 flex gap-1.5 overflow-x-auto px-6 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
-          <Link href="/learn/browse" aria-current={!q && !section && !week ? "page" : undefined} className={chip(!q && !section && !week)}>For you</Link>
-          <Link href="/learn/browse?view=week" aria-current={week ? "page" : undefined} className={chip(week)}>This week</Link>
-          {THEMA.map((s) => (
-            <Link key={s.code} href={`/learn/browse?cat=${s.code}`} title={s.heading} aria-current={s.code === section?.code ? "page" : undefined} className={chip(s.code === section?.code)}>{s.short}</Link>
-          ))}
-        </nav>
-        {section && section.children.length > 1 ? (
-          <nav aria-label={`Categories in ${section.short}`} className="-mx-6 flex gap-1.5 overflow-x-auto border-t px-6 pt-3 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
-            <Link href={`/learn/browse?cat=${section.code}`} aria-current={!category ? "page" : undefined} className={chip(!category)}>All of {section.short.toLowerCase()}</Link>
-            {section.children.map((c) => (
-              <Link key={c.code} href={`/learn/browse?cat=${c.code}`} title={c.heading} aria-current={c.code === category?.code ? "page" : undefined} className={chip(c.code === category?.code)}>{c.short}</Link>
-            ))}
-          </nav>
-        ) : null}
+        <p className="text-muted-foreground text-sm">Books from Open Library. Add one and it goes in its section in My shelves.</p>
         {body}
         <p className="text-muted-foreground pt-6 text-center text-xs">Categories from Thema, the book trade&apos;s subject scheme (EDItEUR). Books, covers and ratings from Open Library.</p>
       </div>
@@ -109,14 +112,15 @@ function Books({ books, mine }: { books: CatalogEntry[] | null; mine: Map<string
 
 /**
  * Lists made from the person's own records: books like the one they are reading or read last, books on the
- * subjects they are learning, then this week's reads. Each list leaves out books already on their shelves.
+ * subjects they are learning, then this week's reads. Books already on their shelves stay in, marked as theirs.
  */
 async function ForYou({ view, mine }: { view: LearnView; mine: Map<string, string> }) {
   const rank = { reading: 0, read: 1, want: 2 } as Record<string, number>;
   const seed = [...view.books].filter((b) => b.catalog?.subjects.some((s) => !BROAD.test(s))).sort((a, b) => (rank[a.status] ?? 3) - (rank[b.status] ?? 3))[0];
   const seedSubject = seed?.catalog?.subjects.find((s) => !BROAD.test(s));
   const learning = [...new Set([...view.books.filter((b) => b.status !== "read").flatMap((b) => b.subjects), ...view.known, ...view.shown].map((s) => s.name))].slice(0, 2);
-  const fresh = (books: CatalogEntry[]) => books.filter((b) => !mine.has(b.work)).slice(0, ROW);
+  // Books already on the shelves stay in a list, marked as yours, so a list does not change as you add.
+  const fresh = (books: CatalogEntry[]) => books.filter((b) => b.work !== seed?.catalog?.work).slice(0, ROW);
   const [like, ...bySubject] = await Promise.all([
     seedSubject ? browseQuery(`subject:"${seedSubject.replace(/"/g, "")}"`, openLibrary, { limit: ROW * 2, sort: "readinglog" }).then(fresh).catch(() => null) : Promise.resolve(null),
     ...learning.map((name) => searchBooks(name, openLibrary, ROW * 2).then(fresh).catch(() => null)),

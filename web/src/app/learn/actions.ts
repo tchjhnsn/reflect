@@ -27,8 +27,9 @@ export async function addFromLibraryAction(form: FormData): Promise<void> {
     const full = await workEntry(clean.work, openLibrary).catch(() => null);
     if (full) clean = { ...full, ...(clean.cover ? { cover: clean.cover } : {}) };
   }
+  // No revalidation: Learn's pages render fresh on each visit, and refreshing the page the book was added from
+  // would reshuffle its lists under the person.
   await addBook(user.id, { title: clean.title, authors: clean.authors, ...(clean.isbn ? { isbn: clean.isbn } : {}), status: status(form.get("status")), subjects: [], catalog: clean });
-  revalidatePath("/learn");
 }
 
 /** Where the person is with a book: want to read, reading, read. */
