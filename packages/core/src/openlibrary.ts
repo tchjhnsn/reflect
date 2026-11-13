@@ -181,8 +181,43 @@ export async function searchAuthors(query: string, fetcher: Fetch, limit = 4): P
     .map((d) => ({ id: d.key!, name: d.name!, ...(d.top_work ? { topWork: d.top_work } : {}), works: d.work_count ?? 0, ...(d.birth_date ? { birth: d.birth_date } : {}), ...(d.death_date ? { death: d.death_date } : {}) }));
 }
 
-export type Edition = { title: string; year?: number; publisher?: string; isbn?: string; language?: string };
-export type WorkDetails = { description: string | null; subjects: string[]; rating: { average: number; count: number } | null; editions: { count: number; first: Edition[] } };
+export type Edition = { title: string; year?: number; publisher?: string; isbn?: string; language?: string; /** Open Library cover id. */ cover?: number; pages?: number };
+export type WorkDetails = { description: string | null; subjects: string[]; rating: { average: number; count: number } | null; editions: { count: number; first: Edition[] }; /** The table of contents of the first edition in Reflect's language that has one. */ contents: string[] };
+
+/** Catalog subjects too broad to make a list of books like another from. */
+export const BROAD_SUBJECT = /^(fiction|nonfiction|history|biography|literature|juvenile fiction|juvenile literature|english language|large type books|textbooks|in library|accessible book|fiction, general|classic literature|novela|reading level-grade \d+)$/i;
+
+/**
+ * Where a work can be read or heard free: the Internet Archive's scan through Open Library (`public` to read,
+ * `borrowable` to borrow with an Open Library account), Project Gutenberg, Standard Ebooks and LibriVox ids.
+ */
+export type WorkAccess = { access: "public" | "borrowable" | "printdisabled" | "no_ebook"; archive?: string; edition?: string; gutenberg: string[]; standardEbooks: string[]; librivox: string[] };
+
+/** Where one work can be read or heard free, from the catalog's own links. */
+export async function workAccess(work: string, fetcher: Fetch): Promise<WorkAccess | null> {
+  if (!/^OL\d+W$/.test(work)) return null;
+  const body = (await get(fetcher, `/search.json?q=${encodeURIComponent(`key:/works/${work}`)}&fields=key,ebook_access,lending_identifier_s,lending_edition_s,id_project_gutenberg,id_standard_ebooks,id_librivox&limit=1`)) as { docs?: { ebook_access?: string; lending_identifier_s?: string; lending_edition_s?: string; id_project_gutenberg?: string[]; id_standard_ebooks?: string[]; id_librivox?: string[] }[] } | null;
+  const d = body?.docs?.[0];
+  if (!d) return null;
+  const ok = (v: string[] | undefined, re: RegExp) => (v ?? []).filter((x) => re.test(x)).slice(0, 5);
+  const access = (["public", "borrowable", "printdisabled"] as const).find((a) => a === d.ebook_access) ?? "no_ebook";
+  return {
+    access,
+    ...(d.lending_identifier_s && /^[\w.-]+$/.test(d.lending_identifier_s) ? { archive: d.lending_identifier_s } : {}),
+    ...(d.lending_edition_s && /^OL\d+M$/.test(d.lending_edition_s) ? { edition: d.lending_edition_s } : {}),
+    gutenberg: ok(d.id_project_gutenberg, /^\d+$/),
+    standardEbooks: ok(d.id_standard_ebooks, /^[a-z0-9-]+\/[a-z0-9-]+$/),
+    librivox: ok(d.id_librivox, /^\d+$/),
+  };
+}
+
+/** Books like a work: the most read on its first subject that is not too broad, without the work itself. */
+export async function booksLike(entry: Pick<CatalogEntry, "work" | "subjects">, fetcher: Fetch, limit = 6): Promise<CatalogEntry[]> {
+  const subject = entry.subjects.find((s) => !BROAD_SUBJECT.test(s.trim()));
+  if (!subject) return [];
+  const books = await browseQuery(`subject:"${subject.replace(/"/g, "")}"`, fetcher, { limit: limit + 1, sort: "readinglog" });
+  return books.filter((b) => b.work !== entry.work).slice(0, limit);
+}
 
 /** What a book page shows beyond its catalog entry: the work's description, its readers' rating and its editions. */
 export async function workDetails(work: string, fetcher: Fetch): Promise<WorkDetails | null> {
@@ -190,7 +225,7 @@ export async function workDetails(work: string, fetcher: Fetch): Promise<WorkDet
   const [w, r, e] = await Promise.all([
     get(fetcher, `/works/${work}.json`) as Promise<{ description?: string | { value?: string }; subjects?: string[] } | null>,
     get(fetcher, `/works/${work}/ratings.json`).catch(() => null) as Promise<{ summary?: { average?: number; count?: number } } | null>,
-    get(fetcher, `/works/${work}/editions.json?limit=30`).catch(() => null) as Promise<{ size?: number; entries?: { title?: string; publish_date?: string; publishers?: string[]; isbn_13?: string[]; isbn_10?: string[]; languages?: { key?: string }[] }[] } | null>,
+    get(fetcher, `/works/${work}/editions.json?limit=30`).catch(() => null) as Promise<{ size?: number; entries?: { title?: string; publish_date?: string; publishers?: string[]; isbn_13?: string[]; isbn_10?: string[]; languages?: { key?: string }[]; covers?: number[]; number_of_pages?: number; table_of_contents?: ({ title?: string; level?: number } | string)[] }[] } | null>,
   ]);
   if (!w) return null;
   const raw = typeof w.description === "string" ? w.description : w.description?.value ?? "";
@@ -207,9 +242,15 @@ export async function workDetails(work: string, fetcher: Fetch): Promise<WorkDet
         const year = Number(/\d{4}/.exec(x.publish_date ?? "")?.[0]);
         const isbn = x.isbn_13?.[0] ?? x.isbn_10?.[0];
         const language = x.languages?.[0]?.key?.replace("/languages/", "");
-        return { title: x.title!, ...(year ? { year } : {}), ...(x.publishers?.[0] ? { publisher: x.publishers[0] } : {}), ...(isbn ? { isbn } : {}), ...(language ? { language } : {}) };
-      }).sort((a, b) => Number(b.language === LANGUAGE.code) - Number(a.language === LANGUAGE.code)), // Reflect's language first
+        const cover = x.covers?.find((c) => Number.isInteger(c) && c > 0);
+        const pages = Number.isInteger(x.number_of_pages) && x.number_of_pages! > 0 ? x.number_of_pages : undefined;
+        return { title: x.title!, ...(year ? { year } : {}), ...(x.publishers?.[0] ? { publisher: x.publishers[0] } : {}), ...(isbn ? { isbn } : {}), ...(language ? { language } : {}), ...(cover ? { cover } : {}), ...(pages ? { pages } : {}) };
+      }).sort((a, b) => Number(b.language === LANGUAGE.code) - Number(a.language === LANGUAGE.code) || Number(Boolean(b.cover)) - Number(Boolean(a.cover))), // Reflect's language first, then editions with a cover
     },
+    contents: ((e?.entries ?? []).find((x) => (x.languages?.[0]?.key ?? "/languages/eng") === `/languages/${LANGUAGE.code}` && (x.table_of_contents?.length ?? 0) > 1)?.table_of_contents ?? [])
+      .map((c) => (typeof c === "string" ? c : `${"  ".repeat(Math.min(c.level ?? 0, 4))}${c.title ?? ""}`).replace(/\s+$/, ""))
+      .filter((c) => c.trim())
+      .slice(0, 200),
   };
 }
 

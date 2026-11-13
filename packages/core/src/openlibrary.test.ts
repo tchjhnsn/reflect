@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { authorDetails, authorWorks, browseClass, browseQuery, isSort, searchAuthors, LANGUAGE, cleanEntry, coverUrl, searchBooks, trendingBooks, workDetails, workEntry, type Fetch } from "./openlibrary.ts";
+import { booksLike, workAccess, authorDetails, authorWorks, browseClass, browseQuery, isSort, searchAuthors, LANGUAGE, cleanEntry, coverUrl, searchBooks, trendingBooks, workDetails, workEntry, type Fetch } from "./openlibrary.ts";
 
 const fake = (docs: unknown[], seen: string[]): Fetch => async (url) => {
   seen.push(url);
@@ -72,6 +72,7 @@ describe("open library", () => {
       subjects: ["Habit"],
       rating: { average: 3.97, count: 1495 },
       editions: { count: 42, first: [{ title: "Atomic Habits", year: 2018, publisher: "Avery", isbn: "9780735211292", language: "eng" }] },
+      contents: [],
     });
     expect(await workDetails("OL0W", f)).toBeNull();
     expect(await workDetails("../x", f)).toBeNull();
@@ -125,5 +126,33 @@ describe("open library", () => {
     expect(await searchAuthors("isbn:123", f)).toEqual([]);
     expect(isSort("old")).toBe(true);
     expect(isSort("toString")).toBe(false);
+  });
+
+  it("finds where a work is free to read or hear, and books like it", async () => {
+    const seen: string[] = [];
+    const f: Fetch = async (url) => {
+      seen.push(url);
+      if (url.includes("ebook_access")) return { ok: true, status: 200, json: async () => ({ docs: [{ ebook_access: "public", lending_identifier_s: "prideprejudice00aust", lending_edition_s: "OL1M", id_project_gutenberg: ["1342", "x/y"], id_standard_ebooks: ["jane-austen/pride-and-prejudice", "../bad"], id_librivox: ["253", "orgullo"] }] }) };
+      return { ok: true, status: 200, json: async () => ({ docs: [{ key: "/works/OL1W", title: "Self" }, { key: "/works/OL2W", title: "Emma" }] }) };
+    };
+    expect(await workAccess("OL1W", f)).toEqual({ access: "public", archive: "prideprejudice00aust", edition: "OL1M", gutenberg: ["1342"], standardEbooks: ["jane-austen/pride-and-prejudice"], librivox: ["253"] });
+    expect(await workAccess("nope", f)).toBeNull();
+    expect((await booksLike({ work: "OL1W", subjects: ["Fiction", "Courtship"] }, f)).map((b) => b.title)).toEqual(["Emma"]);
+    expect(seen.at(-1)).toContain(encodeURIComponent('subject:"Courtship"'));
+    expect(await booksLike({ work: "OL1W", subjects: ["Fiction"] }, f)).toEqual([]);
+  });
+
+  it("keeps editions' covers and pages and the first English table of contents", async () => {
+    const routes: Record<string, unknown> = {
+      "/works/OL9W.json": { description: "x" },
+      "/works/OL9W/editions.json?limit=30": { size: 2, entries: [{ title: "Sin tapa", languages: [{ key: "/languages/spa" }], table_of_contents: [{ title: "Uno" }, { title: "Dos" }] }, { title: "With cover", covers: [-1, 77], number_of_pages: 320, languages: [{ key: "/languages/eng" }], table_of_contents: [{ title: "Part I", level: 0 }, { title: "Chapter 1", level: 1 }, "Notes"] }] },
+    };
+    const f: Fetch = async (url) => {
+      const path = url.replace("https://openlibrary.org", "");
+      return path in routes ? { ok: true, status: 200, json: async () => routes[path] } : { ok: false, status: 404, json: async () => ({}) };
+    };
+    const d = await workDetails("OL9W", f);
+    expect(d?.editions.first[0]).toEqual({ title: "With cover", language: "eng", cover: 77, pages: 320 });
+    expect(d?.contents).toEqual(["Part I", "  Chapter 1", "Notes"]);
   });
 });

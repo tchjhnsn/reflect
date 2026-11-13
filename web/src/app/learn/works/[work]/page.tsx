@@ -3,8 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { BookIcon, ExternalLinkIcon, StarIcon } from "lucide-react";
-import { googleVolume } from "@reflect/core/googlebooks";
-import { authorWorks, coverUrl, workDetails, workEntry, type CatalogEntry } from "@reflect/core/openlibrary";
+import { googleVolume, readerUrl } from "@reflect/core/googlebooks";
+import { librivoxBook, type Audiobook } from "@reflect/core/librivox";
+import { authorWorks, booksLike, coverUrl, workAccess, workDetails, workEntry, type CatalogEntry } from "@reflect/core/openlibrary";
 import { categoryOf, showCall, themaCategory } from "@reflect/core/thema";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,8 @@ import { learnView } from "@/server/learn-store";
 import { listClaims, type ClaimOut } from "@/server/claims-store";
 import { LearnHeader } from "../../header";
 import { AddBook } from "../../add-book";
-import { Reader } from "./reader";
+import { Reader, type ReadLink, type ReadSource } from "./reader";
+import { Listen } from "./listen";
 import { AuthorName, BookGrid } from "../../book-card";
 import { setBookStatusAction } from "../../actions";
 
@@ -25,19 +27,25 @@ export const dynamic = "force-dynamic";
 const STATUS = [["want", "Want to read"], ["reading", "Reading"], ["read", "Read"]] as const;
 const STANCE: Record<string, string> = { belief: "Belief", disbelief: "Disbelief", suspension: "Suspension of judgment" };
 const cached = (url: string) => fetch(url, { headers: { "user-agent": "reflect-app" }, next: { revalidate: 86400 } });
+// LibriVox can be slow to answer; the page does not wait on it for long.
+const slow = (url: string) => fetch(url, { headers: { "user-agent": "reflect-app" }, next: { revalidate: 86400 }, signal: AbortSignal.timeout(6000) });
 const Label = ({ children }: { children: ReactNode }) => <h3 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{children}</h3>;
 
 /**
  * One book's page, for any book in the open library: its cover, what it is about, its readers' ratings, a
- * preview or the whole book to read when Google Books has one, its editions, where it sits in Thema, and, when it is yours, where you are with it and the claims on its subjects.
+ * the whole book to read or hear free when it is in the public domain (the Internet Archive, Project Gutenberg,
+ * Standard Ebooks, LibriVox) or a preview from Google Books, its contents and editions, where it sits in Thema,
+ * books like it and more by its author, and, when it is yours, where you are with it and the claims on its
+ * subjects.
  */
 export default async function WorkPage({ params }: { params: Promise<{ work: string }> }) {
   const user = await requireUser();
   const { work } = await params;
   if (!/^OL\d+W$/.test(work)) notFound();
-  const [entry, details, view, claims] = await Promise.all([
+  const [entry, details, access, view, claims] = await Promise.all([
     workEntry(work, cached).catch(() => null),
     workDetails(work, cached).catch(() => null),
+    workAccess(work, cached).catch(() => null),
     learnView(user.id),
     listClaims(user.id).catch((): ClaimOut[] => []),
   ]);
@@ -46,10 +54,21 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
   const title = entry?.title ?? mine?.title ?? "Untitled";
   const authors = entry?.authors ?? mine?.authors ?? [];
   const authorKeys = entry?.authorKeys ?? mine?.catalog?.authorKeys ?? [];
-  const [google, byAuthor] = await Promise.all([
+  const [google, byAuthor, audio, like] = await Promise.all([
     googleVolume({ title, authors, ...(entry?.isbn ? { isbn: entry.isbn } : {}) }, cached, process.env.GOOGLE_BOOKS_API_KEY).catch(() => null),
     authorKeys[0] ? authorWorks(authorKeys[0], cached, { limit: 7, sort: "rating" }).then((b) => b.filter((x) => x.work !== work).slice(0, 6)).catch((): CatalogEntry[] => []) : Promise.resolve([] as CatalogEntry[]),
+    access?.librivox.length ? librivoxBook(access.librivox, slow).catch((): Audiobook | null => null) : Promise.resolve(null),
+    entry ? booksLike({ work, subjects: details?.subjects.length ? details.subjects : entry.subjects }, cached).catch((): CatalogEntry[] => []) : Promise.resolve([] as CatalogEntry[]),
   ]);
+  const sources: ReadSource[] = [
+    ...(access?.access === "public" && access.archive ? [{ key: "archive", name: "the Internet Archive", src: `https://archive.org/embed/${access.archive}`, full: true }] : []),
+    ...(google?.read ? [{ key: "google", name: "Google Books", src: readerUrl(google.read.id), full: google.read.full }] : []),
+  ].sort((a, b) => Number(b.full) - Number(a.full));
+  const links: ReadLink[] = [
+    ...(access?.standardEbooks[0] ? [{ name: "Standard Ebooks", href: `https://standardebooks.org/ebooks/${access.standardEbooks[0]}` }] : []),
+    ...(access?.gutenberg[0] ? [{ name: "Project Gutenberg", href: `https://www.gutenberg.org/ebooks/${access.gutenberg[0]}` }] : []),
+    ...(access?.access === "borrowable" && access.edition ? [{ name: "Borrow from Open Library", href: `https://openlibrary.org/books/${access.edition}` }] : []),
+  ];
   const shelved = new Map(view.books.filter((b) => b.catalog?.work).map((b) => [b.catalog!.work, b.status]));
   const subjects = details?.subjects.length ? details.subjects : entry?.subjects ?? [];
   const category = themaCategory(categoryOf({ ...(entry?.lcc ? { lcc: entry.lcc } : {}), subjects }) ?? "");
@@ -89,7 +108,8 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
             ) : entry ? <AddBook entry={entry} /> : null}
             {mine ? <span className="text-muted-foreground text-xs">On your shelves</span> : null}
           </div>
-          {google?.read ? <Reader id={google.read.id} full={google.read.full} /> : null}
+          {sources.length || links.length ? <Reader sources={sources} links={links} /> : null}
+          {audio ? <Listen book={audio} /> : null}
           <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
             <div><dt className="text-muted-foreground text-xs">Category</dt><dd>{category ? <Link className="underline-offset-4 hover:underline" href={`/learn/browse?cat=${category.code}`}>{category.heading}</Link> : "Not yet placed"}</dd></div>
             <div><dt className="text-muted-foreground text-xs">Library of Congress call number</dt><dd>{entry?.lcc?.[0] ? showCall(entry.lcc[0]) : "None in the catalog"}</dd></div>
@@ -107,14 +127,24 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
               <div className="flex flex-wrap gap-1.5">{subjects.slice(0, 16).map((s) => <Badge key={s} asChild variant="outline"><Link href={`/learn/browse?q=${encodeURIComponent(s)}`}>{s}</Link></Badge>)}</div>
             </section>
           ) : null}
+          {details?.contents.length ? (
+            <details className="group space-y-2">
+              <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden"><Label>Contents <span className="normal-case group-open:hidden">· show</span></Label></summary>
+              <ol className="mt-2 max-w-prose space-y-0.5 text-sm">{details.contents.map((c, i) => <li key={i} className="whitespace-pre">{c}</li>)}</ol>
+            </details>
+          ) : null}
           {details?.editions.count ? (
             <section className="space-y-2">
               <Label>{details.editions.count.toLocaleString("en-US")} {details.editions.count === 1 ? "edition" : "editions"}</Label>
               <ul className="divide-y rounded-md border text-sm">
-                {details.editions.first.slice(0, 5).map((e, i) => (
-                  <li key={`${e.isbn ?? e.title}-${i}`} className="flex flex-wrap justify-between gap-x-4 gap-y-0.5 px-3 py-2">
-                    <span className="min-w-0 truncate">{e.title}</span>
-                    <span className="text-muted-foreground text-xs">{[e.publisher, e.year, e.language?.toUpperCase()].filter(Boolean).join(" · ")}</span>
+                {details.editions.first.slice(0, 6).map((e, i) => (
+                  <li key={`${e.isbn ?? e.title}-${i}`} className="flex items-center gap-3 px-3 py-2">
+                    <div className="bg-muted h-12 w-8 shrink-0 overflow-hidden rounded-sm border">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      {e.cover ? <img src={`https://covers.openlibrary.org/b/id/${e.cover}-S.jpg`} alt="" loading="lazy" className="size-full object-cover" /> : null}
+                    </div>
+                    <span className="min-w-0 flex-1 truncate">{e.title}</span>
+                    <span className="text-muted-foreground shrink-0 text-right text-xs">{[e.publisher, e.year, e.pages ? `${e.pages} pages` : null, e.language?.toUpperCase()].filter(Boolean).join(" · ")}</span>
                   </li>
                 ))}
               </ul>
@@ -132,6 +162,12 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
                 )) : <p className="text-muted-foreground">None yet. Claims you keep on this book&apos;s subjects, or that cite it, show here.</p>}
               </CardContent>
             </Card>
+          ) : null}
+          {like.length ? (
+            <section className="space-y-4">
+              <Label>Books like this</Label>
+              <BookGrid books={like} mine={shelved} cols="md:grid-cols-3 lg:grid-cols-6" />
+            </section>
           ) : null}
           {byAuthor.length && authorKeys[0] ? (
             <section className="space-y-4">

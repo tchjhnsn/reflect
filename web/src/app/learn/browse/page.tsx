@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { browseQuery, isSort, searchAuthors, searchBooks, SORTS, trendingBooks, type AuthorHit, type CatalogEntry, type Sort } from "@reflect/core/openlibrary";
+import { BROAD_SUBJECT as BROAD, browseQuery, isSort, searchAuthors, searchBooks, SORTS, trendingBooks, type AuthorHit, type CatalogEntry, type Sort } from "@reflect/core/openlibrary";
 import { THEMA, themaCategory, themaQuery, themaSection } from "@reflect/core/thema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,8 +20,6 @@ export const dynamic = "force-dynamic";
 
 const ROW = 6;
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
-// Catalog subjects too broad to make a list from.
-const BROAD = /^(fiction|nonfiction|history|biography|literature|juvenile fiction|juvenile literature|english language|large type books|textbooks|in library|accessible book)$/i;
 
 /**
  * Browse books that are not on your shelves yet: lists for you, this week's reads, a Thema section or
