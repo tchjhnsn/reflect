@@ -32,7 +32,7 @@ export function GoodreadsImport() {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <input ref={input} type="file" accept=".csv,text/csv" hidden onChange={(e) => take(e.target.files?.[0])} />
-      <Button variant="outline" disabled={pending} onClick={() => input.current?.click()}><UploadIcon />{pending ? "Importing from Goodreads..." : "Import from Goodreads"}</Button>
+      <Button variant="outline" className="h-10" disabled={pending} onClick={() => input.current?.click()}><UploadIcon />{pending ? "Importing from Goodreads..." : "Import from Goodreads"}</Button>
       {note ? <span className="text-muted-foreground text-xs" role="status">{note}</span> : null}
     </div>
   );
