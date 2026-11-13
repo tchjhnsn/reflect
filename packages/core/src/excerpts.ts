@@ -56,3 +56,28 @@ export function runsOf(text: string, index: number, marks: readonly (Span & { id
 export function citeQuote(quote: string, cite: { author?: string; title: string; place?: string }): string {
   return `“${squash(quote)}” — ${[cite.author, cite.title, cite.place].filter(Boolean).join(", ")}`;
 }
+
+/** A run with the character offset it starts at, as `cutRuns` gives it. */
+export type PlacedRun = Run & { at: number };
+
+/**
+ * Runs split again at the given character offsets (where a note mark sits), each with the offset it starts at, so
+ * a page can put something between two runs without changing the text.
+ */
+export function cutRuns(runs: readonly Run[], cuts: readonly number[]): PlacedRun[] {
+  const sorted = [...new Set(cuts)].sort((a, b) => a - b);
+  const out: PlacedRun[] = [];
+  let at = 0;
+  for (const r of runs) {
+    let start = 0;
+    for (const c of sorted) {
+      const k = c - at;
+      if (k <= start || k >= r.text.length) continue;
+      out.push({ text: r.text.slice(start, k), id: r.id, at: at + start });
+      start = k;
+    }
+    out.push({ text: r.text.slice(start), id: r.id, at: at + start });
+    at += r.text.length;
+  }
+  return out;
+}

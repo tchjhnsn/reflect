@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { CheckIcon, CopyIcon, HighlighterIcon, QuoteIcon, Trash2Icon, XIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { BookAIcon, CheckIcon, CopyIcon, HighlighterIcon, QuoteIcon, Trash2Icon, XIcon } from "lucide-react";
 import { STANCES } from "@reflect/core/claims";
-import { citeQuote, runsOf, type Span } from "@reflect/core/excerpts";
+import { citeQuote, cutRuns, runsOf, type Span } from "@reflect/core/excerpts";
+import { lookupWord, type Definition } from "@reflect/core/wiktionary";
 import { Button } from "@/components/ui/button";
-import { addExcerptAction, keepClaimAction, keepPlaceAction, removeExcerptAction } from "../../../actions";
+import { addExcerptAction, defineAction, keepClaimAction, keepPlaceAction, removeExcerptAction } from "../../../actions";
+import { useReader } from "./reader-frame";
 
 /** A highlight kept in this chapter: its id, its words, and where they sit. */
 export type Mark = Span & { id: string; quote: string };
@@ -19,14 +22,18 @@ export const placeKey = (work: string) => `reflect:read:${work}`;
  * with its place in the text), to copy it as a quote cited to the author, book and chapter, or to keep it as a
  * claim under the stance the person picks. Tapping a highlight offers to copy or remove it.
  */
-export function Page({ work, chapter, chapters, title, author, chapterTitle, paragraphs, bookId, kept: keptPlace, source, marks: initial }: { work: string; chapter: number; chapters: number; title: string; author: string; chapterTitle: string; paragraphs: string[]; /** The book on the person's shelves, when it is there. */ bookId?: string; /** The place kept with their account. */ kept?: ReadPlace | null; /** Where the text comes from, as a highlight records it ("gutenberg:1342"). */ source: string; /** The person's highlights in this chapter. */ marks: Mark[] }) {
+export function Page({ work, chapter, chapters, title, author, chapterTitle, paragraphs, bookId, kept: keptPlace, source, marks: initial, notes = [], noteText = {}, found = [], goTo, next }: { work: string; chapter: number; chapters: number; title: string; author: string; chapterTitle: string; paragraphs: string[]; /** The book on the person's shelves, when it is there. */ bookId?: string; /** The place kept with their account, already carried to this text's chapters. */ kept?: { chapter: number; at: number } | null; /** Where the text comes from, as a highlight records it ("gutenberg:1342"). */ source: string; /** The person's highlights in this chapter. */ marks: Mark[]; /** Note marks in this chapter, and each note's text. */ notes?: { p: number; c: number; id: string }[]; noteText?: Record<string, string>; /** Where a searched phrase occurs in this chapter. */ found?: Span[]; /** The paragraph to open at (a search result), instead of the kept place. */ goTo?: number; /** The next chapter's address, for turning past the last page. */ next?: string }) {
   const box = useRef<HTMLDivElement>(null);
   const [picked, setPicked] = useState<{ text: string; span: Span | null; id: string | null } | null>(null);
   const [kept, setKept] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [marks, setMarks] = useState<Mark[]>(initial);
   const [error, setError] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  const [defined, setDefined] = useState<{ word: string; definitions: Definition[]; lemma?: { word: string; definitions: Definition[] } } | "none" | null>(null);
   const [pending, run] = useTransition();
+  const { look, setAt } = useReader();
+  const router = useRouter();
 
   useEffect(() => {
     let saved: ReadPlace | null = null;
@@ -36,8 +43,11 @@ export function Page({ work, chapter, chapters, title, author, chapterTitle, par
       saved = null;
     }
     // The place kept with the account wins: it may come from another device.
-    if (keptPlace) saved = keptPlace;
-    if (saved?.chapter === chapter && saved.at > 0) {
+    if (keptPlace) saved = { ...keptPlace, chapters };
+    const target = goTo !== undefined ? document.querySelector(`p[data-i="${goTo}"]`) : null;
+    if (target) {
+      requestAnimationFrame(() => target.scrollIntoView({ block: "center" }));
+    } else if (saved?.chapter === chapter && saved.at > 0) {
       requestAnimationFrame(() => window.scrollTo(0, saved!.at * (document.documentElement.scrollHeight - window.innerHeight)));
     } else {
       window.scrollTo(0, 0);
@@ -52,6 +62,7 @@ export function Page({ work, chapter, chapters, title, author, chapterTitle, par
       if (bookId) keepPlaceAction(bookId, here()).catch(() => undefined);
     };
     const save = () => {
+      setAt(here().at);
       try {
         window.localStorage.setItem(placeKey(work), JSON.stringify(here()));
       } catch {
@@ -77,7 +88,44 @@ export function Page({ work, chapter, chapters, title, author, chapterTitle, par
       window.removeEventListener("scroll", onScroll);
       document.removeEventListener("visibilitychange", onHide);
     };
-  }, [work, chapter, chapters, bookId, keptPlace]);
+  }, [work, chapter, chapters, bookId, keptPlace, goTo, setAt]);
+
+  useEffect(() => {
+    if (look.turn !== "pages") return;
+    // Turning pages: a screen at a time, by the arrow keys, space, or a tap at the left or right edge; past the
+    // last page of the chapter, on to the next.
+    const turn = (dir: 1 | -1) => {
+      const end = document.documentElement.scrollHeight - window.innerHeight;
+      if (dir > 0 && window.scrollY >= end - 2 && next) {
+        router.push(next);
+        return;
+      }
+      window.scrollBy({ top: dir * (window.innerHeight - 72), behavior: "smooth" });
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLElement && e.target.closest("input, textarea, [contenteditable]")) return;
+      if (e.key === "ArrowRight" || e.key === "PageDown" || (e.key === " " && !e.shiftKey)) {
+        e.preventDefault();
+        turn(1);
+      } else if (e.key === "ArrowLeft" || e.key === "PageUp" || (e.key === " " && e.shiftKey)) {
+        e.preventDefault();
+        turn(-1);
+      }
+    };
+    const onClick = (e: MouseEvent) => {
+      if (window.getSelection()?.toString().trim()) return;
+      if (e.target instanceof HTMLElement && e.target.closest("a, button, mark, sup, [role=dialog], [data-bar]")) return;
+      const edge = window.innerWidth * 0.25;
+      if (e.clientX > window.innerWidth - edge) turn(1);
+      else if (e.clientX < edge) turn(-1);
+    };
+    window.addEventListener("keydown", onKey);
+    document.addEventListener("click", onClick);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.removeEventListener("click", onClick);
+    };
+  }, [look.turn, next, router]);
 
   useEffect(() => {
     // Where a point in the text is: the paragraph it is in and how many characters into that paragraph.
@@ -98,6 +146,8 @@ export function Page({ work, chapter, chapters, title, author, chapterTitle, par
       const b = pointOf(r.endContainer, r.endOffset);
       const span = a && b && (b[0] > a[0] || (b[0] === a[0] && b[1] > a[1])) ? { from: a, to: b } : null;
       setPicked({ text: text.slice(0, 5000), span, id: null });
+      setDefined(null);
+      setNote(null);
       setKept(null);
       setDone(null);
       setError(false);
@@ -165,9 +215,20 @@ export function Page({ work, chapter, chapters, title, author, chapterTitle, par
     }
   };
 
+  const define = () => run(async () => {
+    if (!picked) return;
+    try {
+      setDefined((await defineAction(picked.text)) ?? "none");
+    } catch {
+      setError(true);
+    }
+  });
+
   const open = (m: Mark) => {
     if (window.getSelection()?.toString().trim()) return;
     setPicked({ text: m.quote, span: { from: m.from, to: m.to }, id: m.id });
+    setDefined(null);
+    setNote(null);
     setKept(null);
     setDone(null);
     setError(false);
@@ -175,19 +236,40 @@ export function Page({ work, chapter, chapters, title, author, chapterTitle, par
 
   return (
     <>
-      <div ref={box} className="writing mt-10 space-y-5 text-pretty">
-        {paragraphs.map((p, i) => (
-          <p key={i} data-i={i}>
-            {runsOf(p, i, marks).map((r, k) => {
-              const m = r.id ? marks.find((x) => x.id === r.id) : undefined;
-              return m ? <mark key={k} className="cursor-pointer rounded-sm bg-amber-200/70 text-inherit dark:bg-amber-400/30" onClick={() => open(m)}>{r.text}</mark> : <span key={k}>{r.text}</span>;
-            })}
-          </p>
-        ))}
+      <div ref={box} className="reading mt-10 space-y-[0.9em] text-pretty">
+        {paragraphs.map((p, i) => {
+          const here = notes.filter((n) => n.p === i);
+          const all = [...marks, ...found.map((f) => ({ ...f, id: "found" }))];
+          return (
+            <p key={i} data-i={i}>
+              {cutRuns(runsOf(p, i, all), here.map((n) => n.c)).map((r, k) => {
+                const m = r.id && r.id !== "found" ? marks.find((x) => x.id === r.id) : undefined;
+                const refs = here.filter((n) => n.c === r.at + r.text.length);
+                const body = m ? <mark className="cursor-pointer rounded-sm bg-amber-200/70 text-inherit dark:bg-amber-400/30" onClick={() => open(m)}>{r.text}</mark> : r.id === "found" ? <mark className="rounded-sm bg-sky-200/80 text-inherit dark:bg-sky-400/30">{r.text}</mark> : <span>{r.text}</span>;
+                return (
+                  <span key={k}>
+                    {body}
+                    {refs.map((n) => (
+                      <sup key={n.id} className="leading-none"><button type="button" className="text-primary inline-block min-w-4 px-1 py-0.5 text-[0.7em] leading-none font-semibold underline-offset-2 hover:underline" aria-label={`Note ${n.id.replace("note-", "")}`} onClick={() => { setNote(n.id); setPicked(null); }}>{n.id.replace("note-", "")}</button></sup>
+                    ))}
+                  </span>
+                );
+              })}
+            </p>
+          );
+        })}
       </div>
+      {note ? (
+        <div data-bar className="bg-background fixed inset-x-0 bottom-0 z-20 border-t shadow-lg">
+          <div className="mx-auto flex max-w-3xl items-start justify-between gap-3 px-4 py-3 sm:px-6">
+            <p className="max-h-[40svh] overflow-y-auto text-sm"><span className="font-semibold">Note {note.replace("note-", "")}. </span>{noteText[note] ?? "This note is not in the text."}</p>
+            <Button variant="ghost" size="icon" className="size-7 shrink-0" onClick={() => setNote(null)} aria-label="Close"><XIcon /></Button>
+          </div>
+        </div>
+      ) : null}
       {picked ? (
-        <div className="bg-background fixed inset-x-0 bottom-0 z-20 border-t shadow-lg">
-          <div className="mx-auto flex max-w-3xl flex-col gap-2 px-4 py-3 sm:px-6">
+        <div data-bar className="bg-background fixed inset-x-0 bottom-0 z-20 border-t shadow-lg">
+          <div className="mx-auto flex max-h-[70svh] max-w-3xl flex-col gap-2 overflow-y-auto px-4 py-3 sm:px-6">
             <div className="flex items-start justify-between gap-3">
               <p className="text-muted-foreground line-clamp-2 text-sm"><QuoteIcon className="mr-1 inline size-3.5" />{picked.text}</p>
               <Button variant="ghost" size="icon" className="size-7 shrink-0" onClick={close} aria-label="Close"><XIcon /></Button>
@@ -195,9 +277,11 @@ export function Page({ work, chapter, chapters, title, author, chapterTitle, par
             <div className="flex flex-wrap items-center gap-2">
               {picked.id ? null : <Button size="sm" disabled={pending || !picked.span} onClick={highlight}><HighlighterIcon />Highlight</Button>}
               <Button size="sm" variant="outline" onClick={copy}><CopyIcon />Copy quote</Button>
+              {lookupWord(picked.text) ? <Button size="sm" variant="outline" disabled={pending} onClick={define}><BookAIcon />Look up</Button> : null}
               {picked.id ? <Button size="sm" variant="ghost" disabled={pending} onClick={remove}><Trash2Icon />Remove highlight</Button> : null}
               {done ? <span className="text-muted-foreground flex items-center gap-1 text-xs"><CheckIcon className="size-3.5" />{done}</span> : null}
             </div>
+            {defined === "none" ? <p className="text-muted-foreground text-sm">Wiktionary has no English entry for that word.</p> : defined ? <Defined found={defined} /> : null}
             {kept ? (
               <p className="flex items-center gap-1.5 text-sm"><CheckIcon className="size-4" />Kept as a claim: {kept}. It is in Claims, cited to {title}.</p>
             ) : (
@@ -214,3 +298,43 @@ export function Page({ work, chapter, chapters, title, author, chapterTitle, par
   );
 }
 
+
+const OLD = /^(archaic|obsolete|dated|historical|poetic|literary)$/;
+
+function Senses({ definitions }: { definitions: Definition[] }) {
+  return (
+    <>
+      {definitions.slice(0, 4).map((d, k) => (
+        <div key={k}>
+          <p className="text-muted-foreground text-xs italic">{d.pos.toLowerCase()}</p>
+          <ol className="list-decimal space-y-1 pl-5">
+            {d.senses.slice(0, 5).map((s, j) => (
+              <li key={j}>
+                {s.old ? <span className="mr-1 rounded bg-amber-100 px-1 text-xs text-amber-900 dark:bg-amber-400/20 dark:text-amber-200">older meaning: {s.labels.filter((l) => OLD.test(l)).join(", ")}</span> : null}
+                {s.labels.some((l) => !OLD.test(l)) ? <span className="text-muted-foreground mr-1 text-xs">({s.labels.filter((l) => !OLD.test(l)).join(", ")})</span> : null}
+                {s.text}
+              </li>
+            ))}
+          </ol>
+        </div>
+      ))}
+    </>
+  );
+}
+
+/** A word's senses from Wiktionary, older meanings marked, and the word it is a form of when it is one. */
+function Defined({ found }: { found: { word: string; definitions: Definition[]; lemma?: { word: string; definitions: Definition[] } } }) {
+  return (
+    <div className="space-y-2 rounded-md border p-3 text-sm">
+      <p className="font-medium">{found.word}</p>
+      <Senses definitions={found.definitions} />
+      {found.lemma ? (
+        <>
+          <p className="pt-1 font-medium">{found.lemma.word}</p>
+          <Senses definitions={found.lemma.definitions} />
+        </>
+      ) : null}
+      <p className="text-muted-foreground text-xs">From <a className="underline underline-offset-2" href={`https://en.wiktionary.org/wiki/${encodeURIComponent(found.lemma?.word ?? found.word)}#English`} target="_blank" rel="noreferrer">Wiktionary</a>, CC BY-SA.</p>
+    </div>
+  );
+}

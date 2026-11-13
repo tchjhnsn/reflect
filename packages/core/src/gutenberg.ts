@@ -4,7 +4,8 @@
 /** A fetch that can read a body as text. */
 export type TextFetch = (url: string) => Promise<{ ok: boolean; status: number; text(): Promise<string> }>;
 
-export type Chapter = { title: string; paragraphs: string[] };
+/** A chapter of plain paragraphs. `notes` are the note marks in it: paragraph, character offset, and the note's id in the book's notes. */
+export type Chapter = { title: string; paragraphs: string[]; notes?: { p: number; c: number; id: string }[] };
 export type GutenbergBook = { id: string; chapters: Chapter[] };
 
 const HEADING = /^(chapter|book|part|letter|volume|act|canto|stave|section)\s+([ivxlcdm]+|\d+|the\s+\w+|[a-z]+(-[a-z]+)?)\b[.:]?(\s.{0,80})?$/i;
