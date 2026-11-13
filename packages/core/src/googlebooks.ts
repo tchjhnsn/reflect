@@ -12,17 +12,26 @@ const sameTitle = (a: string, b: string) => {
   return x.length > 0 && words(b).join(" ").startsWith(x);
 };
 
-/** One book's volume, found by ISBN, or else by title and first author with the title checked. */
+/**
+ * One book's volume, found by ISBN, or else by title and first author with the title checked. Google keeps
+ * ratings on some editions and not others, so when the volume found has none, the rating comes from the
+ * best-rated edition with the same title and author.
+ */
 export async function googleVolume(book: { title: string; authors?: readonly string[]; isbn?: string }, fetcher: Fetch, key: string | undefined): Promise<GoogleVolume | null> {
   if (!key) return null;
-  const q = book.isbn ? `isbn:${book.isbn.replace(/[^0-9X]/gi, "")}` : `intitle:${book.title}${book.authors?.[0] ? ` inauthor:${book.authors[0]}` : ""}`;
-  const r = await fetcher(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=3&printType=books&key=${encodeURIComponent(key)}`);
-  if (!r.ok) throw new Error(`Google Books answered ${r.status}`);
-  const items = ((await r.json()) as { items?: Item[] }).items ?? [];
-  const v = (book.isbn ? items[0] : items.find((i) => sameTitle(book.title, i.volumeInfo?.title ?? "")))?.volumeInfo;
+  const ask = async (q: string, n: number): Promise<Item[]> => {
+    const r = await fetcher(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=${n}&printType=books&key=${encodeURIComponent(key)}`);
+    if (!r.ok) throw new Error(`Google Books answered ${r.status}`);
+    return ((await r.json()) as { items?: Item[] }).items ?? [];
+  };
+  const byTitle = `intitle:${book.title}${book.authors?.[0] ? ` inauthor:${book.authors[0]}` : ""}`;
+  const isbnHit = book.isbn ? (await ask(`isbn:${book.isbn.replace(/[^0-9X]/gi, "")}`, 1))[0]?.volumeInfo : undefined;
+  const same = isbnHit?.averageRating ? [] : (await ask(byTitle, 10)).map((i) => i.volumeInfo).filter((v): v is NonNullable<Item["volumeInfo"]> => Boolean(v && sameTitle(book.title, v.title ?? "")));
+  const v = isbnHit ?? same[0];
   if (!v) return null;
+  const rated = [v, ...same].filter((x) => x.averageRating && x.ratingsCount).sort((a, b) => (b.ratingsCount ?? 0) - (a.ratingsCount ?? 0))[0];
   return {
-    rating: v.averageRating && v.ratingsCount ? { average: v.averageRating, count: v.ratingsCount } : null,
+    rating: rated ? { average: rated.averageRating!, count: rated.ratingsCount! } : null,
     description: v.description ? v.description.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 4000) : null,
     categories: (v.categories ?? []).slice(0, 5),
     link: v.infoLink?.startsWith("https://") ? v.infoLink : v.infoLink?.startsWith("http://") ? v.infoLink.replace("http://", "https://") : null,

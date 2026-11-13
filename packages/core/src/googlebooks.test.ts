@@ -26,4 +26,18 @@ describe("google books", () => {
     expect(v?.rating).toBeNull();
     expect(await googleVolume({ title: "The Republic" }, fake([{ volumeInfo: { title: "Something else" } }], []), "k")).toBeNull();
   });
+
+  it("takes the rating from the best-rated edition with the same title when the ISBN's edition has none", async () => {
+    const seen: string[] = [];
+    const f: Fetch = async (url) => {
+      seen.push(url);
+      const items = url.includes("isbn%3A")
+        ? [{ volumeInfo: { title: "Atomic Habits", infoLink: "https://books.google.com/a" } }]
+        : [{ volumeInfo: { title: "Atomic Habits", averageRating: 4, ratingsCount: 12 } }, { volumeInfo: { title: "Atomic Habits", averageRating: 4.5, ratingsCount: 300 } }, { volumeInfo: { title: "Other", averageRating: 5, ratingsCount: 9000 } }];
+      return { ok: true, status: 200, json: async () => ({ items }) };
+    };
+    const v = await googleVolume({ title: "Atomic Habits", authors: ["James Clear"], isbn: "9780735211292" }, f, "k");
+    expect(v).toMatchObject({ rating: { average: 4.5, count: 300 }, link: "https://books.google.com/a" });
+    expect(seen).toHaveLength(2);
+  });
 });
