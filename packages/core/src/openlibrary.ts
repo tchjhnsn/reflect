@@ -13,8 +13,17 @@ export type CatalogEntry = { work: string; title: string; authors: string[]; yea
 export const coverUrl = (e: Pick<CatalogEntry, "cover">, size: "S" | "M" | "L" = "M"): string | null => (e.cover ? `https://covers.openlibrary.org/b/id/${e.cover}-${size}.jpg` : null);
 
 const BASE = "https://openlibrary.org";
-const FIELDS = "key,title,author_name,first_publish_year,isbn,subject,lcc,cover_i,ratings_average,ratings_count";
-type Doc = { key?: string; title?: string; author_name?: string[]; first_publish_year?: number; isbn?: string[]; subject?: string[]; lcc?: string[]; cover_i?: number; ratings_average?: number; ratings_count?: number };
+/**
+ * The language Reflect lists books in: English for now. Lists keep works with an edition in it, and each work
+ * shows that edition's title and cover (a work's own title and cover are often another language's).
+ */
+export const LANGUAGE = { code: "eng", ui: "en", name: "English" } as const;
+const FIELDS = "key,title,author_name,first_publish_year,isbn,subject,lcc,cover_i,ratings_average,ratings_count,language,editions,editions.key,editions.title,editions.cover_i,editions.language";
+const LANG = `&lang=${LANGUAGE.ui}`;
+/** A search kept to works with an edition in Reflect's language. */
+const inLanguage = (q: string) => `(${q}) language:${LANGUAGE.code}`;
+type EditionDoc = { key?: string; title?: string; cover_i?: number; language?: string[] };
+type Doc = { key?: string; title?: string; author_name?: string[]; first_publish_year?: number; isbn?: string[]; subject?: string[]; lcc?: string[]; cover_i?: number; ratings_average?: number; ratings_count?: number; language?: string[]; editions?: { docs?: EditionDoc[] } };
 
 async function get(fetcher: Fetch, path: string): Promise<unknown> {
   const r = await fetcher(`${BASE}${path}`);
@@ -37,35 +46,60 @@ function topSubjects(subjects: readonly string[] | undefined, n = 15): string[] 
   return out;
 }
 
+const plain = (t: string) => t.toLowerCase().replace(/[^a-z0-9]/g, "");
+/** The edition in Reflect's language that a search picked for a work, when it has one. */
+const localEdition = (d: Doc): EditionDoc | undefined => d.editions?.docs?.find((e) => e.language?.includes(LANGUAGE.code));
+/** The work's title, unless the edition in Reflect's language is titled differently (a translation). */
+function titleOf(d: Doc): string {
+  const t = d.title ?? "";
+  const e = localEdition(d)?.title?.trim().replace(/\.$/, "");
+  return e && plain(e) !== plain(t) && !/^(the )?(harvard classics|works|collected works)\b/i.test(e) ? e : t;
+}
+function coverOf(d: Doc): number | undefined {
+  const c = localEdition(d)?.cover_i ?? d.cover_i;
+  return Number.isInteger(c) && c! > 0 ? c : undefined;
+}
+
 const fromDoc = (d: Doc, isbn?: string): CatalogEntry => ({
   work: (d.key ?? "").replace("/works/", ""),
-  title: d.title ?? "",
+  title: titleOf(d),
   authors: d.author_name ?? [],
   ...(d.first_publish_year ? { year: d.first_publish_year } : {}),
   ...(isbn ? { isbn } : d.isbn?.find((i) => i.length === 13) ? { isbn: d.isbn.find((i) => i.length === 13) } : {}),
   subjects: topSubjects(d.subject),
   contents: [],
   ...(d.lcc?.length ? { lcc: d.lcc.slice(0, 20) } : {}),
-  ...(Number.isInteger(d.cover_i) && d.cover_i! > 0 ? { cover: d.cover_i } : {}),
+  ...(coverOf(d) ? { cover: coverOf(d) } : {}),
   ...(d.ratings_count && d.ratings_average ? { rating: { average: Math.round(d.ratings_average * 100) / 100, count: d.ratings_count } } : {}),
 });
 
-/** Books whose title or author matches, best first. */
+/** Books whose title or author matches, best first, in Reflect's language. An ISBN search finds any language. */
 export async function searchBooks(query: string, fetcher: Fetch, limit = 5, page = 1): Promise<CatalogEntry[]> {
-  const body = (await get(fetcher, `/search.json?q=${encodeURIComponent(query)}&fields=${FIELDS}&limit=${limit}${page > 1 ? `&page=${page}` : ""}`)) as { docs?: Doc[] } | null;
+  const q = /^isbn:/i.test(query.trim()) ? query : inLanguage(query);
+  const body = (await get(fetcher, `/search.json?q=${encodeURIComponent(q)}&fields=${FIELDS}${LANG}&limit=${limit}${page > 1 ? `&page=${page}` : ""}`)) as { docs?: Doc[] } | null;
   return (body?.docs ?? []).filter((d) => d.key && d.title).map((d) => fromDoc(d));
 }
 
-/** What people are reading on Open Library this week. The trending list carries no call numbers; `workEntry` fills them in. */
+/**
+ * What people are reading on Open Library this week, kept to works with an edition in Reflect's language and
+ * shown by that edition. The trending list carries no call numbers; `workEntry` fills them in.
+ */
 export async function trendingBooks(fetcher: Fetch, limit = 24): Promise<CatalogEntry[]> {
-  const body = (await get(fetcher, `/trending/weekly.json?limit=${Math.min(Math.max(limit, 1), 50)}`)) as { works?: Doc[] } | null;
-  return (body?.works ?? []).filter((d) => d.key && d.title).map((d) => fromDoc(d));
+  const n = Math.min(Math.max(limit, 1), 50);
+  const body = (await get(fetcher, `/trending/weekly.json?limit=50`)) as { works?: Doc[] } | null;
+  const works = (body?.works ?? []).filter((d) => d.key && d.title && d.language?.includes(LANGUAGE.code)).slice(0, n);
+  if (!works.length) return [];
+  // The trending list gives each work's own title and cover; one search gets the edition in Reflect's language.
+  const keys = works.map((d) => `"${d.key}"`).join(" OR ");
+  const found = (await get(fetcher, `/search.json?q=${encodeURIComponent(`key:(${keys})`)}&fields=${FIELDS}${LANG}&limit=${works.length}`).catch(() => null)) as { docs?: Doc[] } | null;
+  const local = new Map((found?.docs ?? []).map((d) => [d.key, d]));
+  return works.map((d) => fromDoc(local.get(d.key) ?? d));
 }
 
 /** One work by its id (OL...W), with its subjects and call numbers. */
 export async function workEntry(work: string, fetcher: Fetch): Promise<CatalogEntry | null> {
   if (!/^OL\d+W$/.test(work)) return null;
-  const body = (await get(fetcher, `/search.json?q=${encodeURIComponent(`key:/works/${work}`)}&fields=${FIELDS}&limit=1`)) as { docs?: Doc[] } | null;
+  const body = (await get(fetcher, `/search.json?q=${encodeURIComponent(`key:/works/${work}`)}&fields=${FIELDS}${LANG}&limit=1`)) as { docs?: Doc[] } | null;
   const d = body?.docs?.[0];
   return d?.key && d.title ? fromDoc(d) : null;
 }
@@ -75,7 +109,7 @@ export async function browseClass(lccClass: string, fetcher: Fetch, opts: { page
   if (!/^[A-Z]$/.test(lccClass)) throw new Error("a class is one capital letter of the Library of Congress Classification");
   const limit = Math.min(Math.max(opts.limit ?? 24, 1), 50);
   const page = Math.max(opts.page ?? 1, 1);
-  const body = (await get(fetcher, `/search.json?q=${encodeURIComponent(`lcc:${lccClass}*`)}&sort=rating&fields=${FIELDS}&limit=${limit}&page=${page}`)) as { docs?: Doc[] } | null;
+  const body = (await get(fetcher, `/search.json?q=${encodeURIComponent(inLanguage(`lcc:${lccClass}*`))}&sort=rating&fields=${FIELDS}${LANG}&limit=${limit}&page=${page}`)) as { docs?: Doc[] } | null;
   return (body?.docs ?? []).filter((d) => d.key && d.title).map((d) => fromDoc(d));
 }
 
@@ -86,7 +120,7 @@ export async function browseClass(lccClass: string, fetcher: Fetch, opts: { page
 export async function browseQuery(query: string, fetcher: Fetch, opts: { page?: number; limit?: number; sort?: "rating" | "readinglog" } = {}): Promise<CatalogEntry[]> {
   const limit = Math.min(Math.max(opts.limit ?? 24, 1), 50);
   const page = Math.max(opts.page ?? 1, 1);
-  const body = (await get(fetcher, `/search.json?q=${encodeURIComponent(query)}&sort=${opts.sort ?? "rating"}&fields=${FIELDS}&limit=${limit}&page=${page}`)) as { docs?: Doc[] } | null;
+  const body = (await get(fetcher, `/search.json?q=${encodeURIComponent(inLanguage(query))}&sort=${opts.sort ?? "rating"}&fields=${FIELDS}${LANG}&limit=${limit}&page=${page}`)) as { docs?: Doc[] } | null;
   return (body?.docs ?? []).filter((d) => d.key && d.title).map((d) => fromDoc(d));
 }
 
@@ -99,7 +133,7 @@ export async function workDetails(work: string, fetcher: Fetch): Promise<WorkDet
   const [w, r, e] = await Promise.all([
     get(fetcher, `/works/${work}.json`) as Promise<{ description?: string | { value?: string }; subjects?: string[] } | null>,
     get(fetcher, `/works/${work}/ratings.json`).catch(() => null) as Promise<{ summary?: { average?: number; count?: number } } | null>,
-    get(fetcher, `/works/${work}/editions.json?limit=6`).catch(() => null) as Promise<{ size?: number; entries?: { title?: string; publish_date?: string; publishers?: string[]; isbn_13?: string[]; isbn_10?: string[]; languages?: { key?: string }[] }[] } | null>,
+    get(fetcher, `/works/${work}/editions.json?limit=30`).catch(() => null) as Promise<{ size?: number; entries?: { title?: string; publish_date?: string; publishers?: string[]; isbn_13?: string[]; isbn_10?: string[]; languages?: { key?: string }[] }[] } | null>,
   ]);
   if (!w) return null;
   const raw = typeof w.description === "string" ? w.description : w.description?.value ?? "";
@@ -117,7 +151,7 @@ export async function workDetails(work: string, fetcher: Fetch): Promise<WorkDet
         const isbn = x.isbn_13?.[0] ?? x.isbn_10?.[0];
         const language = x.languages?.[0]?.key?.replace("/languages/", "");
         return { title: x.title!, ...(year ? { year } : {}), ...(x.publishers?.[0] ? { publisher: x.publishers[0] } : {}), ...(isbn ? { isbn } : {}), ...(language ? { language } : {}) };
-      }),
+      }).sort((a, b) => Number(b.language === LANGUAGE.code) - Number(a.language === LANGUAGE.code)), // Reflect's language first
     },
   };
 }

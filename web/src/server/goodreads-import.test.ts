@@ -15,7 +15,7 @@ const CSV = `Book Id,Title,Author,Additional Authors,ISBN,ISBN13,Date Read,Exclu
 const fake: Fetch = async (url) => {
   const q = decodeURIComponent(new URL(url).searchParams.get("q") ?? "");
   const docs = q.startsWith("isbn:") ? [{ key: "/works/OL1W", title: "Meditations", author_name: ["Marcus Aurelius"], lcc: ["B-0580"], cover_i: 7 }]
-    : q.startsWith("The Republic") ? [{ key: "/works/OL2W", title: "The Republic", author_name: ["Plato"], lcc: ["JC-0071"] }]
+    : q.startsWith("(The Republic") ? [{ key: "/works/OL2W", title: "The Republic", author_name: ["Plato"], lcc: ["JC-0071"] }]
     : [{ key: "/works/OL3W", title: "Something else entirely" }];
   return { ok: true, status: 200, json: async () => ({ docs }) };
 };

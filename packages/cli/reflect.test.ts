@@ -245,7 +245,7 @@ describe("reflect CLI", () => {
     const out: string[] = [];
     await main(["learn", "find", "thinking", "in", "systems", "--dir", dir], (x) => out.push(x), fetcher);
     expect(out[0]).toBe("Thinking in systems, Donella H. Meadows, Diana Wright (2008)  isbn 9781603580557");
-    expect(asked[0]).toContain("q=thinking%20in%20systems");
+    expect(asked[0]).toContain("q=(thinking%20in%20systems)%20language%3Aeng");
 
     out.length = 0;
     await main(["learn", "book", "Thinking in Systems", "--isbn", "9781603580557", "--lookup", "--dir", dir], (x) => out.push(x), fetcher);
