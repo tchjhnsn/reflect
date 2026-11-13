@@ -7,7 +7,7 @@ import { BOOKS, cleanIsbn, slugOf } from "./learning.ts";
 import { readRecord, writeRecord } from "./record-io.ts";
 
 export type Fetch = (url: string) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
-export type CatalogEntry = { work: string; title: string; authors: string[]; year?: number; isbn?: string; subjects: string[]; contents: string[]; lcc?: string[]; /** Open Library cover id. */ cover?: number; /** Open Library readers' star rating, 1 to 5, when shown in a list. */ rating?: { average: number; count: number } };
+export type CatalogEntry = { work: string; title: string; authors: string[]; /** Open Library author ids (OL...A), in the order of `authors`. */ authorKeys?: string[]; year?: number; isbn?: string; subjects: string[]; contents: string[]; lcc?: string[]; /** Open Library cover id. */ cover?: number; /** Open Library readers' star rating, 1 to 5, when shown in a list. */ rating?: { average: number; count: number } };
 
 /** The cover image for an entry, from Open Library's covers service, or null when it has none. */
 export const coverUrl = (e: Pick<CatalogEntry, "cover">, size: "S" | "M" | "L" = "M"): string | null => (e.cover ? `https://covers.openlibrary.org/b/id/${e.cover}-${size}.jpg` : null);
@@ -18,12 +18,12 @@ const BASE = "https://openlibrary.org";
  * shows that edition's title and cover (a work's own title and cover are often another language's).
  */
 export const LANGUAGE = { code: "eng", ui: "en", name: "English" } as const;
-const FIELDS = "key,title,author_name,first_publish_year,isbn,subject,lcc,cover_i,ratings_average,ratings_count,language,editions,editions.key,editions.title,editions.cover_i,editions.language";
+const FIELDS = "key,title,author_name,author_key,first_publish_year,isbn,subject,lcc,cover_i,ratings_average,ratings_count,language,editions,editions.key,editions.title,editions.cover_i,editions.language";
 const LANG = `&lang=${LANGUAGE.ui}`;
 /** A search kept to works with an edition in Reflect's language. */
 const inLanguage = (q: string) => `(${q}) language:${LANGUAGE.code}`;
 type EditionDoc = { key?: string; title?: string; cover_i?: number; language?: string[] };
-type Doc = { key?: string; title?: string; author_name?: string[]; first_publish_year?: number; isbn?: string[]; subject?: string[]; lcc?: string[]; cover_i?: number; ratings_average?: number; ratings_count?: number; language?: string[]; editions?: { docs?: EditionDoc[] } };
+type Doc = { key?: string; title?: string; author_name?: string[]; author_key?: string[]; first_publish_year?: number; isbn?: string[]; subject?: string[]; lcc?: string[]; cover_i?: number; ratings_average?: number; ratings_count?: number; language?: string[]; editions?: { docs?: EditionDoc[] } };
 
 async function get(fetcher: Fetch, path: string): Promise<unknown> {
   const r = await fetcher(`${BASE}${path}`);
@@ -64,6 +64,7 @@ const fromDoc = (d: Doc, isbn?: string): CatalogEntry => ({
   work: (d.key ?? "").replace("/works/", ""),
   title: titleOf(d),
   authors: d.author_name ?? [],
+  ...(d.author_key?.length ? { authorKeys: d.author_key.filter((k) => AUTHOR_ID.test(k)).slice(0, 10) } : {}),
   ...(d.first_publish_year ? { year: d.first_publish_year } : {}),
   ...(isbn ? { isbn } : d.isbn?.find((i) => i.length === 13) ? { isbn: d.isbn.find((i) => i.length === 13) } : {}),
   subjects: topSubjects(d.subject),
@@ -73,10 +74,21 @@ const fromDoc = (d: Doc, isbn?: string): CatalogEntry => ({
   ...(d.ratings_count && d.ratings_average ? { rating: { average: Math.round(d.ratings_average * 100) / 100, count: d.ratings_count } } : {}),
 });
 
-/** Books whose title or author matches, best first, in Reflect's language. An ISBN search finds any language. */
-export async function searchBooks(query: string, fetcher: Fetch, limit = 5, page = 1): Promise<CatalogEntry[]> {
+/** An Open Library author id. */
+export const AUTHOR_ID = /^OL\d+A$/;
+
+/** The orders a list of books can be in: best rated, most read (most readers have logged it), newest, oldest. */
+export const SORTS = { rating: "Best rated", readinglog: "Most read", new: "Newest", old: "Oldest" } as const;
+export type Sort = keyof typeof SORTS;
+export const isSort = (s: unknown): s is Sort => typeof s === "string" && Object.hasOwn(SORTS, s);
+
+/**
+ * Books whose title or author matches, best match first unless a sort is given, in Reflect's language. An
+ * ISBN search finds any language.
+ */
+export async function searchBooks(query: string, fetcher: Fetch, limit = 5, page = 1, sort?: Sort): Promise<CatalogEntry[]> {
   const q = /^isbn:/i.test(query.trim()) ? query : inLanguage(query);
-  const body = (await get(fetcher, `/search.json?q=${encodeURIComponent(q)}&fields=${FIELDS}${LANG}&limit=${limit}${page > 1 ? `&page=${page}` : ""}`)) as { docs?: Doc[] } | null;
+  const body = (await get(fetcher, `/search.json?q=${encodeURIComponent(q)}${sort ? `&sort=${sort}` : ""}&fields=${FIELDS}${LANG}&limit=${limit}${page > 1 ? `&page=${page}` : ""}`)) as { docs?: Doc[] } | null;
   return (body?.docs ?? []).filter((d) => d.key && d.title).map((d) => fromDoc(d));
 }
 
@@ -117,11 +129,56 @@ export async function browseClass(lccClass: string, fetcher: Fetch, opts: { page
  * Books matching an Open Library search query (as `themaQuery` writes them): best rated first, or, with
  * `sort: "readinglog"`, the ones most readers have logged, which keeps a narrow subject's list to known books.
  */
-export async function browseQuery(query: string, fetcher: Fetch, opts: { page?: number; limit?: number; sort?: "rating" | "readinglog" } = {}): Promise<CatalogEntry[]> {
-  const limit = Math.min(Math.max(opts.limit ?? 24, 1), 50);
+export async function browseQuery(query: string, fetcher: Fetch, opts: { page?: number; limit?: number; sort?: Sort } = {}): Promise<CatalogEntry[]> {
+  const limit = Math.min(Math.max(opts.limit ?? 24, 1), 120);
   const page = Math.max(opts.page ?? 1, 1);
   const body = (await get(fetcher, `/search.json?q=${encodeURIComponent(inLanguage(query))}&sort=${opts.sort ?? "rating"}&fields=${FIELDS}${LANG}&limit=${limit}&page=${page}`)) as { docs?: Doc[] } | null;
   return (body?.docs ?? []).filter((d) => d.key && d.title).map((d) => fromDoc(d));
+}
+
+export type Author = { id: string; name: string; birth?: string; death?: string; bio: string | null; photo: number | null; wikipedia: string | null };
+export type AuthorHit = { id: string; name: string; topWork?: string; works: number; birth?: string; death?: string };
+
+/** An author's photo from Open Library's covers service, or null when they have none. */
+export const authorPhotoUrl = (photo: number | null, size: "S" | "M" | "L" = "M"): string | null => (photo ? `https://covers.openlibrary.org/a/id/${photo}-${size}.jpg` : null);
+
+/** One author by id (OL...A): name, life dates, a short biography, a photo and their Wikipedia article. */
+export async function authorDetails(id: string, fetcher: Fetch): Promise<Author | null> {
+  if (!AUTHOR_ID.test(id)) return null;
+  const a = (await get(fetcher, `/authors/${id}.json`)) as { name?: string; personal_name?: string; birth_date?: string; death_date?: string; bio?: string | { value?: string }; photos?: number[]; links?: { url?: string; title?: string }[]; remote_ids?: { wikidata?: string } } | null;
+  if (!a || !(a.name ?? a.personal_name)) return null;
+  const raw = typeof a.bio === "string" ? a.bio : a.bio?.value ?? "";
+  const bio = raw.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/\r/g, "").split(/\n-{3,}\n|\n\(\[source\]|\n\(Source/)[0]!.trim().slice(0, 3000);
+  const wiki = a.links?.find((l) => /^https?:\/\/en\.wikipedia\.org\//.test(l.url ?? ""))?.url?.replace(/^http:/, "https:") ?? null;
+  return {
+    id,
+    name: (a.name ?? a.personal_name)!.trim(),
+    ...(a.birth_date ? { birth: a.birth_date } : {}),
+    ...(a.death_date ? { death: a.death_date } : {}),
+    bio: bio || null,
+    photo: a.photos?.find((p) => Number.isInteger(p) && p > 0) ?? null,
+    wikipedia: wiki,
+  };
+}
+
+/** An author's books in Reflect's language, best rated first unless another sort is given. */
+export async function authorWorks(id: string, fetcher: Fetch, opts: { page?: number; limit?: number; sort?: Sort } = {}): Promise<CatalogEntry[]> {
+  if (!AUTHOR_ID.test(id)) return [];
+  return browseQuery(`author_key:${id}`, fetcher, opts);
+}
+
+/**
+ * Authors whose name matches, most works first among the ones the catalog ranks well. An author with one
+ * work is left out unless their name is the whole query, which drops most misspelled duplicates.
+ */
+export async function searchAuthors(query: string, fetcher: Fetch, limit = 4): Promise<AuthorHit[]> {
+  const q = query.trim();
+  if (!q || /^isbn:/i.test(q)) return [];
+  const body = (await get(fetcher, `/search/authors.json?q=${encodeURIComponent(q)}&fields=key,name,top_work,work_count,birth_date,death_date&limit=10`)) as { docs?: { key?: string; name?: string; top_work?: string; work_count?: number; birth_date?: string; death_date?: string }[] } | null;
+  return (body?.docs ?? [])
+    .filter((d) => d.key && AUTHOR_ID.test(d.key) && d.name && ((d.work_count ?? 0) > 1 || plain(d.name) === plain(q)))
+    .slice(0, limit)
+    .map((d) => ({ id: d.key!, name: d.name!, ...(d.top_work ? { topWork: d.top_work } : {}), works: d.work_count ?? 0, ...(d.birth_date ? { birth: d.birth_date } : {}), ...(d.death_date ? { death: d.death_date } : {}) }));
 }
 
 export type Edition = { title: string; year?: number; publisher?: string; isbn?: string; language?: string };
@@ -194,11 +251,13 @@ export function cleanEntry(raw: unknown): CatalogEntry | null {
   if (!work || !title) return null;
   const year = Number(e.year);
   const lcc = strs(e.lcc, 20, 60);
+  const authorKeys = strs(e.authorKeys, 10, 20).filter((k) => AUTHOR_ID.test(k));
   const cover = Number(e.cover);
   return {
     work,
     title,
     authors: strs(e.authors, 10, 200),
+    ...(authorKeys.length ? { authorKeys } : {}),
     ...(Number.isInteger(year) && year > 0 ? { year } : {}),
     ...(typeof e.isbn === "string" && e.isbn.trim() ? { isbn: e.isbn.trim().slice(0, 20) } : {}),
     subjects: strs(e.subjects, 15, 200),
