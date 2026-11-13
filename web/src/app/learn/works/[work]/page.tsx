@@ -14,6 +14,7 @@ import { requireUser } from "@/server/session";
 import { learnView } from "@/server/learn-store";
 import { listClaims, type ClaimOut } from "@/server/claims-store";
 import { listIdeas, type IdeaOut } from "@/server/ideas-store";
+import { hardcoverFor } from "@/server/hardcover";
 import { ideasNaming } from "@reflect/core/ideas";
 import { LearnHeader } from "../../header";
 import { AddBook } from "../../add-book";
@@ -62,13 +63,16 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
   const title = entry?.title ?? mine?.title ?? "Untitled";
   const authors = entry?.authors ?? mine?.authors ?? [];
   const authorKeys = entry?.authorKeys ?? mine?.catalog?.authorKeys ?? [];
-  const [google, byAuthor, audio, like, text] = await Promise.all([
+  const isbns = [...(entry?.isbn ? [entry.isbn] : []), ...(details?.editions.first.map((e) => e.isbn).filter((x): x is string => Boolean(x)) ?? [])];
+  const [google, byAuthor, audio, like, text, ranked] = await Promise.all([
     googleVolume({ title, authors, ...(entry?.isbn ? { isbn: entry.isbn } : {}) }, cached, process.env.GOOGLE_BOOKS_API_KEY).catch(() => null),
     authorKeys[0] ? authorWorks(authorKeys[0], cached, { limit: 7, sort: "rating" }).then((b) => b.filter((x) => x.work !== work).slice(0, 6)).catch((): CatalogEntry[] => []) : Promise.resolve([] as CatalogEntry[]),
     audiobookFor({ title, authors, ...(entry?.year ? { year: entry.year } : {}) }, access),
     entry ? booksLike({ work, subjects: details?.subjects.length ? details.subjects : entry.subjects }, cached).catch((): CatalogEntry[] => []) : Promise.resolve([] as CatalogEntry[]),
     access?.access === "public" || access?.gutenberg.length || access?.standardEbooks.length || (entry?.year ?? 9999) < 1930 ? textSource({ title, authors }, access) : Promise.resolve(null),
+    hardcoverFor({ title, authors, isbns }).catch((): Awaited<ReturnType<typeof hardcoverFor>> => ({ book: null })),
   ]);
+  const hc = ranked.book?.editions.length ? ranked.book : null;
   // Without a text in Reflect: a scan at the Internet Archive, or a loan from Open Library, off the page.
   const links: ReadLink[] = text ? [] : [
     ...(access?.access === "public" && access.archive ? [{ name: "Scanned book at the Internet Archive", href: `https://archive.org/details/${access.archive}` }] : []),
@@ -162,6 +166,24 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
               </ul>
             </section>
           ) : null}
+          {hc ? (
+            <section className="space-y-2">
+              <Label>Most read editions on Hardcover</Label>
+              <ol className="divide-y rounded-md border text-sm">
+                {hc.editions.slice(0, 8).map((e, i) => (
+                  <li key={e.id} className="flex items-start gap-3 px-3 py-2">
+                    <span className="text-muted-foreground w-5 pt-0.5 text-right text-xs tabular-nums">{i + 1}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate">{e.title}</span>
+                      <span className="text-muted-foreground block truncate text-xs">{[e.translators.length ? `Translated by ${e.translators.join(", ")}` : null, e.publisher, e.year, e.pages ? `${e.pages} pages` : null, e.format, e.language && e.language !== "English" ? e.language : null].filter(Boolean).join(" · ")}</span>
+                    </span>
+                    <span className="text-muted-foreground shrink-0 text-right text-xs tabular-nums">{e.readers.toLocaleString("en-US")} {e.readers === 1 ? "reader" : "readers"}{e.rating ? <><br />★ {e.rating.toFixed(2)}</> : null}</span>
+                  </li>
+                ))}
+              </ol>
+              <p className="text-muted-foreground text-xs">Hardcover readers and average Hardcover ratings{hc.rating ? ` (the book: ★ ${hc.rating.toFixed(2)} from ${hc.ratings.toLocaleString("en-US")} ratings)` : ""}, from <a href={`https://hardcover.app/books/${hc.slug}`} target="_blank" rel="noreferrer" className="underline underline-offset-2">Hardcover</a>.</p>
+            </section>
+          ) : ranked.error ? <span hidden data-hardcover-error={ranked.error} /> : null}
           {mine || fromIt.length || related.length || bearing.length ? (
             <Card className="gap-3 py-5">
               <CardHeader className="px-5"><CardTitle className="text-sm">Claims and ideas from this book</CardTitle></CardHeader>
