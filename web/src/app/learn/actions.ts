@@ -8,6 +8,7 @@ import { requireUser } from "@/server/session";
 import { addBook, keepPlace, setBookStatus, type BookPlace } from "@/server/learn-store";
 import { keepClaim, setStance } from "@/server/claims-store";
 import { addExcerpt, removeExcerpt, type Anchor } from "@/server/excerpt-store";
+import { definitionsOf, lookupWord, type Definition } from "@reflect/core/wiktionary";
 
 const openLibrary = (url: string) => fetch(url, { headers: { "user-agent": "reflect-app" }, cache: "no-store" });
 const status = (v: FormDataEntryValue | null): BookStatus => ((BOOK_STATUS as readonly string[]).includes(String(v)) ? (String(v) as BookStatus) : "want");
@@ -92,4 +93,30 @@ export async function removeExcerptAction(id: string, work: string): Promise<voi
   const user = await requireUser();
   await removeExcerpt(user.id, String(id));
   revalidatePath(`/learn/works/${String(work)}`);
+}
+
+const wiktionary = (word: string) => fetch(`https://en.wiktionary.org/w/index.php?title=${encodeURIComponent(word)}&action=raw`, { headers: { "user-agent": "reflect-app" }, next: { revalidate: 604800 } });
+
+/**
+ * A word looked up while reading, from Wiktionary: its English senses with their labels, the word as written
+ * first and then in lower case; a word that is only a form of another ("acknowledged") also brings that word's senses.
+ */
+export async function defineAction(selection: string): Promise<{ word: string; definitions: Definition[]; lemma?: { word: string; definitions: Definition[] } } | null> {
+  await requireUser();
+  const word = lookupWord(selection);
+  if (!word) return null;
+  const look = async (w: string) => {
+    const r = await wiktionary(w).catch(() => null);
+    return r?.ok ? definitionsOf(await r.text()) : [];
+  };
+  let found = word;
+  let defs = await look(word);
+  if (!defs.length && word !== word.toLowerCase()) {
+    found = word.toLowerCase();
+    defs = await look(found);
+  }
+  if (!defs.length) return null;
+  const forms = defs.flatMap((d) => d.senses).filter((s) => s.formOf).map((s) => s.formOf!);
+  const lemma = forms[0] && forms[0] !== found ? { word: forms[0], definitions: await look(forms[0]) } : null;
+  return { word: found, definitions: defs, ...(lemma?.definitions.length ? { lemma } : {}) };
 }

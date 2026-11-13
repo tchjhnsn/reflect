@@ -5,7 +5,8 @@ import { gutenbergId } from "./free";
 
 /** Where a public-domain book's text comes from: Standard Ebooks (proofread and typeset) or Project Gutenberg. */
 export type TextSource = { kind: "standard"; id: string } | { kind: "gutenberg"; id: string };
-export type BookText = { source: TextSource; chapters: Chapter[]; credit: { name: string; href: string } };
+/** A book's text: its chapters, its notes by id (Standard Ebooks endnotes; none for Gutenberg), and whom it comes from. */
+export type BookText = { source: TextSource; chapters: Chapter[]; notes: Record<string, string>; credit: { name: string; href: string } };
 
 const cached = (url: string) => fetch(url, { headers: { "user-agent": "reflect-app" }, next: { revalidate: 86400 } });
 
@@ -24,9 +25,9 @@ export async function textSource(book: { title: string; authors: readonly string
 export async function readText(source: TextSource, fallback?: TextSource | null): Promise<BookText | null> {
   if (source.kind === "standard") {
     const b = await standardBook(source.id, cached).catch(() => null);
-    if (b) return { source, chapters: b.chapters, credit: { name: "Standard Ebooks", href: `https://standardebooks.org/ebooks/${source.id}` } };
+    if (b) return { source, chapters: b.chapters, notes: b.notes, credit: { name: "Standard Ebooks", href: `https://standardebooks.org/ebooks/${source.id}` } };
     return fallback && fallback.kind !== "standard" ? readText(fallback) : null;
   }
   const b = await gutenbergBook(source.id, cached).catch(() => null);
-  return b ? { source, chapters: b.chapters, credit: { name: "Project Gutenberg", href: `https://www.gutenberg.org/ebooks/${source.id}` } } : null;
+  return b ? { source, chapters: b.chapters, notes: {}, credit: { name: "Project Gutenberg", href: `https://www.gutenberg.org/ebooks/${source.id}` } } : null;
 }

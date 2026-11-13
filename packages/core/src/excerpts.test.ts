@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { citeQuote, locate, runsOf, spanText } from "./excerpts.ts";
+import { citeQuote, cutRuns, locate, runsOf, spanText } from "./excerpts.ts";
 
 const ps = ["It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.", "However little known the feelings or views of such a man may be."];
 
@@ -28,5 +28,11 @@ describe("highlights", () => {
 
   it("copies a quote with who wrote it and where", () => {
     expect(citeQuote("  It is a truth ", { author: "Jane Austen", title: "Pride and Prejudice", place: "Chapter I" })).toBe("“It is a truth” — Jane Austen, Pride and Prejudice, Chapter I");
+  });
+
+  it("cuts runs where a note mark sits, keeping each run's offset", () => {
+    const runs = [{ text: "It is a ", id: null }, { text: "truth", id: "a" }];
+    expect(cutRuns(runs, [10, 0, 13, 10])).toEqual([{ text: "It is a ", id: null, at: 0 }, { text: "tr", id: "a", at: 8 }, { text: "uth", id: "a", at: 10 }]);
+    expect(cutRuns(runs, [8]).map((r) => r.at)).toEqual([0, 8]);
   });
 });
