@@ -54,6 +54,7 @@ export default async function HighlightsPage({ searchParams }: { searchParams: P
           <Input name="q" defaultValue={q} placeholder="Search your highlights" aria-label="Search your highlights" className="h-9" />
           <Button type="submit" variant="outline" size="sm" className="h-9" aria-label="Search"><SearchIcon /></Button>
         </form>
+        <p className="text-muted-foreground mt-2 text-xs"><Link href={`/learn/passages${q ? `?q=${encodeURIComponent(q)}` : ""}`} className="underline underline-offset-2">Search inside the books themselves</Link>, not only your highlights.</p>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
           <Link href={href("")} className={cn("rounded-full border px-3 py-1", !isHighlightColor(color) && "bg-muted")}>All colours</Link>
           {HIGHLIGHT_COLORS.map((c) => (

@@ -58,9 +58,53 @@ export const LISTS: readonly BookList[] = [
       { title: "The Song of Roland", author: "" },
     ],
   },
+  /**
+   * The Last Days of Socrates: the four dialogues of Socrates' trial and death, in the order of the events they tell
+   * (the order of Hugh Tredennick's Penguin translation, 1954, under that title). Plato wrote them; they are in the
+   * public domain in Benjamin Jowett's translation.
+   */
+  {
+    id: "last-days-of-socrates",
+    name: "The Last Days of Socrates",
+    about: "Plato's four dialogues of Socrates' trial and death, read in the order of the events: on his way to the court, his defence, in prison, and his last day.",
+    source: "Plato, Euthyphro, Apology, Crito, Phaedo; read together as The Last Days of Socrates (tr. Hugh Tredennick, Penguin, 1954)",
+    books: [
+      { title: "Euthyphro", author: "Plato" },
+      { title: "Apology", author: "Plato" },
+      { title: "Crito", author: "Plato" },
+      { title: "Phaedo", author: "Plato" },
+    ],
+  },
 ];
+
+/**
+ * Where a person is on a list read in order: each book's status (from their shelves, or null when not there), how
+ * many are read, and the first book not yet read.
+ */
+export function pathProgress<S extends string>(statuses: readonly (S | null)[]): { read: number; next: number | null } {
+  const read = statuses.filter((s) => s === "read").length;
+  const i = statuses.findIndex((s) => s !== "read");
+  return { read, next: i < 0 ? null : i };
+}
 
 export const listById = (id: string): BookList | undefined => LISTS.find((l) => l.id === id);
 
 /** The open library search that finds one book of a list: its title, and its author when the list names one. */
+/**
+ * Which search result is the list's book itself. A title search also finds collections that hold it ("Euthyphro,
+ * Apology, Crito"), often ranked first; the result whose title is the book's own title, give or take an article or
+ * the author's name ("Plato's Phaedo", "Platonis Crito"), wins, then the first that is not a collection, then the
+ * first result.
+ */
+export function bestListMatch<T extends { title: string }>(b: ListBook, results: T[]): T | null {
+  const author = b.author.toLowerCase().split(/\s+/).filter(Boolean);
+  const skip = new Set(["the", "a", "an", "of", ...author, ...author.flatMap((w) => [`${w}s`, `${w}'s`, `${w}nis`, `${w.replace(/o$/, "")}onis`])]);
+  const words = (t: string) => t.toLowerCase().replace(/[’']s\b/g, "s").replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/).filter((w) => w && !skip.has(w));
+  const want = words(b.title).join(" ");
+  const exact = results.find((r) => words(r.title).join(" ") === want);
+  if (exact) return exact;
+  const single = results.find((r) => !/[,;&/]| and /i.test(r.title) && words(r.title).join(" ").includes(want));
+  return single ?? results[0] ?? null;
+}
+
 export const listBookQuery = (b: ListBook): string => `title:"${b.title.replace(/"/g, "")}"${b.author ? ` author:"${b.author.replace(/"/g, "")}"` : ""}`;

@@ -35,17 +35,84 @@ export function RowsLoading({ n = 2 }: { n?: number }) {
   );
 }
 
-/** More rows of For you as the person scrolls near the end, three at a time, until every row is shown. */
+type Saved = { rows: Row[]; mine: [string, string][]; next: number | null; y: number };
+// Leaving by a link: the place is kept as it was at the click, before the page shrinks under the next one and moves it.
+let leftAt = 0;
+const keyOf = () => `reflect:rows:${window.location.pathname}${window.location.search}`;
+
+/**
+ * More rows of For you as the person scrolls near the end, three at a time, until every row is shown. The rows
+ * loaded and the place on the page are kept for this tab, so coming back from a book shows them where they were.
+ */
 export function MoreRows({ from }: { from: number }) {
   const [rows, setRows] = useState<Row[]>([]);
   const [mine, setMine] = useState<Map<string, string>>(new Map());
   const [next, setNext] = useState<number | null>(from);
   const [busy, setBusy] = useState(false);
+  const [ready, setReady] = useState(false);
   const end = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    let saved: Saved | null = null;
+    try {
+      saved = JSON.parse(window.sessionStorage.getItem(keyOf()) ?? "null") as Saved | null;
+    } catch {
+      saved = null;
+    }
+    if (saved && Array.isArray(saved.rows)) {
+      setRows(saved.rows);
+      setMine(new Map(saved.mine));
+      setNext(saved.next);
+      const y = saved.y;
+      if (y) {
+        // The rows above may still be arriving: keep trying for a moment until the page is long enough to reach y.
+        let tries = 0;
+        const go = () => {
+          window.scrollTo(0, y);
+          if (Math.abs(window.scrollY - y) > 4 && ++tries < 30) setTimeout(go, 100);
+          else setReady(true);
+        };
+        requestAnimationFrame(go);
+        return;
+      }
+    }
+    setReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!ready) return;
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const save = () => {
+      if (Date.now() - leftAt < 3000) return;
+      try {
+        window.sessionStorage.setItem(keyOf(), JSON.stringify({ rows, mine: [...mine], next, y: window.scrollY } satisfies Saved));
+      } catch {
+        // storage full or blocked: coming back starts from the top
+      }
+    };
+    const onScroll = () => {
+      clearTimeout(t);
+      t = setTimeout(save, 200);
+    };
+    const onClick = (e: MouseEvent) => {
+      if (!(e.target instanceof Element) || !e.target.closest("a[href]")) return;
+      clearTimeout(t);
+      save();
+      leftAt = Date.now();
+    };
+    save();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    document.addEventListener("click", onClick, true);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("scroll", onScroll);
+      document.removeEventListener("click", onClick, true);
+    };
+  }, [ready, rows, mine, next]);
+
+  useEffect(() => {
     const el = end.current;
-    if (!el || next === null || busy) return;
+    if (!el || !ready || next === null || busy) return;
     const io = new IntersectionObserver((seen) => {
       if (!seen.some((s) => s.isIntersecting)) return;
       io.disconnect();
@@ -61,7 +128,7 @@ export function MoreRows({ from }: { from: number }) {
     }, { rootMargin: "800px 0px" });
     io.observe(el);
     return () => io.disconnect();
-  }, [next, busy]);
+  }, [next, busy, ready]);
 
   return (
     <>

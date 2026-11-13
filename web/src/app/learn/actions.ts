@@ -12,6 +12,9 @@ import { importKindle, type KindleReport } from "@/server/kindle-import";
 import { publishQuote, unpublishQuote } from "@/server/published-store";
 import { importWork } from "@/server/work-store";
 import { excerptsMarkdown, isHighlightColor } from "@reflect/core/excerpts";
+import { bestListMatch, listBookQuery, listById } from "@reflect/core/lists";
+import { searchBooks } from "@reflect/core/openlibrary";
+import { learnView } from "@/server/learn-store";
 import { highlightBooks } from "@/server/highlights";
 import { definitionsOf, lookupWord, type Definition } from "@reflect/core/wiktionary";
 
@@ -191,4 +194,28 @@ export async function unpublishQuoteAction(id: string): Promise<void> {
   const user = await requireUser();
   await unpublishQuote(user.id, String(id));
   revalidatePath("/learn/highlights");
+}
+
+/**
+ * Put a list's books that are not on the person's shelves on Want to read, in the list's order, after the books
+ * already there. Returns how many were added.
+ */
+export async function followListAction(id: string): Promise<number> {
+  const user = await requireUser();
+  const list = listById(String(id));
+  if (!list) throw new Error("no such list");
+  const found = await Promise.all(list.books.map((b) => searchBooks(listBookQuery(b), openLibrary, 6).then((r) => bestListMatch(b, r)).catch(() => null)));
+  const view = await learnView(user.id);
+  const have = new Set(view.books.map((b) => b.catalog?.work).filter(Boolean));
+  const added: string[] = [];
+  for (const b of found) {
+    if (!b || have.has(b.work)) continue;
+    have.add(b.work);
+    added.push(await addBook(user.id, { title: b.title, authors: b.authors, status: "want", subjects: [], catalog: b }));
+  }
+  const before = view.books.filter((b) => b.status === "want").sort((a, b) => (a.wantRank ?? 1e9) - (b.wantRank ?? 1e9)).map((b) => b.id);
+  await rankWant(user.id, [...before, ...added]);
+  revalidatePath("/learn/reading");
+  revalidatePath(`/learn/lists/${list.id}`);
+  return added.length;
 }
