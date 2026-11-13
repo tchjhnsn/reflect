@@ -3,7 +3,7 @@
 import type { Spec, UIElement } from "@json-render/core";
 import type { Holder } from "@reflect/core/claims";
 import type { CatalogEntry } from "@reflect/core/openlibrary";
-import { LCC_CLASSES, mainClass } from "@reflect/core/shelves";
+import { categoryOf, themaCategory } from "@reflect/core/thema";
 
 export type Piece =
   | { kind: "shelves"; shelves: { id: string; name: string; books: string[]; subjects: string[] }[] }
@@ -13,9 +13,9 @@ export type Piece =
   | { kind: "note"; text: string };
 
 const holderText = (hs: readonly Holder[]) => hs.map((h) => (h.citation ? `${h.name} (${h.citation})` : h.name)).join("; ");
-const shelfName = (lcc: readonly string[] | undefined) => {
-  const c = mainClass(lcc);
-  return c ? `${c} ${LCC_CLASSES.find((x) => x.id === c)?.name ?? ""}`.trim() : "not yet shelved";
+const shelfName = (e: Pick<CatalogEntry, "lcc" | "subjects">) => {
+  const c = categoryOf(e);
+  return c ? themaCategory(c)?.short ?? c : "not yet placed";
 };
 
 /** One spec for the cards of one answer, or null when there is nothing to show. */
@@ -43,7 +43,7 @@ export function buildSpec(pieces: readonly Piece[]): Spec | null {
       for (const b of p.books) {
         add({
           type: "LibraryBook",
-          props: { title: b.title, by: b.authors.join(", ") || "unknown author", shelf: shelfName(b.lcc), onShelves: p.kept.has(b.work), entry: JSON.stringify(b) },
+          props: { title: b.title, by: b.authors.join(", ") || "unknown author", shelf: shelfName(b), onShelves: p.kept.has(b.work), entry: JSON.stringify(b) },
         });
       }
     } else {

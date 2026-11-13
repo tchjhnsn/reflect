@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { XIcon } from "lucide-react";
 import { STANCES } from "@reflect/core/claims";
 import { coverUrl } from "@reflect/core/openlibrary";
+import { categoryOf, showCall, themaCategory } from "@reflect/core/thema";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,12 +34,12 @@ const TONE: Record<ShelfTone, string> = { known: "fill-foreground", learning: "f
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
 const Note = ({ children }: { children: ReactNode }) => <p className="text-muted-foreground text-sm">{children}</p>;
 
-/** Learn: your shelves by Library of Congress class, the whole library, and your claims. */
+/** Learn: your shelves by Thema section, and your claims. Browsing the library is its own page. */
 export default async function LearnPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const user = await requireUser();
   const sp = await searchParams;
   // Browsing moved to its own page (/learn/browse); old links still land there.
-  if (one(sp.tab) === "library") redirect(`/learn/browse${one(sp.q) ? `?q=${encodeURIComponent(one(sp.q))}` : one(sp.class) ? `?class=${encodeURIComponent(one(sp.class))}` : ""}`);
+  if (one(sp.tab) === "library") redirect(`/learn/browse${one(sp.q) ? `?q=${encodeURIComponent(one(sp.q))}` : ""}`);
   const tab: Tab = one(sp.tab) === "claims" ? "claims" : "shelves";
   const view = await learnView(user.id);
   return (
@@ -53,7 +54,7 @@ export default async function LearnPage({ searchParams }: { searchParams: Promis
           <span>■ Book</span>
           <span>● Subject</span>
           <span>Dark = known · grey = learning · light = registered</span>
-          <span>Library of Congress Classification</span>
+          <span>Thema subject categories</span>
         </footer>
       ) : null}
     </main>
@@ -71,7 +72,7 @@ function Shelves({ view, all, open }: { view: LearnView; all: boolean; open: str
   for (const b of view.books) for (const s of b.subjects) subjectBooks.set(s.id, [...(subjectBooks.get(s.id) ?? []), b]);
   const grasp = new Map(view.books.flatMap((b) => b.subjects).concat(view.known).map((s) => [s.id, s.grasp?.grasp ?? null]));
   const book = open ? byId.get(open) : undefined;
-  const items = (books: { id: string; title: string }[], subjects: { id: string; name: string }[]) => (
+  const items = (books: { id: string; title: string; category?: string }[], subjects: { id: string; name: string }[]) => (
     <div className="flex flex-wrap gap-4">
       {books.map((b) => {
         const full = byId.get(b.id)!;
@@ -85,6 +86,7 @@ function Shelves({ view, all, open }: { view: LearnView; all: boolean; open: str
               </span>
             ) : <Glyph d={BOOK} tone={bookTone(full.status)} className="h-20 w-14 rounded-sm" />}
             <span className="line-clamp-2 text-xs font-medium">{b.title}</span>
+            {b.category ? <span className="text-muted-foreground -mt-1 line-clamp-1 text-[11px]">{themaCategory(b.category)?.short}</span> : null}
           </Link>
         );
       })}
@@ -110,11 +112,11 @@ function Shelves({ view, all, open }: { view: LearnView; all: boolean; open: str
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
-        {sh.shelves.length ? <Note>Books and subjects on their Library of Congress shelves.</Note> : <Note>No books yet. <Link className="underline underline-offset-4" href="/learn/browse">Browse books</Link> and each one you add goes on its shelf.</Note>}
-        <Button asChild variant="ghost" size="sm"><Link href={all ? "/learn?filled=1" : "/learn"}>{all ? "Only filled shelves" : "All 21 shelves"}</Link></Button>
+        {sh.shelves.length ? <Note>Books and subjects in their Thema sections. Each book keeps its Library of Congress call number as its exact address.</Note> : <Note>No books yet. <Link className="underline underline-offset-4" href="/learn/browse">Browse books</Link> and each one you add goes on its shelf.</Note>}
+        <Button asChild variant="ghost" size="sm"><Link href={all ? "/learn?filled=1" : "/learn"}>{all ? "Only filled shelves" : "All 20 shelves"}</Link></Button>
       </div>
       {sh.shelves.map((s) => shelf(s.id, s.name, Boolean(s.books.length || s.subjects.length), items(s.books, s.subjects)))}
-      {sh.unshelved.books.length || sh.unshelved.subjects.length ? shelf("?", "Not yet shelved (no call number)", true, items(sh.unshelved.books, sh.unshelved.subjects)) : null}
+      {sh.unshelved.books.length || sh.unshelved.subjects.length ? shelf("?", "Not yet placed (the catalog gives no category)", true, items(sh.unshelved.books, sh.unshelved.subjects)) : null}
       {book ? (
         <>
         <Link href={`/learn${all ? "" : "?filled=1"}`} aria-label="Close" tabIndex={-1} className="fixed inset-0 z-10 bg-black/40" />
@@ -124,6 +126,13 @@ function Shelves({ view, all, open }: { view: LearnView; all: boolean; open: str
             <Button asChild variant="ghost" size="icon" aria-label="Close"><Link href={`/learn${all ? "" : "?filled=1"}`}><XIcon /></Link></Button>
           </div>
           <Note>{book.authors.join(", ") || "Author not given"}{book.catalog?.year ? ` · ${book.catalog.year}` : ""}</Note>
+          {book.catalog ? (
+            <p className="text-muted-foreground text-xs">
+              {themaCategory(categoryOf(book.catalog) ?? "")?.heading ?? "Not yet placed"}
+              {book.catalog.lcc?.[0] ? <> · Call number {showCall(book.catalog.lcc[0])}</> : null}
+            </p>
+          ) : null}
+          {book.catalog?.work ? <Button asChild variant="outline" size="sm"><Link href={`/learn/works/${book.catalog.work}`}>Open the book page</Link></Button> : null}
           <form action={setBookStatusAction} className="flex flex-wrap gap-2">
             <input type="hidden" name="book" value={book.id} />
             {STATUS.map(([id, label]) => (

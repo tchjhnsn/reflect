@@ -21,7 +21,7 @@ describe("chat cards render", () => {
       </JSONUIProvider>,
     );
     expect(html).toContain("Wiring");
-    expect(html).toContain("T Technology");
+    expect(html).toContain("Electronics");
     expect(html.match(/Add to shelves/g)).toHaveLength(1);
     expect(html).toContain("On your shelves");
     expect(html).toContain("Accept");

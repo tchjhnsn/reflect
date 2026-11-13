@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { browseClass, cleanEntry, coverUrl, searchBooks, trendingBooks, workEntry, type Fetch } from "./openlibrary.ts";
+import { browseClass, browseQuery, cleanEntry, coverUrl, searchBooks, trendingBooks, workDetails, workEntry, type Fetch } from "./openlibrary.ts";
 
 const fake = (docs: unknown[], seen: string[]): Fetch => async (url) => {
   seen.push(url);
@@ -43,5 +43,35 @@ describe("open library", () => {
     expect(await workEntry("../etc", fake([], []))).toBeNull();
     expect(cleanEntry({ work: "OL9W", title: "x", cover: "12" })?.cover).toBe(12);
   });
-});
 
+  it("browses any query best rated first, with readers' ratings", async () => {
+    const seen: string[] = [];
+    const [b] = await browseQuery("lcc:[BF-0000 TO BF-9999.99999999]", fake([{ key: "/works/OL3W", title: "Mind", ratings_average: 4.123, ratings_count: 80 }], seen), { limit: 6 });
+    expect(b!.rating).toEqual({ average: 4.12, count: 80 });
+    expect(seen[0]).toContain("sort=rating");
+    expect(seen[0]).toContain(encodeURIComponent("lcc:[BF-0000"));
+  });
+
+  it("reads a work's description, rating and editions, and refuses a bad id", async () => {
+    const seen: string[] = [];
+    const routes: Record<string, unknown> = {
+      "/works/OL9W.json": { description: { value: "A book about [habits](https://x).\n\n----------\nSee also" }, subjects: ["Habit", "Habit", "accessible book"] },
+      "/works/OL9W/ratings.json": { summary: { average: 3.968, count: 1495 } },
+      "/works/OL9W/editions.json?limit=6": { size: 42, entries: [{ title: "Atomic Habits", publish_date: "October 18, 2018", publishers: ["Avery"], isbn_13: ["9780735211292"], languages: [{ key: "/languages/eng" }] }, { publish_date: "1999" }] },
+    };
+    const f: Fetch = async (url) => {
+      seen.push(url);
+      const path = url.replace("https://openlibrary.org", "");
+      return path in routes ? { ok: true, status: 200, json: async () => routes[path] } : { ok: false, status: 404, json: async () => ({}) };
+    };
+    const d = await workDetails("OL9W", f);
+    expect(d).toEqual({
+      description: "A book about habits.",
+      subjects: ["Habit"],
+      rating: { average: 3.97, count: 1495 },
+      editions: { count: 42, first: [{ title: "Atomic Habits", year: 2018, publisher: "Avery", isbn: "9780735211292", language: "eng" }] },
+    });
+    expect(await workDetails("OL0W", f)).toBeNull();
+    expect(await workDetails("../x", f)).toBeNull();
+  });
+});
