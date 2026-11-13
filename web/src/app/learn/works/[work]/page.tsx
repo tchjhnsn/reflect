@@ -176,10 +176,9 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
                   <li key={e.id} className="flex items-start gap-3 px-3 py-2">
                     <span className="text-muted-foreground w-5 pt-0.5 text-right text-xs tabular-nums">{i + 1}</span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate">{e.title}</span>
-                      <span className="text-muted-foreground block truncate text-xs">{[e.translators.length ? `Translated by ${e.translators.join(", ")}` : null, e.publisher, e.year, e.pages ? `${e.pages} pages` : null, e.format, e.language && e.language !== "English" ? e.language : null].filter(Boolean).join(" · ")}</span>
+                      <span className="block">{e.title}</span>
+                      <span className="text-muted-foreground block text-xs">{[`${e.readers.toLocaleString("en-US")} ${e.readers === 1 ? "reader" : "readers"}`, e.rating ? `★ ${e.rating.toFixed(2)}` : null, e.translators.length ? `translated by ${e.translators.join(", ")}` : null, e.publisher, e.year, e.pages ? `${e.pages} pages` : null, e.format, e.language && e.language !== "English" ? e.language : null].filter(Boolean).join(" · ")}</span>
                     </span>
-                    <span className="text-muted-foreground shrink-0 text-right text-xs tabular-nums">{e.readers.toLocaleString("en-US")} {e.readers === 1 ? "reader" : "readers"}{e.rating ? <><br />★ {e.rating.toFixed(2)}</> : null}</span>
                   </li>
                 ))}
               </ol>
