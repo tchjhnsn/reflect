@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { googleVolume } from "./googlebooks.ts";
+import { googleVolume, readerUrl, sameBook } from "./googlebooks.ts";
 import type { Fetch } from "./openlibrary.ts";
 
 const fake = (items: unknown[], seen: string[]): Fetch => async (url) => {
   seen.push(url);
   return { ok: true, status: 200, json: async () => ({ items }) };
 };
+const preview = { viewability: "PARTIAL", embeddable: true };
+const whole = { viewability: "ALL_PAGES", embeddable: true };
 
 describe("google books", () => {
   it("asks nothing without a key", async () => {
@@ -14,30 +16,51 @@ describe("google books", () => {
     expect(seen).toEqual([]);
   });
 
-  it("finds a volume by ISBN and keeps its rating, plain description and an https link", async () => {
+  it("finds a volume by ISBN and keeps its plain description and an https link, and no rating", async () => {
     const seen: string[] = [];
-    const v = await googleVolume({ title: "Atomic Habits", isbn: "978-0735211292" }, fake([{ volumeInfo: { title: "Atomic Habits", averageRating: 4.5, ratingsCount: 900, description: "<p>Tiny <b>changes</b></p>", categories: ["Self-Help"], infoLink: "http://books.google.com/x" } }], seen), "k");
-    expect(v).toEqual({ rating: { average: 4.5, count: 900 }, description: "Tiny changes", categories: ["Self-Help"], link: "https://books.google.com/x" });
+    const v = await googleVolume({ title: "Atomic Habits", isbn: "978-0735211292" }, fake([{ id: "abc", volumeInfo: { title: "Atomic Habits", averageRating: 4.5, ratingsCount: 900, description: "<p>Tiny <b>changes</b></p>", categories: ["Self-Help"], infoLink: "http://books.google.com/x" }, accessInfo: preview }], seen), "k");
+    expect(v).toEqual({ read: { id: "abc", full: false }, description: "Tiny changes", categories: ["Self-Help"], link: "https://books.google.com/x" });
     expect(seen[0]).toContain("q=isbn%3A9780735211292");
+    expect(seen[0]).toContain("country=US");
   });
 
-  it("by title, takes only a volume whose title matches", async () => {
-    const v = await googleVolume({ title: "The Republic", authors: ["Plato"] }, fake([{ volumeInfo: { title: "Plato: A Life" } }, { volumeInfo: { title: "The Republic of Plato", averageRating: 4 } }], []), "k");
-    expect(v?.rating).toBeNull();
-    expect(await googleVolume({ title: "The Republic" }, fake([{ volumeInfo: { title: "Something else" } }], []), "k")).toBeNull();
+  it("knows the same book from a workbook, a summary or a book about it", () => {
+    const habits = { title: "Atomic Habits", authors: ["James Clear"] };
+    expect(sameBook(habits, { title: "Atomic Habits", authors: ["James Clear"] })).toBe(true);
+    expect(sameBook(habits, { title: "The Atomic Habits Workbook", authors: ["James Clear"] })).toBe(false);
+    expect(sameBook(habits, { title: "Atomic Habits and James Clear", authors: ["Someone Else"] })).toBe(false);
+    expect(sameBook(habits, { title: "Atomic Habits", authors: ["Summary Press"] })).toBe(false);
+    expect(sameBook({ title: "Confessions", authors: ["Augustine of Hippo"] }, { title: "The Confessions of S. Augustin", authors: ["Saint Augustine (Bishop of Hippo.)"] })).toBe(true);
+    expect(sameBook({ title: "The Republic" }, { title: "Republic" })).toBe(true);
+    expect(sameBook({ title: "The Republic" }, { title: "Plato: A Life" })).toBe(false);
   });
 
-  it("takes the rating from the best-rated edition with the same title when the ISBN's edition has none", async () => {
+  it("reads from the English edition of the same book with the most to read: the whole book first, then a preview", async () => {
     const seen: string[] = [];
     const f: Fetch = async (url) => {
       seen.push(url);
       const items = url.includes("isbn%3A")
-        ? [{ volumeInfo: { title: "Atomic Habits", infoLink: "https://books.google.com/a" } }]
-        : [{ volumeInfo: { title: "Atomic Habits", averageRating: 4, ratingsCount: 12 } }, { volumeInfo: { title: "Atomic Habits", averageRating: 4.5, ratingsCount: 300 } }, { volumeInfo: { title: "Other", averageRating: 5, ratingsCount: 9000 } }];
+        ? [{ id: "isbn1", volumeInfo: { title: "Confessions", authors: ["Augustine"], infoLink: "https://books.google.com/a" }, accessInfo: { viewability: "NO_PAGES" } }]
+        : [
+            { id: "p1", volumeInfo: { title: "The Confessions", authors: ["Saint Augustine"], language: "en" }, accessInfo: preview },
+            { id: "fr", volumeInfo: { title: "Confessions", authors: ["Augustin"], language: "fr" }, accessInfo: whole },
+            { id: "noembed", volumeInfo: { title: "Confessions", authors: ["Augustine"], language: "en" }, accessInfo: { viewability: "ALL_PAGES", embeddable: false } },
+            { id: "w1", volumeInfo: { title: "The Confessions of S. Augustin", authors: ["Saint Augustine"], language: "en" }, accessInfo: whole },
+            { id: "other", volumeInfo: { title: "Augustine's Confessions: A Guide", authors: ["Augustine Scholar"], language: "en" }, accessInfo: whole },
+          ];
       return { ok: true, status: 200, json: async () => ({ items }) };
     };
-    const v = await googleVolume({ title: "Atomic Habits", authors: ["James Clear"], isbn: "9780735211292" }, f, "k");
-    expect(v).toMatchObject({ rating: { average: 4.5, count: 300 }, link: "https://books.google.com/a" });
+    const v = await googleVolume({ title: "Confessions", authors: ["Augustine"], isbn: "9780140441147" }, f, "k");
+    expect(v).toMatchObject({ read: { id: "w1", full: true }, link: "https://books.google.com/a" });
     expect(seen).toHaveLength(2);
+  });
+
+  it("has no reader when no edition can be read, and nothing when no volume is the same book", async () => {
+    expect((await googleVolume({ title: "Atomic Habits" }, fake([{ id: "x", volumeInfo: { title: "Atomic Habits" }, accessInfo: { viewability: "NO_PAGES" } }], []), "k"))?.read).toBeNull();
+    expect(await googleVolume({ title: "The Republic" }, fake([{ volumeInfo: { title: "Something else" } }], []), "k")).toBeNull();
+  });
+
+  it("frames Google's reader at the start of the book", () => {
+    expect(readerUrl("w1")).toBe("https://books.google.com/books?id=w1&pg=PP1&output=embed");
   });
 });

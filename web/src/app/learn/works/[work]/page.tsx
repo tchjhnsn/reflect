@@ -15,6 +15,7 @@ import { learnView } from "@/server/learn-store";
 import { listClaims, type ClaimOut } from "@/server/claims-store";
 import { LearnHeader } from "../../header";
 import { AddBook } from "../../add-book";
+import { Reader } from "./reader";
 import { setBookStatusAction } from "../../actions";
 
 export const metadata: Metadata = { title: "Book" };
@@ -26,8 +27,8 @@ const cached = (url: string) => fetch(url, { headers: { "user-agent": "reflect-a
 const Label = ({ children }: { children: ReactNode }) => <h3 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{children}</h3>;
 
 /**
- * One book's page, for any book in the open library: its cover, what it is about, its readers' ratings, its
- * editions, where it sits in Thema, and, when it is yours, where you are with it and the claims on its subjects.
+ * One book's page, for any book in the open library: its cover, what it is about, its readers' ratings, a
+ * preview or the whole book to read when Google Books has one, its editions, where it sits in Thema, and, when it is yours, where you are with it and the claims on its subjects.
  */
 export default async function WorkPage({ params }: { params: Promise<{ work: string }> }) {
   const user = await requireUser();
@@ -70,8 +71,7 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
             <p className="text-muted-foreground">{authors.join(", ") || "Author not given"}{entry?.year ? ` · first published ${entry.year}` : ""}</p>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
               {details?.rating ? <Rating source="Open Library" r={details.rating} /> : null}
-              {google?.rating ? <Rating source="Google Books" r={google.rating} /> : null}
-              {!details?.rating && !google?.rating ? <span className="text-muted-foreground">No ratings yet</span> : null}
+              {!details?.rating ? <span className="text-muted-foreground">No ratings yet</span> : null}
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -83,6 +83,7 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
             ) : entry ? <AddBook entry={entry} /> : null}
             {mine ? <span className="text-muted-foreground text-xs">On your shelves</span> : null}
           </div>
+          {google?.read ? <Reader id={google.read.id} full={google.read.full} /> : null}
           <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
             <div><dt className="text-muted-foreground text-xs">Category</dt><dd>{category ? <Link className="underline-offset-4 hover:underline" href={`/learn/browse?cat=${category.code}`}>{category.heading}</Link> : "Not yet placed"}</dd></div>
             <div><dt className="text-muted-foreground text-xs">Library of Congress call number</dt><dd>{entry?.lcc?.[0] ? showCall(entry.lcc[0]) : "None in the catalog"}</dd></div>

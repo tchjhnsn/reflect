@@ -175,7 +175,7 @@ export function readCall(callNumber: string): Call | null {
 /** A call number as a library prints it: Open Library's "BF-0335.30000000.C54" reads "BF335.3 .C54". */
 export function showCall(callNumber: string): string {
   if (!callNumber.includes("-")) return callNumber.trim();
-  const m = /^([A-Z]{1,3})-*0*(\d+)(?:\.(\d+))?(?:\.(.+))?$/.exec(callNumber.trim().toUpperCase());
+  const m = /^([A-Z]{1,3})-*0*(\d+)(?:\.(\d+))?(?:[. ]\s*(.+))?$/.exec(callNumber.trim().toUpperCase());
   if (!m) return callNumber.trim();
   const dec = (m[3] ?? "").replace(/0+$/, "");
   return `${m[1]}${m[2]}${dec ? `.${dec}` : ""}${m[4] ? ` .${m[4]}` : ""}`;
