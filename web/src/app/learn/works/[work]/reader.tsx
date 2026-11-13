@@ -1,32 +1,39 @@
 "use client";
 
 import { useState } from "react";
-import { BookOpenIcon, XIcon } from "lucide-react";
-import { readerUrl } from "@reflect/core/googlebooks";
+import { BookOpenIcon, ExternalLinkIcon, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+/** A reader the book can be read in on the page: the Internet Archive's or Google's. */
+export type ReadSource = { key: string; name: string; src: string; full: boolean };
+/** A place the book can be read off the page: Project Gutenberg, Standard Ebooks, a loan from Open Library. */
+export type ReadLink = { name: string; href: string };
+
 /**
- * Google's reader for the book, opened on the book page when the person asks for it: the whole book when it is
- * free, a preview otherwise. The reader's own search box searches inside the book.
+ * Reading the book: the first reader opens on the page when the person asks, the whole book when one has it
+ * free and a preview otherwise; the other readers and the places off the page sit beside it.
  */
-export function Reader({ id, full }: { id: string; full: boolean }) {
-  const [open, setOpen] = useState(false);
-  const label = full ? "Read it free" : "Read a preview";
-  if (!open) {
-    return (
-      <Button variant="outline" onClick={() => setOpen(true)}>
-        <BookOpenIcon />
-        {label}
-      </Button>
-    );
-  }
+export function Reader({ sources, links }: { sources: ReadSource[]; links: ReadLink[] }) {
+  const [open, setOpen] = useState<string | null>(null);
+  const first = sources[0];
+  const current = sources.find((s) => s.key === open);
+  const label = first?.full ? "Read it free" : "Read a preview";
   return (
     <section className="space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-muted-foreground text-xs">{full ? "The whole book, free" : "A preview"}, from Google Books. Search inside it with the box at its top.</p>
-        <Button variant="ghost" size="sm" onClick={() => setOpen(false)}><XIcon />Close</Button>
+      <div className="flex flex-wrap items-center gap-2">
+        {first && !current ? <Button variant="outline" onClick={() => setOpen(first.key)}><BookOpenIcon />{label}</Button> : null}
+        {current ? sources.filter((s) => s.key !== current.key).map((s) => <Button key={s.key} variant="ghost" size="sm" onClick={() => setOpen(s.key)}>{s.full ? "Whole book" : "Preview"} at {s.name}</Button>) : null}
+        {links.map((l) => <Button key={l.href} asChild variant="ghost" size="sm"><a href={l.href} target="_blank" rel="noreferrer">{l.name}<ExternalLinkIcon /></a></Button>)}
       </div>
-      <iframe src={readerUrl(id)} title={`${label}, from Google Books`} className="bg-muted h-[70vh] min-h-96 w-full rounded-md border" />
+      {current ? (
+        <>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-muted-foreground text-xs">{current.full ? "The whole book, free" : "A preview"}, from {current.name}. Search inside it with the reader&apos;s own search.</p>
+            <Button variant="ghost" size="sm" onClick={() => setOpen(null)}><XIcon />Close</Button>
+          </div>
+          <iframe key={current.key} src={current.src} title={`${current.full ? "The whole book" : "A preview"}, from ${current.name}`} className="bg-muted h-[75vh] min-h-96 w-full rounded-md border" allowFullScreen />
+        </>
+      ) : null}
     </section>
   );
 }
