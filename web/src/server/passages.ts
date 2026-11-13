@@ -1,6 +1,6 @@
 import { workAccess } from "@reflect/core/openlibrary";
 import { searchBook, type Hit } from "@reflect/core/reading";
-import { learnView } from "./learn-store";
+import { learnView, type BookOut } from "./learn-store";
 import { openLibrary } from "./browse";
 import { readText, textSource } from "./texts";
 
@@ -30,18 +30,41 @@ export async function searchShelves(userId: string, phrase: string): Promise<{ b
     .slice(0, PASSAGE_BOOKS * 2);
   let unread = 0;
   const found = await inBatches(shelved, 4, async (b) => {
-    const work = b.catalog!.work;
-    const access = await workAccess(work, openLibrary).catch(() => null);
-    const source = await textSource({ title: b.catalog!.title, authors: b.catalog!.authors }, access).catch(() => null);
-    if (!source) return null;
-    const text = await readText(source, access?.gutenberg[0] ? { kind: "gutenberg", id: access.gutenberg[0] } : null).catch(() => null);
-    if (!text) {
-      unread++;
-      return null;
-    }
-    const r = searchBook(text.chapters, phrase, 3);
-    return { work, title: b.catalog!.title, author: b.catalog!.authors[0] ?? "", total: r.total, hits: r.hits, chapters: r.hits.map((h) => text.chapters[h.chapter - 1]?.title ?? "") };
+    const r = await searchOne(b, phrase, 3);
+    if (r === "unread") unread++;
+    return r === "unread" ? null : r;
   });
   const free = found.filter((x): x is PassageBook => x !== null).slice(0, PASSAGE_BOOKS);
   return { books: free.filter((b) => b.total > 0).sort((a, b) => b.total - a.total), searched: free.length, unread };
+}
+
+/** One shelved book's free text searched for a phrase: null when it has no free text, "unread" when the text did not come. */
+async function searchOne(b: BookOut, phrase: string, limit: number): Promise<PassageBook | null | "unread"> {
+  const c = b.catalog;
+  if (!c?.work) return null;
+  const access = await workAccess(c.work, openLibrary).catch(() => null);
+  const source = await textSource({ title: c.title, authors: c.authors }, access).catch(() => null);
+  if (!source) return null;
+  const text = await readText(source, access?.gutenberg[0] ? { kind: "gutenberg", id: access.gutenberg[0] } : null).catch(() => null);
+  if (!text) return "unread";
+  const r = searchBook(text.chapters, phrase, limit);
+  return { work: c.work, title: c.title, author: c.authors[0] ?? "", total: r.total, hits: r.hits, chapters: r.hits.map((h) => text.chapters[h.chapter - 1]?.title ?? "") };
+}
+
+/**
+ * Words found in the text of a book the person is reading in Reflect, for the chat to quote and cite: the book
+ * named (by words of its title, among their shelves), else the books they are reading, those they read inside Reflect
+ * first. The first book with the words wins; at most three places.
+ */
+export async function quoteFromShelves(books: readonly BookOut[], phrase: string, named?: string): Promise<PassageBook | null> {
+  const want = named?.trim().toLowerCase();
+  const pick = books
+    .filter((b) => b.catalog?.work && (want ? `${b.title} ${b.catalog.title}`.toLowerCase().includes(want) : b.status === "reading"))
+    .sort((a, b) => Number(Boolean(b.place)) - Number(Boolean(a.place)))
+    .slice(0, 4);
+  for (const b of pick) {
+    const r = await searchOne(b, phrase, 3);
+    if (r && r !== "unread" && r.total) return r;
+  }
+  return null;
 }

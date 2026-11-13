@@ -29,4 +29,9 @@ describe("chat cards", () => {
     expect(spec.elements.e1).toMatchObject({ type: "Note", props: { text: "You keep no claims yet." } });
     expect(spec.elements.e2!.type).toBe("Note");
   });
+
+  it("shows a quote with its citation and the reader at its place", () => {
+    const spec = buildSpec([{ kind: "quote", text: "The unexamined life", cite: "Plato, Apology, Part 1", href: "/learn/works/OL1W/read?c=1&find=x&p=2" }])!;
+    expect(spec.elements.e0).toMatchObject({ type: "Quote", props: { cite: "Plato, Apology, Part 1", href: "/learn/works/OL1W/read?c=1&find=x&p=2" } });
+  });
 });

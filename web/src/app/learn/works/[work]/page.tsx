@@ -13,6 +13,8 @@ import { PAGE } from "@/components/page-header";
 import { requireUser } from "@/server/session";
 import { learnView } from "@/server/learn-store";
 import { listClaims, type ClaimOut } from "@/server/claims-store";
+import { listIdeas, type IdeaOut } from "@/server/ideas-store";
+import { ideasNaming } from "@reflect/core/ideas";
 import { LearnHeader } from "../../header";
 import { AddBook } from "../../add-book";
 import { Reader, type ReadLink } from "./reader";
@@ -38,14 +40,14 @@ const Label = ({ children }: { children: ReactNode }) => <h3 className="text-mut
  * One book's page, for any book in the open library: its cover, what it is about, its readers' ratings, a
  * the whole book to read or hear free when it is in the public domain (the Internet Archive, Project Gutenberg,
  * Standard Ebooks, LibriVox) or a preview from Google Books, its contents and editions, where it sits in Thema,
- * books like it and more by its author, and, when it is yours, where you are with it and the claims on its
- * subjects.
+ * books like it and more by its author, where you are with it when it is yours, and the claims that cite it or
+ * are on its subjects and the ideas that came from it.
  */
 export default async function WorkPage({ params }: { params: Promise<{ work: string }> }) {
   const user = await requireUser();
   const { work } = await params;
   if (!/^OL\d+W$/.test(work)) notFound();
-  const [entry, details, access, view, claims, excerpts, published] = await Promise.all([
+  const [entry, details, access, view, claims, excerpts, published, ideas] = await Promise.all([
     workEntry(work, cached).catch(() => null),
     workDetails(work, cached).catch(() => null),
     workAccess(work, cached).catch(() => null),
@@ -53,6 +55,7 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
     listClaims(user.id).catch((): ClaimOut[] => []),
     excerptsOf(user.id, work).catch(() => []),
     publishedBy(user.id).catch(() => []),
+    listIdeas(user.id).catch((): IdeaOut[] => []),
   ]);
   if (!entry && !details) notFound();
   const mine = view.books.find((b) => b.catalog?.work === work);
@@ -79,7 +82,12 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
   const description = details?.description ?? google?.description ?? null;
   const mySubjects = new Set(mine?.subjects.map((s) => s.id) ?? []);
   const lower = title.toLowerCase();
-  const related = claims.filter((c) => (c.subject && mySubjects.has(c.subject.id)) || c.holders.some((h) => `${h.name} ${h.citation ?? ""}`.toLowerCase().includes(lower)));
+  // Claims that cite the book (a passage kept as a claim cites it), then claims on its subjects.
+  const cites = (c: ClaimOut) => c.holders.some((h) => `${h.name} ${h.citation ?? ""}`.toLowerCase().includes(lower));
+  const fromIt = claims.filter(cites);
+  const related = claims.filter((c) => !cites(c) && c.subject && mySubjects.has(c.subject.id));
+  // Ideas of the person's that came from the book, may have, or have it as a recommendation.
+  const bearing = ideasNaming(ideas, mine ? `book:${mine.id}` : null, title);
 
   return (
     <main className={PAGE}>
@@ -154,16 +162,45 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
               </ul>
             </section>
           ) : null}
-          {mine || related.length ? (
+          {mine || fromIt.length || related.length || bearing.length ? (
             <Card className="gap-3 py-5">
-              <CardHeader className="px-5"><CardTitle className="text-sm">Your claims on this book&apos;s subjects</CardTitle></CardHeader>
-              <CardContent className="space-y-3 px-5 text-sm">
-                {related.length ? related.map((c) => (
-                  <div key={c.id}>
-                    <p className="font-medium">{c.text}</p>
-                    <p className="text-muted-foreground text-xs">{[c.stance ? STANCE[c.stance.stance] : "No stance", c.subject?.name].filter(Boolean).join(" · ")}</p>
+              <CardHeader className="px-5"><CardTitle className="text-sm">Claims and ideas from this book</CardTitle></CardHeader>
+              <CardContent className="space-y-4 px-5 text-sm">
+                {fromIt.length ? (
+                  <div className="space-y-3">
+                    <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">Claims citing it</p>
+                    {fromIt.map((c) => (
+                      <div key={c.id}>
+                        <p className="font-medium">{c.text}</p>
+                        <p className="text-muted-foreground text-xs">{[c.stance ? STANCE[c.stance.stance] : "No stance", c.holders.map((h) => [h.name, h.citation].filter(Boolean).join(", ")).join("; ")].filter(Boolean).join(" · ")}</p>
+                      </div>
+                    ))}
                   </div>
-                )) : <p className="text-muted-foreground">None yet. Claims you keep on this book&apos;s subjects, or that cite it, show here.</p>}
+                ) : null}
+                {bearing.length ? (
+                  <div className="space-y-3">
+                    <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">Your ideas</p>
+                    {bearing.map(({ idea, how }) => (
+                      <div key={idea.id}>
+                        <p className="font-medium">{idea.title}</p>
+                        {idea.statement ? <p className="text-muted-foreground line-clamp-3">{idea.statement}</p> : null}
+                        <p className="text-muted-foreground text-xs">{how === "from" ? "Came from this book" : how === "maybe" ? "May have come from this book" : `This book ${how} it`}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+                {related.length ? (
+                  <div className="space-y-3">
+                    <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">Claims on its subjects</p>
+                    {related.map((c) => (
+                      <div key={c.id}>
+                        <p className="font-medium">{c.text}</p>
+                        <p className="text-muted-foreground text-xs">{[c.stance ? STANCE[c.stance.stance] : "No stance", c.subject?.name].filter(Boolean).join(" · ")}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+                {!fromIt.length && !bearing.length && !related.length ? <p className="text-muted-foreground">None yet. Claims that cite this book or are on its subjects, and ideas that came from it, show here.</p> : null}
               </CardContent>
             </Card>
           ) : null}
