@@ -16,7 +16,10 @@ import { learnView } from "@/server/learn-store";
 import { listClaims, type ClaimOut } from "@/server/claims-store";
 import { LearnHeader } from "../../header";
 import { AddBook } from "../../add-book";
-import { Reader, type ReadLink, type ReadSource } from "./reader";
+import { Reader, type ReadLink } from "./reader";
+import { textSource } from "@/server/texts";
+import { excerptsOf } from "@/server/excerpt-store";
+import { Excerpts } from "./excerpts";
 import { Listen } from "./listen";
 import { AuthorName, BookGrid } from "../../book-card";
 import { setBookStatusAction } from "../../actions";
@@ -42,32 +45,32 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
   const user = await requireUser();
   const { work } = await params;
   if (!/^OL\d+W$/.test(work)) notFound();
-  const [entry, details, access, view, claims] = await Promise.all([
+  const [entry, details, access, view, claims, excerpts] = await Promise.all([
     workEntry(work, cached).catch(() => null),
     workDetails(work, cached).catch(() => null),
     workAccess(work, cached).catch(() => null),
     learnView(user.id),
     listClaims(user.id).catch((): ClaimOut[] => []),
+    excerptsOf(user.id, work).catch(() => []),
   ]);
   if (!entry && !details) notFound();
   const mine = view.books.find((b) => b.catalog?.work === work);
   const title = entry?.title ?? mine?.title ?? "Untitled";
   const authors = entry?.authors ?? mine?.authors ?? [];
   const authorKeys = entry?.authorKeys ?? mine?.catalog?.authorKeys ?? [];
-  const [google, byAuthor, audio, like] = await Promise.all([
+  const [google, byAuthor, audio, like, text] = await Promise.all([
     googleVolume({ title, authors, ...(entry?.isbn ? { isbn: entry.isbn } : {}) }, cached, process.env.GOOGLE_BOOKS_API_KEY).catch(() => null),
     authorKeys[0] ? authorWorks(authorKeys[0], cached, { limit: 7, sort: "rating" }).then((b) => b.filter((x) => x.work !== work).slice(0, 6)).catch((): CatalogEntry[] => []) : Promise.resolve([] as CatalogEntry[]),
     access?.librivox.length ? librivoxBook(access.librivox, slow).catch((): Audiobook | null => null) : Promise.resolve(null),
     entry ? booksLike({ work, subjects: details?.subjects.length ? details.subjects : entry.subjects }, cached).catch((): CatalogEntry[] => []) : Promise.resolve([] as CatalogEntry[]),
+    access?.access === "public" || access?.gutenberg.length || access?.standardEbooks.length || (entry?.year ?? 9999) < 1930 ? textSource({ title, authors }, access) : Promise.resolve(null),
   ]);
-  const sources: ReadSource[] = [
-    ...(access?.access === "public" && access.archive ? [{ key: "archive", name: "the Internet Archive", src: `https://archive.org/embed/${access.archive}`, full: true }] : []),
-    ...(google?.read ? [{ key: "google", name: "Google Books", src: readerUrl(google.read.id), full: google.read.full }] : []),
-  ].sort((a, b) => Number(b.full) - Number(a.full));
-  const links: ReadLink[] = [
-    ...(access?.standardEbooks[0] ? [{ name: "Standard Ebooks", href: `https://standardebooks.org/ebooks/${access.standardEbooks[0]}` }] : []),
+  // Without a text in Reflect: a scan at the Internet Archive, or a loan from Open Library, off the page.
+  const links: ReadLink[] = text ? [] : [
+    ...(access?.access === "public" && access.archive ? [{ name: "Scanned book at the Internet Archive", href: `https://archive.org/details/${access.archive}` }] : []),
     ...(access?.access === "borrowable" && access.edition ? [{ name: "Borrow from Open Library", href: `https://openlibrary.org/books/${access.edition}` }] : []),
   ];
+  const preview = google?.read ? { src: readerUrl(google.read.id), full: google.read.full } : null;
   const shelved = new Map(view.books.filter((b) => b.catalog?.work).map((b) => [b.catalog!.work, b.status]));
   const subjects = details?.subjects.length ? details.subjects : entry?.subjects ?? [];
   const category = themaCategory(categoryOf({ ...(entry?.lcc ? { lcc: entry.lcc } : {}), subjects }) ?? "");
@@ -107,8 +110,9 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
             ) : entry ? <AddBook entry={entry} /> : null}
             {mine ? <span className="text-muted-foreground text-xs">On your shelves</span> : null}
           </div>
-          {sources.length || links.length || access?.gutenberg[0] ? <Reader sources={sources} links={links} work={work} kept={mine?.place ?? null} {...(access?.gutenberg[0] ? { here: `/learn/works/${work}/read` } : {})} /> : null}
+          {text || preview || links.length ? <Reader links={links} work={work} kept={mine?.place ?? null} preview={preview} {...(text ? { here: `/learn/works/${work}/read` } : {})} /> : null}
           {audio ? <Listen book={audio} /> : null}
+          <Excerpts work={work} title={title} author={authors[0] ?? ""} rows={excerpts.map((e) => ({ id: e.id, quote: e.quote, where: e.anchor?.chapterTitle || e.place, chapter: e.anchor?.chapter ?? null, note: e.note }))} {...(text ? { reader: `/learn/works/${work}/read` } : {})} />
           <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
             <div><dt className="text-muted-foreground text-xs">Category</dt><dd>{category ? <Link className="underline-offset-4 hover:underline" href={`/learn/browse?cat=${category.code}`}>{category.heading}</Link> : "Not yet placed"}</dd></div>
             <div><dt className="text-muted-foreground text-xs">Library of Congress call number</dt><dd>{entry?.lcc?.[0] ? showCall(entry.lcc[0]) : "None in the catalog"}</dd></div>

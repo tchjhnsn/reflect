@@ -7,6 +7,7 @@ import { importGoodreads, type ImportReport } from "@/server/goodreads-import";
 import { requireUser } from "@/server/session";
 import { addBook, keepPlace, setBookStatus, type BookPlace } from "@/server/learn-store";
 import { keepClaim, setStance } from "@/server/claims-store";
+import { addExcerpt, removeExcerpt, type Anchor } from "@/server/excerpt-store";
 
 const openLibrary = (url: string) => fetch(url, { headers: { "user-agent": "reflect-app" }, cache: "no-store" });
 const status = (v: FormDataEntryValue | null): BookStatus => ((BOOK_STATUS as readonly string[]).includes(String(v)) ? (String(v) as BookStatus) : "want");
@@ -76,4 +77,19 @@ export async function importGoodreadsAction(text: string): Promise<{ error: stri
 export async function keepPlaceAction(bookId: string, place: BookPlace): Promise<void> {
   const user = await requireUser();
   await keepPlace(user.id, bookId, { chapter: Number(place?.chapter), chapters: Number(place?.chapters), at: Number(place?.at) });
+}
+
+/** Keep an excerpt from a book: a highlight in a text read in Reflect, or words typed with a page or place. Returns its id. */
+export async function addExcerptAction(e: { work: string; quote: string; anchor?: unknown; place?: string; note?: string }): Promise<string> {
+  const user = await requireUser();
+  const id = await addExcerpt(user.id, { work: String(e?.work ?? ""), quote: String(e?.quote ?? ""), anchor: (e?.anchor ?? null) as Anchor | null, place: e?.place ? String(e.place) : null, note: e?.note ? String(e.note) : null });
+  revalidatePath(`/learn/works/${String(e.work)}`);
+  return id;
+}
+
+/** Remove one of the person's excerpts. */
+export async function removeExcerptAction(id: string, work: string): Promise<void> {
+  const user = await requireUser();
+  await removeExcerpt(user.id, String(id));
+  revalidatePath(`/learn/works/${String(work)}`);
 }
