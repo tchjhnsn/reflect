@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chaptersOf, gutenbergBook } from "./gutenberg.ts";
+import { chaptersOf, gutenbergBook, rdfEnglish } from "./gutenberg.ts";
 
 const book = [
   "The Project Gutenberg eBook of Test",
@@ -49,5 +49,13 @@ describe("gutenberg", () => {
     expect((await gutenbergBook("1342", f))?.chapters).toHaveLength(2);
     expect(seen).toEqual(["https://www.gutenberg.org/cache/epub/1342/pg1342.txt"]);
     expect(await gutenbergBook("../x", f)).toBeNull();
+  });
+});
+
+describe("gutenberg records", () => {
+  it("reads the English title of a text in another language", () => {
+    expect(rdfEnglish("<dcterms:title>Ιλιάδα</dcterms:title>\n<pgterms:name>Homer</pgterms:name><pgterms:name>Palles, Alexandros</pgterms:name>\n<dcterms:alternative>Iliad</dcterms:alternative>")).toEqual({ title: "Iliad", author: "Homer" });
+    expect(rdfEnglish("<pgterms:name>Tolstoy, Leo</pgterms:name><dcterms:alternative>War and Peace</dcterms:alternative>")).toEqual({ title: "War and Peace", author: "Leo Tolstoy" });
+    expect(rdfEnglish("<dcterms:alternative>Ἰλιάς</dcterms:alternative>")).toBeNull();
   });
 });

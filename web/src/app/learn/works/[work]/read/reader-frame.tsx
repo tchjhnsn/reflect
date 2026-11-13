@@ -99,7 +99,7 @@ export function ReaderSettings() {
 }
 
 /** The contents: every chapter with its reading time and how far through it the person is. */
-export function Contents({ work, chapters, current }: { work: string; chapters: { title: string; words: number }[]; current: number }) {
+export function Contents({ work, chapters, current, suffix = "" }: { work: string; chapters: { title: string; words: number }[]; current: number; /** More of the address to keep, such as the translation ("&t=2199"). */ suffix?: string }) {
   const { at } = useReader();
   const [open, setOpen] = useState(false);
   return (
@@ -115,7 +115,7 @@ export function Contents({ work, chapters, current }: { work: string; chapters: 
             const done = n < current ? 1 : n === current ? at : 0;
             return (
               <li key={n}>
-                <Link href={`/learn/works/${work}/read?c=${n}`} onClick={() => setOpen(false)} aria-current={n === current ? "page" : undefined} className={cn("hover:bg-muted block rounded-md px-2 py-2", n === current && "bg-muted")}>
+                <Link href={`/learn/works/${work}/read?c=${n}${suffix}`} onClick={() => setOpen(false)} aria-current={n === current ? "page" : undefined} className={cn("hover:bg-muted block rounded-md px-2 py-2", n === current && "bg-muted")}>
                   <span className="flex items-baseline justify-between gap-3 text-sm">
                     <span className="min-w-0 truncate">{c.title}</span>
                     <span className="text-muted-foreground flex shrink-0 items-center gap-1 text-xs tabular-nums">{n < current ? <CheckIcon className="size-3" /> : null}{readingTime(minutesFor(c.words))}</span>

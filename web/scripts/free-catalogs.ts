@@ -1,6 +1,6 @@
 // Writes the two catalogs Reflect uses to know, for any book in a list, whether it can be read or heard in
 // Reflect: Project Gutenberg's English texts (from its daily catalog file) and LibriVox's English recordings
-// (from its API, 500 at a time). Each line is "id|title|author", lower case. Run it again to refresh them:
+// (from its API, 500 at a time). Each line is "id|title|author", lower case; a Gutenberg line adds "|translators" as written when it has any. Run it again to refresh them:
 //   npx tsx scripts/free-catalogs.ts
 import { writeFileSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
@@ -36,7 +36,9 @@ for (const r of rows(gunzipSync(gz).toString("utf8"))) {
   if (type !== "Text" || !language?.split(/;\s*/).includes("en") || !id || !title) continue;
   // "Austen, Jane, 1775-1817; ..." keeps each author's names without the dates.
   const by = (authors ?? "").split(";").map((a) => a.replace(/\d{1,4}\??\s*(BCE|BC|CE|AD)?-?\d{0,4}\??\s*(BCE|BC|CE|AD)?/g, "").replace(/\[[^\]]*\]/g, "").replace(/[,()]/g, " ")).join(" ");
-  pg.push(`${id}|${clean(title).split(/\s*[;:]\s/)[0]!.slice(0, 90)}|${clean(by).slice(0, 60)}`);
+  // Translators, as written ("Samuel Butler"), kept so a book's translations can be told apart.
+  const tr = (authors ?? "").split(";").filter((a) => /\[Translator\]/.test(a)).map((a) => a.replace(/\[[^\]]*\]/g, "").replace(/,?\s*\d{1,4}\??\s*(BCE|BC|CE|AD)?-?\d{0,4}\??\s*(BCE|BC|CE|AD)?\s*$/g, "").trim()).map((a) => { const [last, first] = a.split(/,\s*/); return `${first ?? ""} ${last ?? ""}`.replace(/\s+/g, " ").trim(); }).filter(Boolean).join(", ").replace(/\|/g, " ").slice(0, 80);
+  pg.push(`${id}|${clean(title).split(/\s*[;:]\s/)[0]!.slice(0, 90)}|${clean(by).slice(0, 60)}${tr ? `|${tr}` : ""}`);
 }
 writeFileSync(new URL("../src/data/gutenberg.txt", import.meta.url), pg.join("\n") + "\n");
 console.log(`gutenberg: ${pg.length} English texts`);

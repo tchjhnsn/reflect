@@ -1,7 +1,7 @@
-import { findGutenberg, gutenbergBook, type Chapter } from "@reflect/core/gutenberg";
+import { findGutenberg, gutenbergBook, rdfEnglish, type Chapter } from "@reflect/core/gutenberg";
 import { standardBook } from "@reflect/core/standardebooks";
 import type { WorkAccess } from "@reflect/core/openlibrary";
-import { gutenbergId } from "./free";
+import { englishGutenberg, gutenbergId } from "./free";
 
 /** Where a public-domain book's text comes from: Standard Ebooks (proofread and typeset) or Project Gutenberg. */
 export type TextSource = { kind: "standard"; id: string } | { kind: "gutenberg"; id: string };
@@ -12,12 +12,22 @@ const cached = (url: string) => fetch(url, { headers: { "user-agent": "reflect-a
 
 /**
  * Where to read a book's text in Reflect: its Standard Ebooks edition when the catalog links one, else its
- * Gutenberg text linked from the catalog, else the book found in Gutenberg's own catalog by title and author (the catalog file first, then Gutenberg's search).
+ * English Gutenberg text linked from the catalog, else the book found in Gutenberg's own catalog by title and author (the catalog file first, then Gutenberg's search).
  */
 export async function textSource(book: { title: string; authors: readonly string[] }, access: WorkAccess | null): Promise<TextSource | null> {
   if (access?.standardEbooks[0]) return { kind: "standard", id: access.standardEbooks[0] };
-  if (access?.gutenberg[0]) return { kind: "gutenberg", id: access.gutenberg[0] };
-  const id = gutenbergId(book) ?? (await findGutenberg(book, cached).catch(() => null));
+  // The catalog's Gutenberg links, kept to the English texts (it also links translations into other languages).
+  const linked = access?.gutenberg ?? [];
+  const english = linked.find(englishGutenberg);
+  if (english) return { kind: "gutenberg", id: english };
+  // Only texts in other languages linked: Gutenberg's English title and author for one of them find the English text.
+  let alt: { title: string; author: string } | null = null;
+  if (linked[0]) {
+    const r = await cached(`https://www.gutenberg.org/cache/epub/${linked[0]}/pg${linked[0]}.rdf`).catch(() => null);
+    alt = r?.ok ? rdfEnglish(await r.text()) : null;
+  }
+  const named = alt ? { title: alt.title, authors: alt.author ? [alt.author] : book.authors } : book;
+  const id = gutenbergId(named) ?? (await findGutenberg(named, cached).catch(() => null));
   return id ? { kind: "gutenberg", id } : null;
 }
 

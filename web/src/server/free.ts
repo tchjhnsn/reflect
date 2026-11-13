@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { findFree, freeIndex, type FreeIndex } from "@reflect/core/free";
+import { editionsOfId, findFree, freeEditions, freeIndex, type FreeIndex } from "@reflect/core/free";
 import { knowFree, type Free } from "@reflect/core/openlibrary";
 
 // Whether a book can be read or heard in Reflect: matched against Project Gutenberg's English texts and LibriVox's
@@ -21,6 +21,14 @@ function catalog(name: "gutenberg" | "librivox"): FreeIndex {
 
 /** A book's Gutenberg number from the catalog file, or null. */
 export const gutenbergId = (book: { title: string; authors?: readonly string[] }): string | null => findFree(catalog("gutenberg"), book);
+/** Whether a Gutenberg number is one of the English texts in the catalog file. */
+export const englishGutenberg = (id: string): boolean => catalog("gutenberg").has(`#${id}`);
+/** Every Project Gutenberg text of a book (each translation, for a book kept in several), with its translators. */
+export function gutenbergEditions(book: { title: string; authors?: readonly string[] }, also?: string): { id: string; translators: string }[] {
+  // A book whose catalog title is in another script (the Iliad as "Ἰλιάς") is found through the text already chosen.
+  const all = [...freeEditions(catalog("gutenberg"), book), ...(also ? editionsOfId(catalog("gutenberg"), also) : [])];
+  return [...new Map(all.map((e) => [e.id, e])).values()];
+}
 /** A book's LibriVox id from the catalog file, or null. */
 export const librivoxId = (book: { title: string; authors?: readonly string[] }): string | null => findFree(catalog("librivox"), book);
 
