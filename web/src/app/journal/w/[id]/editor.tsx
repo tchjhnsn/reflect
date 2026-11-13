@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { fileWorkAction, saveWorkAction } from "../../actions";
 import { Mark, type IdealOption } from "../../mark";
+import { SendToLearn } from "../../send-learn";
 
 type Status = "saved" | "unsaved" | "saving" | "failed";
 const SAVE_AFTER_MS = 1200;
@@ -23,7 +24,7 @@ const SAVE_AFTER_MS = 1200;
  * and italic come from typing Markdown or from the small bar. It saves on its own a moment after you stop
  * typing, and each save that changes something is kept as a new version.
  */
-export function Editor({ work, ideals }: { work: Work; ideals: IdealOption[] }) {
+export function Editor({ work, ideals, subjects }: { work: Work; ideals: IdealOption[]; subjects: string[] }) {
   const [title, setTitle] = useState(work.title);
   const [status, setStatus] = useState<Status>("saved");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -99,6 +100,7 @@ export function Editor({ work, ideals }: { work: Work; ideals: IdealOption[] }) 
     if ("error" in r) setDomain(work.domain);
   };
   const [mark, setMark] = useState<{ passage: string; kept?: Domain | null } | null>(null);
+  const [send, setSend] = useState<{ passage: string; sent?: string } | null>(null);
 
   const tool = (label: string, Icon: typeof BoldIcon, on: boolean | undefined, run: () => void) => (
     <Button key={label} type="button" size="icon" variant="ghost" className={cn("size-8", on && "bg-muted")} aria-label={label} aria-pressed={!!on} onMouseDown={(e) => e.preventDefault()} onClick={run}>
@@ -125,7 +127,10 @@ export function Editor({ work, ideals }: { work: Work; ideals: IdealOption[] }) 
               tool("List", ListIcon, marks?.list, () => editor.chain().focus().toggleBulletList().run()),
               tool("Quote", QuoteIcon, marks?.quote, () => editor.chain().focus().toggleBlockquote().run()),
             ] : null}
-            <Button type="button" size="sm" variant="ghost" className="ml-1 h-8" disabled={!marks?.selected} onMouseDown={(e) => e.preventDefault()} onClick={() => setMark({ passage: marks!.selected })}>
+            <Button type="button" size="sm" variant="ghost" className="ml-1 h-8" disabled={!marks?.selected} onMouseDown={(e) => e.preventDefault()} onClick={() => { setMark(null); setSend({ passage: marks!.selected }); }}>
+              Send to Learn
+            </Button>
+            <Button type="button" size="sm" variant="ghost" className="h-8" disabled={!marks?.selected} onMouseDown={(e) => e.preventDefault()} onClick={() => { setSend(null); setMark({ passage: marks!.selected }); }}>
               Mark as a belief
             </Button>
             <span className={cn("text-muted-foreground ml-3 w-16 text-right text-xs", status === "failed" && "text-destructive")} role="status">
@@ -133,6 +138,19 @@ export function Editor({ work, ideals }: { work: Work; ideals: IdealOption[] }) 
             </span>
           </div>
         </div>
+        {send ? (
+          <div className="mx-auto max-w-3xl space-y-3 px-6 pb-4">
+            <blockquote className="border-l-2 pl-3 font-serif text-base italic">{send.passage}</blockquote>
+            {send.sent !== undefined ? (
+              <p className="text-sm">
+                Kept in Learn under {send.sent}. <Link href="/learn?tab=claims" className="underline underline-offset-2">See your claims</Link>
+                <button type="button" className="text-muted-foreground ml-2 text-xs" onClick={() => setSend(null)}>Close</button>
+              </p>
+            ) : (
+              <SendToLearn workId={work.id} passage={send.passage} subjects={subjects} onDone={(sub) => setSend({ passage: send.passage, sent: sub })} onCancel={() => setSend(null)} />
+            )}
+          </div>
+        ) : null}
         {mark ? (
           <div className="mx-auto max-w-3xl space-y-3 px-6 pb-4">
             <blockquote className="border-l-2 pl-3 font-serif text-base italic">{mark.passage}</blockquote>
