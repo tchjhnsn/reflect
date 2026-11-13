@@ -93,3 +93,7 @@ Torian (21:21Z) rejected "I hold this": it was invented, not the design's terms.
 
 Journals sit inside the domains (21:27Z, "Yes"): each domain page holds its works and its beliefs, ideals first; the journal stays the library of every work. Built on #48 (21:28Z "Build"): migration 0017 (`claim_kind`, `claim_origin`, `work_domain`, append-only), `/journal/d/[domain]`, "Mark as a belief" in the editor, the book grouped by kind.
 
+### Learn as the source; subjects placed in domains (built 2026-11-13 03:30Z)
+
+Torian (11-12 22:02Z) did not like the ideal and practical belief design and asked that Learn, and maybe the journal, be the sources beliefs and items are fetched from. 11-13 03:13Z: placing subjects works; 03:17Z: hold off on ideals versus practical beliefs and leave the built version as it is. Built: a Learn subject is placed in a domain once (migration 0018), and its claims and books show on the domain page; beliefs under it take that domain in the book. Not built: a journal passage sent to Learn as a claim; items stated from Learn sources.
+

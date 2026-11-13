@@ -6,6 +6,7 @@ import { requireUser } from "@/server/session";
 import { IMPORTABLE, MAX_IMPORT_BYTES } from "@reflect/core/works";
 import type { Holder } from "@reflect/core/claims";
 import { createWork, fileWork, importWork, saveWork } from "@/server/work-store";
+import { placeSubject } from "@/server/subject-domain-store";
 import { beliefFromWork, compileEdition, markBelief, placeClaim, type Marking } from "@/server/book-store";
 
 /** Start a work from a template of the prompt library, filed in a domain when started from one, and open it. */
@@ -71,6 +72,12 @@ export async function markBeliefAction(claimId: string, m: Marking): Promise<Don
 export async function fileWorkAction(workId: string, domain: string | null): Promise<Done> {
   const user = await requireUser();
   return attempt(() => fileWork(user.id, workId, domain), ["/journal", "/journal/d/[domain]"]);
+}
+
+/** Place a Learn subject in a domain, or take it out of every domain (null). */
+export async function placeSubjectAction(subjectId: string, domain: string | null): Promise<Done> {
+  const user = await requireUser();
+  return attempt(() => placeSubject(user.id, subjectId, domain), ["/journal/book", "/journal/d/[domain]"]);
 }
 
 /** Place a belief in a chapter of the book. */

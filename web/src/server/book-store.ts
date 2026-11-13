@@ -11,6 +11,7 @@ import { workTitle } from "@reflect/core/works";
 import { open, seal } from "./crypto";
 import { keepClaim, listClaims } from "./claims-store";
 import { getWork, listWorks } from "./work-store";
+import { subjectDomains } from "./subject-domain-store";
 
 const isId = (id: string) => /^[0-9a-f-]{36}$/i.test(id);
 
@@ -84,15 +85,16 @@ export async function beliefFromWork(userId: string, workId: string, passage: st
   return claimId;
 }
 
-/** Every claim as the book reads it: stance history, latest domain, and the work it was marked from. */
+/** Every claim as the book reads it: stance history, its domain (placed itself, else its Learn subject's), and the work it was marked from. */
 export async function beliefs(userId: string): Promise<Belief[]> {
-  const [claims, domains, sources, works, kinds, origins] = await Promise.all([
+  const [claims, domains, sources, works, kinds, origins, bySubject] = await Promise.all([
     listClaims(userId),
     db().query("SELECT DISTINCT ON (claim_id) claim_id, domain FROM claim_domain WHERE user_id = $1 ORDER BY claim_id, created_at DESC, id", [userId]),
     db().query("SELECT DISTINCT ON (claim_id) claim_id, work_id FROM claim_source WHERE user_id = $1 ORDER BY claim_id, created_at", [userId]),
     listWorks(userId),
     db().query("SELECT DISTINCT ON (claim_id) claim_id, kind, serves_claim_id, circumstances_ct FROM claim_kind WHERE user_id = $1 ORDER BY claim_id, created_at DESC, id", [userId]),
     db().query("SELECT DISTINCT ON (claim_id) claim_id, origins FROM claim_origin WHERE user_id = $1 ORDER BY claim_id, created_at DESC, id", [userId]),
+    subjectDomains(userId),
   ]);
   const textOf = new Map(claims.map((c) => [c.id, c.text]));
   const kindOf = new Map(kinds.rows.map((r) => [r.claim_id as string, r]));
@@ -105,7 +107,7 @@ export async function beliefs(userId: string): Promise<Belief[]> {
     const k = kindOf.get(c.id);
     const serves = k?.serves_claim_id ? { id: k.serves_claim_id as string, text: textOf.get(k.serves_claim_id as string) ?? "" } : null;
     return {
-      id: c.id, text: c.text, holders: c.holders, history: c.history, domain: domainIn.get(c.id) ?? null, source: w ? { workId: w, title: titles.get(w) ?? "a work" } : null,
+      id: c.id, text: c.text, holders: c.holders, history: c.history, domain: domainIn.get(c.id) ?? (c.subject ? bySubject.get(c.subject.id) : undefined) ?? null, source: w ? { workId: w, title: titles.get(w) ?? "a work" } : null,
       kind: (k?.kind as BeliefKind | undefined) ?? null, serves, circumstances: k?.circumstances_ct ? open(userId, k.circumstances_ct as string) : null, origins: originsOf.get(c.id) ?? [],
     };
   });
