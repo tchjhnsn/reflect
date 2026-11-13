@@ -14,6 +14,7 @@ export const catalog = defineCatalog(schema, {
     Claim: { props: z.object({ text: z.string(), stance: z.string(), holders: z.string() }), description: "A claim the person keeps, with their stance" },
     ProposeClaim: { props: z.object({ text: z.string(), stance: z.string(), holders: z.string(), subject: z.string().nullable(), claim: z.string() }), description: "A claim to keep, which the person accepts with one tap (claim is the proposal as JSON)" },
     BrowseLink: { props: z.object({ href: z.string().regex(/^\/learn\/browse(\?[^\s]*)?$/), label: z.string() }), description: "A link to the same list of books on Learn's Browse page" },
+    Quote: { props: z.object({ text: z.string(), cite: z.string(), href: z.string().regex(/^\/learn\/works\/OL\d+W\/read\?[^\s]*$/) }), description: "Words from a book the person reads in Reflect, cited to its author, book and chapter, opening the reader at them" },
     Note: { props: z.object({ text: z.string() }), description: "A short line from Reflect, such as nothing found" },
   },
   // No json-render actions: a card's one tap calls Reflect's server action itself (registry.tsx).

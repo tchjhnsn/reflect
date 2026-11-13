@@ -114,3 +114,16 @@ export async function findGutenberg(book: { title: string; authors?: readonly st
   if (!r.ok) return null;
   return opdsHits(await r.text()).find((h) => isTheBook(book, h))?.id ?? null;
 }
+
+/**
+ * The English title Project Gutenberg gives a text in another language ("Iliad" for "Ιλιάδα") and its first
+ * creator's name in Latin letters ("Homer"), from its RDF record; null without an English title.
+ */
+export function rdfEnglish(rdf: string): { title: string; author: string } | null {
+  const latin = (t: string | undefined) => (t && /^[\p{Script=Latin}\d\s'’,.:;!?&()-]+$/u.test(t) ? t.trim() : null);
+  const title = latin(/<dcterms:alternative>([^<]{1,200})<\/dcterms:alternative>/.exec(rdf)?.[1]);
+  if (!title) return null;
+  const name = latin(/<pgterms:name>([^<]{1,120})<\/pgterms:name>/.exec(rdf)?.[1]) ?? "";
+  const [last, first] = name.split(/,\s*/);
+  return { title, author: first ? `${first} ${last}` : (last ?? "") };
+}

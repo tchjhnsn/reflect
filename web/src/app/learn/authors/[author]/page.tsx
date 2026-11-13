@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
 
-/** One author: their photo, life dates and biography from Open Library, and their books in English, best rated first. */
+/** One author: their photo, life dates and biography from Open Library, how many of their books can be read or heard free in Reflect and which, and their books in English, best rated first. */
 export default async function AuthorPage({ params, searchParams }: { params: Promise<{ author: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const user = await requireUser();
   const { author } = await params;
@@ -27,7 +27,13 @@ export default async function AuthorPage({ params, searchParams }: { params: Pro
   const sort: Sort | undefined = isSort(one(sp.sort)) ? (one(sp.sort) as Sort) : undefined;
   const state: ListState = { ...(sort ? { sort } : {}), ...(isFilter(one(sp.filter)) ? { filter: one(sp.filter) as Filter } : {}), hide: one(sp.hide) === "1" };
   const source: BookSource = { kind: "author", id: author };
-  const [a, books, view] = await Promise.all([authorDetails(author, openLibrary).catch(() => null), listBooks(source, 1, sort ?? "rating", state.filter).catch(() => null), learnView(user.id)]);
+  const [a, books, view, open] = await Promise.all([
+    authorDetails(author, openLibrary).catch(() => null),
+    listBooks(source, 1, sort ?? "rating", state.filter).catch(() => null),
+    learnView(user.id),
+    // Their public-domain books, most read first, kept to those Reflect can show as text or play as audio.
+    listBooks(source, 1, "readinglog", "free").then((b) => b.filter((x) => x.free?.read || x.free?.listen)).catch((): CatalogEntry[] => []),
+  ]);
   if (!a) notFound();
   // Authors near this one: the authors of the most read books on the subject of their best rated book.
   const near = books?.[0] ? await booksLike(books[0], openLibrary, 24).catch((): CatalogEntry[] => []) : [];
@@ -53,12 +59,19 @@ export default async function AuthorPage({ params, searchParams }: { params: Pro
             {a.birth || a.death ? <p className="text-muted-foreground">{a.birth ?? "?"} – {a.death ?? ""}</p> : null}
           </div>
           {a.bio ? <Bio text={a.bio} /> : <p className="text-muted-foreground text-sm">The open library has no biography for this author yet.</p>}
+          {open.length ? <p className="text-sm">{freeLine(open.filter((b) => b.free?.read).length, open.filter((b) => b.free?.listen).length)}</p> : null}
           <div className="flex flex-wrap gap-2">
             {a.wikipedia ? <Button asChild variant="ghost" size="sm"><a href={a.wikipedia} target="_blank" rel="noreferrer">Wikipedia<ExternalLinkIcon /></a></Button> : null}
             <Button asChild variant="ghost" size="sm"><a href={`https://openlibrary.org/authors/${author}`} target="_blank" rel="noreferrer">Open Library<ExternalLinkIcon /></a></Button>
           </div>
         </div>
       </div>
+      {open.length ? (
+        <section className="mt-10 space-y-5">
+          <h2 className="text-lg font-semibold">Free to read or hear in Reflect</h2>
+          <BookGrid books={open.slice(0, 12)} mine={mine} />
+        </section>
+      ) : null}
       <section className="mt-10 space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">Books by {a.name}, {SORTS[sort ?? "rating"].toLowerCase()}</h2>
@@ -93,6 +106,14 @@ export default async function AuthorPage({ params, searchParams }: { params: Pro
       </section>
     </main>
   );
+}
+
+/** "12 of their most read books can be read free in Reflect, and 9 heard." */
+function freeLine(read: number, listen: number): string {
+  const books = (n: number) => `${n} of their most read books`;
+  if (read && listen) return `${books(read)} can be read free in Reflect, and ${listen} heard.`;
+  if (read) return `${books(read)} can be read free in Reflect.`;
+  return `${books(listen)} can be heard free in Reflect.`;
 }
 
 /** A biography, its opening shown and the rest a click away when it runs long. */

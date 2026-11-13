@@ -12,7 +12,7 @@ import { open, seal, tag } from "./crypto";
  * grasp counts, and recalls and grasps are never changed.
  */
 
-export type BookOut = { id: string; title: string; authors: string[]; isbn: string | null; status: BookStatus; startedOn: string | null; finishedOn: string | null; subjects: SubjectOut[]; catalog: CatalogEntry | null; recalls: { at: string; text: string }[]; /** Where the person is in it, when they read it in Reflect (migration 0019). */ place: BookPlace | null };
+export type BookOut = { id: string; title: string; authors: string[]; isbn: string | null; status: BookStatus; startedOn: string | null; finishedOn: string | null; subjects: SubjectOut[]; catalog: CatalogEntry | null; recalls: { at: string; text: string }[]; /** Where the person is in it, when they read it in Reflect (migration 0019). */ place: BookPlace | null; /** Its place in Want to read as the person ordered it (migration 0022), or null. */ wantRank: number | null };
 /** A chapter of a book and how far down it, from 0 to 1. */
 export type BookPlace = { chapter: number; chapters: number; at: number };
 export type SubjectOut = { id: string; name: string; vouches: number; shown: number; suggested: number; grasp: { grasp: Grasp; at: string; bookId: string | null } | null };
@@ -91,8 +91,13 @@ export async function setBookStatus(userId: string, bookId: string, status: Book
   });
 }
 
-/** Keep where the person is in a book on their shelves, replacing the place kept before (migration 0019). */
-export async function keepPlace(userId: string, bookId: string, p: BookPlace): Promise<void> {
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Keep where the person is in a book on their shelves, replacing the place kept before (migration 0019), and the day
+ * they read (migration 0022): their own date when given and within a day of the server's, else the server's.
+ */
+export async function keepPlace(userId: string, bookId: string, p: BookPlace, day?: string, now = new Date()): Promise<void> {
   const chapters = Math.floor(p.chapters);
   const chapter = Math.floor(p.chapter);
   if (!(chapters >= 1 && chapters <= 10000 && chapter >= 1 && chapter <= chapters)) throw new Error("chapter is a whole number from 1 to the number of chapters");
@@ -103,7 +108,51 @@ export async function keepPlace(userId: string, bookId: string, p: BookPlace): P
       "INSERT INTO learn_book_place (book_id, user_id, chapter, chapters, at, updated_at) VALUES ($1, $2, $3, $4, $5, now()) ON CONFLICT (book_id) DO UPDATE SET chapter = $3, chapters = $4, at = $5, updated_at = now()",
       [bookId, userId, chapter, chapters, at],
     );
+    const near = day && DAY.test(day) && Math.abs(Date.parse(`${day}T12:00:00Z`) - now.getTime()) < 36 * 3600 * 1000;
+    await c.query("INSERT INTO learn_reading_day (user_id, day) VALUES ($1, $2) ON CONFLICT DO NOTHING", [userId, near ? day : now.toISOString().slice(0, 10)]);
   });
+}
+
+/** Set the day the person finished a read book (a date from 1900 to today). */
+export async function setFinishedOn(userId: string, bookId: string, day: string, now = new Date()): Promise<void> {
+  if (!DAY.test(day) || day < "1900-01-01" || day > now.toISOString().slice(0, 10) || Number.isNaN(Date.parse(day))) throw new Error("the day is a date from 1900 to today");
+  await tx(async (c) => {
+    const b = await ownBook(c, userId, bookId);
+    if (b.status !== "read") throw new Error("only a read book has a day it was finished");
+    await c.query("UPDATE learn_book SET finished_on = $3 WHERE id = $1 AND user_id = $2", [bookId, userId, day]);
+  });
+}
+
+/** Order Want to read: the person's books in the order given, first first; books left out keep no order. */
+export async function rankWant(userId: string, ids: string[]): Promise<void> {
+  if (ids.length > 2000 || ids.some((id) => !/^[0-9a-f-]{36}$/.test(id))) throw new Error("no such books");
+  await tx(async (c) => {
+    await c.query("UPDATE learn_book SET want_rank = NULL WHERE user_id = $1 AND want_rank IS NOT NULL", [userId]);
+    for (const [i, id] of ids.entries()) await c.query("UPDATE learn_book SET want_rank = $3 WHERE id = $1 AND user_id = $2", [id, userId, i]);
+  });
+}
+
+/** The person's reading goal for a year, in books, or null. */
+export async function goalFor(userId: string, year: number): Promise<number | null> {
+  const r = await db().query("SELECT books FROM learn_goal WHERE user_id = $1 AND year = $2", [userId, year]);
+  return r.rows[0] ? Number(r.rows[0].books) : null;
+}
+
+/** Set or clear (null) the person's reading goal for a year. */
+export async function setGoal(userId: string, year: number, books: number | null): Promise<void> {
+  if (!Number.isInteger(year) || year < 1900 || year > 3000) throw new Error("no such year");
+  if (books === null) {
+    await db().query("DELETE FROM learn_goal WHERE user_id = $1 AND year = $2", [userId, year]);
+    return;
+  }
+  if (!Number.isInteger(books) || books < 1 || books > 1000) throw new Error("a goal is 1 to 1,000 books");
+  await db().query("INSERT INTO learn_goal (user_id, year, books) VALUES ($1, $2, $3) ON CONFLICT (user_id, year) DO UPDATE SET books = $3, updated_at = now()", [userId, year, books]);
+}
+
+/** The days the person read in Reflect from one day to another, both kept, as "YYYY-MM-DD". */
+export async function readingDays(userId: string, from: string, to: string): Promise<string[]> {
+  const r = await db().query("SELECT to_char(day, 'YYYY-MM-DD') AS d FROM learn_reading_day WHERE user_id = $1 AND day BETWEEN $2 AND $3 ORDER BY day", [userId, from, to]);
+  return r.rows.map((x) => x.d as string);
 }
 
 /** Keep one status change in the book's history (migration 0013): never changed, the log reads it. */
@@ -177,6 +226,7 @@ async function books(userId: string, only?: string): Promise<BookOut[]> {
       catalog: b.catalog_ct ? (JSON.parse(open(userId, b.catalog_ct)) as CatalogEntry) : null,
       recalls: recalls.rows.map((x) => ({ at: new Date(x.created_at as string).toISOString(), text: open(userId, x.text_ct as string) })),
       place: place.rows[0] ? { chapter: Number(place.rows[0].chapter), chapters: Number(place.rows[0].chapters), at: Number(place.rows[0].at) } : null,
+      wantRank: b.want_rank === null || b.want_rank === undefined ? null : Number(b.want_rank),
     });
   }
   return out;

@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { BookIcon, ExternalLinkIcon, StarIcon } from "lucide-react";
 import { googleVolume, readerUrl } from "@reflect/core/googlebooks";
-import { librivoxBook, type Audiobook } from "@reflect/core/librivox";
 import { authorWorks, booksLike, coverUrl, workAccess, workDetails, workEntry, type CatalogEntry } from "@reflect/core/openlibrary";
 import { categoryOf, showCall, themaCategory } from "@reflect/core/thema";
 import { Badge } from "@/components/ui/badge";
@@ -14,12 +13,16 @@ import { PAGE } from "@/components/page-header";
 import { requireUser } from "@/server/session";
 import { learnView } from "@/server/learn-store";
 import { listClaims, type ClaimOut } from "@/server/claims-store";
+import { listIdeas, type IdeaOut } from "@/server/ideas-store";
+import { ideasNaming } from "@reflect/core/ideas";
 import { LearnHeader } from "../../header";
 import { AddBook } from "../../add-book";
 import { Reader, type ReadLink } from "./reader";
 import { textSource } from "@/server/texts";
-import { librivoxId } from "@/server/free";
+import { audiobookFor } from "@/server/audio";
 import { excerptsOf } from "@/server/excerpt-store";
+import { publishedBy } from "@/server/published-store";
+import { whereOf } from "@/server/highlights";
 import { Excerpts } from "./excerpts";
 import { Listen } from "./listen";
 import { AuthorName, BookGrid } from "../../book-card";
@@ -31,42 +34,38 @@ export const dynamic = "force-dynamic";
 const STATUS = [["want", "Want to read"], ["reading", "Reading"], ["read", "Read"]] as const;
 const STANCE: Record<string, string> = { belief: "Belief", disbelief: "Disbelief", suspension: "Suspension of judgment" };
 const cached = (url: string) => fetch(url, { headers: { "user-agent": "reflect-app" }, next: { revalidate: 86400 } });
-// LibriVox can be slow to answer; the page does not wait on it for long.
-const slow = (url: string) => fetch(url, { headers: { "user-agent": "reflect-app" }, next: { revalidate: 86400 }, signal: AbortSignal.timeout(6000) });
 const Label = ({ children }: { children: ReactNode }) => <h3 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{children}</h3>;
 
 /**
  * One book's page, for any book in the open library: its cover, what it is about, its readers' ratings, a
  * the whole book to read or hear free when it is in the public domain (the Internet Archive, Project Gutenberg,
  * Standard Ebooks, LibriVox) or a preview from Google Books, its contents and editions, where it sits in Thema,
- * books like it and more by its author, and, when it is yours, where you are with it and the claims on its
- * subjects.
+ * books like it and more by its author, where you are with it when it is yours, and the claims that cite it or
+ * are on its subjects and the ideas that came from it.
  */
 export default async function WorkPage({ params }: { params: Promise<{ work: string }> }) {
   const user = await requireUser();
   const { work } = await params;
   if (!/^OL\d+W$/.test(work)) notFound();
-  const [entry, details, access, view, claims, excerpts] = await Promise.all([
+  const [entry, details, access, view, claims, excerpts, published, ideas] = await Promise.all([
     workEntry(work, cached).catch(() => null),
     workDetails(work, cached).catch(() => null),
     workAccess(work, cached).catch(() => null),
     learnView(user.id),
     listClaims(user.id).catch((): ClaimOut[] => []),
     excerptsOf(user.id, work).catch(() => []),
+    publishedBy(user.id).catch(() => []),
+    listIdeas(user.id).catch((): IdeaOut[] => []),
   ]);
   if (!entry && !details) notFound();
   const mine = view.books.find((b) => b.catalog?.work === work);
   const title = entry?.title ?? mine?.title ?? "Untitled";
   const authors = entry?.authors ?? mine?.authors ?? [];
   const authorKeys = entry?.authorKeys ?? mine?.catalog?.authorKeys ?? [];
-  // LibriVox recordings: the catalog's links, else the book found in LibriVox's catalog when it is old enough to be free.
-  const oldEnough = access?.access === "public" || (entry?.year ?? 9999) < 1930;
-  const found = !access?.librivox.length && oldEnough ? librivoxId({ title, authors }) : null;
-  const recordings = access?.librivox.length ? access.librivox : found ? [found] : [];
   const [google, byAuthor, audio, like, text] = await Promise.all([
     googleVolume({ title, authors, ...(entry?.isbn ? { isbn: entry.isbn } : {}) }, cached, process.env.GOOGLE_BOOKS_API_KEY).catch(() => null),
     authorKeys[0] ? authorWorks(authorKeys[0], cached, { limit: 7, sort: "rating" }).then((b) => b.filter((x) => x.work !== work).slice(0, 6)).catch((): CatalogEntry[] => []) : Promise.resolve([] as CatalogEntry[]),
-    recordings.length ? librivoxBook(recordings, slow).catch((): Audiobook | null => null) : Promise.resolve(null),
+    audiobookFor({ title, authors, ...(entry?.year ? { year: entry.year } : {}) }, access),
     entry ? booksLike({ work, subjects: details?.subjects.length ? details.subjects : entry.subjects }, cached).catch((): CatalogEntry[] => []) : Promise.resolve([] as CatalogEntry[]),
     access?.access === "public" || access?.gutenberg.length || access?.standardEbooks.length || (entry?.year ?? 9999) < 1930 ? textSource({ title, authors }, access) : Promise.resolve(null),
   ]);
@@ -83,7 +82,12 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
   const description = details?.description ?? google?.description ?? null;
   const mySubjects = new Set(mine?.subjects.map((s) => s.id) ?? []);
   const lower = title.toLowerCase();
-  const related = claims.filter((c) => (c.subject && mySubjects.has(c.subject.id)) || c.holders.some((h) => `${h.name} ${h.citation ?? ""}`.toLowerCase().includes(lower)));
+  // Claims that cite the book (a passage kept as a claim cites it), then claims on its subjects.
+  const cites = (c: ClaimOut) => c.holders.some((h) => `${h.name} ${h.citation ?? ""}`.toLowerCase().includes(lower));
+  const fromIt = claims.filter(cites);
+  const related = claims.filter((c) => !cites(c) && c.subject && mySubjects.has(c.subject.id));
+  // Ideas of the person's that came from the book, may have, or have it as a recommendation.
+  const bearing = ideasNaming(ideas, mine ? `book:${mine.id}` : null, title);
 
   return (
     <main className={PAGE}>
@@ -116,8 +120,8 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
             {mine ? <span className="text-muted-foreground text-xs">On your shelves</span> : null}
           </div>
           {text || preview || links.length ? <Reader links={links} work={work} kept={mine?.place ?? null} preview={preview} {...(text ? { here: `/learn/works/${work}/read` } : {})} /> : null}
-          {audio ? <Listen book={audio} /> : null}
-          <Excerpts work={work} title={title} author={authors[0] ?? ""} rows={excerpts.map((e) => ({ id: e.id, quote: e.quote, where: e.anchor?.chapterTitle || e.place, chapter: e.anchor?.chapter ?? null, note: e.note }))} {...(text ? { reader: `/learn/works/${work}/read` } : {})} />
+          {audio ? <Listen book={audio} work={work} title={title} /> : null}
+          <Excerpts work={work} rows={excerpts.map((e) => ({ id: e.id, work, title, author: authors[0] ?? "", quote: e.quote, where: whereOf(e), chapter: e.anchor?.chapter ?? null, note: e.note, color: e.color, published: published.find((p) => p.work === work && p.quote === e.quote.replace(/\s+/g, " ").trim())?.id ?? null }))} {...(text ? { reader: `/learn/works/${work}/read` } : {})} />
           <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
             <div><dt className="text-muted-foreground text-xs">Category</dt><dd>{category ? <Link className="underline-offset-4 hover:underline" href={`/learn/browse?cat=${category.code}`}>{category.heading}</Link> : "Not yet placed"}</dd></div>
             <div><dt className="text-muted-foreground text-xs">Library of Congress call number</dt><dd>{entry?.lcc?.[0] ? showCall(entry.lcc[0]) : "None in the catalog"}</dd></div>
@@ -158,16 +162,45 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
               </ul>
             </section>
           ) : null}
-          {mine || related.length ? (
+          {mine || fromIt.length || related.length || bearing.length ? (
             <Card className="gap-3 py-5">
-              <CardHeader className="px-5"><CardTitle className="text-sm">Your claims on this book&apos;s subjects</CardTitle></CardHeader>
-              <CardContent className="space-y-3 px-5 text-sm">
-                {related.length ? related.map((c) => (
-                  <div key={c.id}>
-                    <p className="font-medium">{c.text}</p>
-                    <p className="text-muted-foreground text-xs">{[c.stance ? STANCE[c.stance.stance] : "No stance", c.subject?.name].filter(Boolean).join(" · ")}</p>
+              <CardHeader className="px-5"><CardTitle className="text-sm">Claims and ideas from this book</CardTitle></CardHeader>
+              <CardContent className="space-y-4 px-5 text-sm">
+                {fromIt.length ? (
+                  <div className="space-y-3">
+                    <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">Claims citing it</p>
+                    {fromIt.map((c) => (
+                      <div key={c.id}>
+                        <p className="font-medium">{c.text}</p>
+                        <p className="text-muted-foreground text-xs">{[c.stance ? STANCE[c.stance.stance] : "No stance", c.holders.map((h) => [h.name, h.citation].filter(Boolean).join(", ")).join("; ")].filter(Boolean).join(" · ")}</p>
+                      </div>
+                    ))}
                   </div>
-                )) : <p className="text-muted-foreground">None yet. Claims you keep on this book&apos;s subjects, or that cite it, show here.</p>}
+                ) : null}
+                {bearing.length ? (
+                  <div className="space-y-3">
+                    <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">Your ideas</p>
+                    {bearing.map(({ idea, how }) => (
+                      <div key={idea.id}>
+                        <p className="font-medium">{idea.title}</p>
+                        {idea.statement ? <p className="text-muted-foreground line-clamp-3">{idea.statement}</p> : null}
+                        <p className="text-muted-foreground text-xs">{how === "from" ? "Came from this book" : how === "maybe" ? "May have come from this book" : `This book ${how} it`}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+                {related.length ? (
+                  <div className="space-y-3">
+                    <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">Claims on its subjects</p>
+                    {related.map((c) => (
+                      <div key={c.id}>
+                        <p className="font-medium">{c.text}</p>
+                        <p className="text-muted-foreground text-xs">{[c.stance ? STANCE[c.stance.stance] : "No stance", c.subject?.name].filter(Boolean).join(" · ")}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+                {!fromIt.length && !bearing.length && !related.length ? <p className="text-muted-foreground">None yet. Claims that cite this book or are on its subjects, and ideas that came from it, show here.</p> : null}
               </CardContent>
             </Card>
           ) : null}

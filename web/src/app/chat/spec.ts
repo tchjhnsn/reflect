@@ -10,6 +10,7 @@ export type Piece =
   | { kind: "claims"; claims: { text: string; stance: string | null; holders: Holder[] }[] }
   | { kind: "library"; label: string; books: CatalogEntry[]; kept: ReadonlySet<string>; /** The same list on Browse, where it goes on. */ href?: string }
   | { kind: "propose_claim"; text: string; subject?: string; holders: Holder[]; stance: string }
+  | { kind: "quote"; text: string; cite: string; href: string }
   | { kind: "note"; text: string };
 
 const holderText = (hs: readonly Holder[]) => hs.map((h) => (h.citation ? `${h.name} (${h.citation})` : h.name)).join("; ");
@@ -32,6 +33,7 @@ export function buildSpec(pieces: readonly Piece[]): Spec | null {
   const note = (text: string) => add({ type: "Note", props: { text } });
   for (const p of pieces) {
     if (p.kind === "note") note(p.text);
+    else if (p.kind === "quote") add({ type: "Quote", props: { text: p.text, cite: p.cite, href: p.href } });
     else if (p.kind === "shelves") {
       if (!p.shelves.length) note("No shelves yet. Books go on a shelf once they have a call number.");
       for (const s of p.shelves) add({ type: "Shelf", props: { id: s.id, name: s.name, books: s.books, subjects: s.subjects } });

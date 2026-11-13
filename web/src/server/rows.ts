@@ -1,6 +1,6 @@
 import { browseQuery, searchBooks, type CatalogEntry } from "@reflect/core/openlibrary";
 import { THEMA } from "@reflect/core/thema";
-import { LISTS, listBookQuery } from "@reflect/core/lists";
+import { LISTS, bestListMatch, listBookQuery } from "@reflect/core/lists";
 import { listBooks, openLibrary } from "./browse";
 
 /** One row of For you below the person's own rows: a title, where See all goes, and its books. */
@@ -24,7 +24,7 @@ export const ROWS: readonly { key: string; title: string; href: string; make: ()
     key: `list-${l.id}`,
     title: `From ${l.name}`,
     href: `/learn/lists/${l.id}`,
-    make: async () => (await Promise.all(l.books.slice(0, ROW).map((b) => searchBooks(listBookQuery(b), openLibrary, 1).then((r) => r[0] ?? null).catch(() => null)))).filter((b): b is CatalogEntry => b !== null),
+    make: async () => (await Promise.all(l.books.slice(0, ROW).map((b) => searchBooks(listBookQuery(b), openLibrary, 6).then((r) => bestListMatch(b, r)).catch(() => null)))).filter((b): b is CatalogEntry => b !== null),
   })),
   { key: "before-1900", title: "Most read books written before 1900", href: "/learn/browse?q=first_publish_year%3A%5B*%20TO%201899%5D&sort=readinglog", make: async () => take(await browseQuery("first_publish_year:[* TO 1899]", openLibrary, { limit: ROW, sort: "readinglog" })) },
   ...THEMA.flatMap((s) => s.children.map((c) => ({ key: `cat-${c.code}`, title: `Best rated in ${c.short}`, href: `/learn/browse?cat=${c.code}`, make: async () => take(await listBooks({ kind: "cat", code: c.code }, 1, "rating")) }))),

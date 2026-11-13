@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
-import { BROAD_SUBJECT as BROAD, browseQuery, isSort, searchAuthors, searchBooks, SORTS, trendingBooks, type AuthorHit, type CatalogEntry, type Sort } from "@reflect/core/openlibrary";
+import { BROAD_SUBJECT as BROAD, booksLike, browseQuery, workEntry, isSort, searchAuthors, searchBooks, SORTS, trendingBooks, type AuthorHit, type CatalogEntry, type Sort } from "@reflect/core/openlibrary";
 import { THEMA, themaCategory, themaQuery, themaSection } from "@reflect/core/thema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import { Menu } from "./category-menu";
 import { MoreBooks } from "./more-books";
 import { BookRow, MoreRows, RowsLoading } from "./more-rows";
 import { rowsAt } from "@/server/rows";
+import { allExcerpts } from "@/server/excerpt-store";
 import { FilterMenu, SortMenu, type ListState } from "./list-menus";
 import { isFilter, listBooks, newQuery, openLibrary, PER, type BookSource, type Filter } from "@/server/browse";
 
@@ -52,6 +53,7 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
     body = (
       <>
         {authors.length ? <Authors authors={authors} /> : null}
+        {q ? <p className="text-muted-foreground text-sm"><Link href={`/learn/passages?q=${encodeURIComponent(q)}`} className="underline underline-offset-2">Look for “{q}” inside the books on your shelves</Link></p> : null}
         <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
           <h2 className="text-lg font-semibold">{title}</h2>
           <div className="flex flex-wrap gap-2">
@@ -74,7 +76,7 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
       </>
     );
   } else {
-    body = <ForYou view={view} mine={mine} />;
+    body = <ForYou view={view} mine={mine} userId={user.id} />;
   }
 
   return (
@@ -149,11 +151,12 @@ function Books({ books, mine }: { books: CatalogEntry[] | null; mine: Map<string
 }
 
 /**
- * Lists made from the person's own records: books like the one they are reading or read last, books on the
+ * Lists made from the person's own records: books like the one they last highlighted a passage in, books like the
+ * one they are reading or read last, books on the
  * subjects they are learning, their authors, this week's reads and new books; then rows for everyone, loading
  * as the person scrolls (`src/server/rows.ts`). Books already on their shelves stay in, marked as theirs.
  */
-async function ForYou({ view, mine }: { view: LearnView; mine: Map<string, string> }) {
+async function ForYou({ view, mine, userId }: { view: LearnView; mine: Map<string, string>; userId: string }) {
   const rank = { reading: 0, read: 1, want: 2 } as Record<string, number>;
   const seed = [...view.books].filter((b) => b.catalog?.subjects.some((s) => !BROAD.test(s))).sort((a, b) => (rank[a.status] ?? 3) - (rank[b.status] ?? 3))[0];
   const seedSubject = seed?.catalog?.subjects.find((s) => !BROAD.test(s));
@@ -164,6 +167,10 @@ async function ForYou({ view, mine }: { view: LearnView; mine: Map<string, strin
     seedSubject ? browseQuery(`subject:"${seedSubject.replace(/"/g, "")}"`, openLibrary, { limit: ROW * 2, sort: "readinglog" }).then(fresh).catch(() => null) : Promise.resolve(null),
     ...learning.map((name) => searchBooks(name, openLibrary, ROW * 2).then(fresh).catch(() => null)),
   ]);
+  // The book the person last highlighted or excerpted, and books like it.
+  const lastExcerpt = (await allExcerpts(userId).catch(() => []))[0];
+  const highlighted = lastExcerpt ? await workEntry(lastExcerpt.work, openLibrary).catch(() => null) : null;
+  const likeHighlighted = highlighted ? await booksLike(highlighted, openLibrary, ROW + 1).then((b) => b.filter((x) => x.work !== highlighted.work).slice(0, ROW)).catch(() => null) : null;
   const [week, recent] = await Promise.all([
     trendingBooks(openLibrary, ROW * 2).then((b) => b.slice(0, ROW * 2)).catch(() => null),
     browseQuery(newQuery(), openLibrary, { limit: ROW, sort: "readinglog" }).catch(() => null),
@@ -190,6 +197,7 @@ async function ForYou({ view, mine }: { view: LearnView; mine: Map<string, strin
     ) : null;
   return (
     <div className="space-y-8">
+      {highlighted ? row(<>Because you highlighted a passage in <em className="font-serif">{highlighted.title}</em></>, likeHighlighted, `/learn/works/${highlighted.work}`) : null}
       {seed && seedSubject ? row(<>Because you shelved <em className="font-serif">{seed.title}</em></>, like, `/learn/browse?q=${encodeURIComponent(seedSubject)}`) : null}
       {learning.map((name, i) => row(<>On {name}, one of your subjects</>, bySubject[i] ?? null, `/learn/browse?q=${encodeURIComponent(name)}`))}
       {yours.length ? (

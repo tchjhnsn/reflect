@@ -2,16 +2,20 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { BookAIcon, CheckIcon, CopyIcon, HighlighterIcon, QuoteIcon, Trash2Icon, XIcon } from "lucide-react";
+import { BookAIcon, CheckIcon, CopyIcon, HighlighterIcon, MessageSquareIcon, QuoteIcon, Trash2Icon, XIcon } from "lucide-react";
 import { STANCES } from "@reflect/core/claims";
-import { citeQuote, cutRuns, runsOf, type Span } from "@reflect/core/excerpts";
+import { citeQuote, cutRuns, HIGHLIGHT_COLORS, runsOf, type HighlightColor, type Span } from "@reflect/core/excerpts";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+import { COLOR } from "../../../colors";
 import { lookupWord, type Definition } from "@reflect/core/wiktionary";
 import { Button } from "@/components/ui/button";
-import { addExcerptAction, defineAction, keepClaimAction, keepPlaceAction, removeExcerptAction } from "../../../actions";
+import { addExcerptAction, defineAction, keepClaimAction, keepPlaceAction, removeExcerptAction, reviseExcerptAction } from "../../../actions";
 import { useReader } from "./reader-frame";
+import { useListen } from "../../../player";
 
 /** A highlight kept in this chapter: its id, its words, and where they sit. */
-export type Mark = Span & { id: string; quote: string };
+export type Mark = Span & { id: string; quote: string; color: HighlightColor; note: string | null };
 
 /** Where the person is in a book: kept in this browser, and with their account when the book is on their shelves. */
 export type ReadPlace = { chapter: number; chapters: number; at: number };
@@ -30,9 +34,12 @@ export function Page({ work, chapter, chapters, title, author, chapterTitle, par
   const [marks, setMarks] = useState<Mark[]>(initial);
   const [error, setError] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  const [writing, setWriting] = useState<string | null>(null);
   const [defined, setDefined] = useState<{ word: string; definitions: Definition[]; lemma?: { word: string; definitions: Definition[] } } | "none" | null>(null);
   const [pending, run] = useTransition();
   const { look, setAt } = useReader();
+  // The bars sit above Learn's audio player when it is open.
+  const lift = useListen()?.book ? "bottom-[60px]" : "bottom-0";
   const router = useRouter();
 
   useEffect(() => {
@@ -59,7 +66,11 @@ export function Page({ work, chapter, chapters, title, author, chapterTitle, par
       return { chapter, chapters, at: h > 0 ? Math.min(1, window.scrollY / h) : 0 };
     };
     const send = () => {
-      if (bookId) keepPlaceAction(bookId, here()).catch(() => undefined);
+      if (bookId) {
+        const d = new Date();
+        const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        keepPlaceAction(bookId, here(), day).catch(() => undefined);
+      }
     };
     const save = () => {
       setAt(here().at);
@@ -148,6 +159,7 @@ export function Page({ work, chapter, chapters, title, author, chapterTitle, par
       setPicked({ text: text.slice(0, 5000), span, id: null });
       setDefined(null);
       setNote(null);
+      setWriting(null);
       setKept(null);
       setDone(null);
       setError(false);
@@ -181,14 +193,28 @@ export function Page({ work, chapter, chapters, title, author, chapterTitle, par
     }
   });
 
-  const highlight = () => run(async () => {
+  const highlight = (color: HighlightColor = "yellow") => run(async () => {
     if (!picked?.span) return;
     try {
-      const id = await addExcerptAction({ work, quote: picked.text, anchor: { source, chapter, chapterTitle, from: picked.span.from, to: picked.span.to } });
-      setMarks((m) => [...m, { id, quote: picked.text, ...picked.span! }]);
+      const id = await addExcerptAction({ work, quote: picked.text, color, anchor: { source, chapter, chapterTitle, from: picked.span.from, to: picked.span.to } });
+      setMarks((m) => [...m, { id, quote: picked.text, color, note: null, ...picked.span! }]);
       setPicked({ ...picked, id });
       setDone("Highlighted. It is with your excerpts on the book page.");
       window.getSelection()?.removeAllRanges();
+    } catch {
+      setError(true);
+    }
+  });
+
+  // A new colour or note keeps the highlight as a new excerpt with a new id (an excerpt is never edited).
+  const revise = (change: { color?: HighlightColor; note?: string }) => run(async () => {
+    if (!picked?.id) return;
+    try {
+      const id = await reviseExcerptAction(picked.id, work, change);
+      setMarks((m) => m.map((x) => (x.id === picked.id ? { ...x, id, ...(change.color ? { color: change.color } : {}), ...(change.note !== undefined ? { note: change.note.trim() || null } : {}) } : x)));
+      setPicked({ ...picked, id });
+      setWriting(null);
+      setDone(change.note !== undefined ? "Note kept." : "Colour changed.");
     } catch {
       setError(true);
     }
@@ -229,6 +255,7 @@ export function Page({ work, chapter, chapters, title, author, chapterTitle, par
     setPicked({ text: m.quote, span: { from: m.from, to: m.to }, id: m.id });
     setDefined(null);
     setNote(null);
+    setWriting(null);
     setKept(null);
     setDone(null);
     setError(false);
@@ -245,7 +272,7 @@ export function Page({ work, chapter, chapters, title, author, chapterTitle, par
               {cutRuns(runsOf(p, i, all), here.map((n) => n.c)).map((r, k) => {
                 const m = r.id && r.id !== "found" ? marks.find((x) => x.id === r.id) : undefined;
                 const refs = here.filter((n) => n.c === r.at + r.text.length);
-                const body = m ? <mark className="cursor-pointer rounded-sm bg-amber-200/70 text-inherit dark:bg-amber-400/30" onClick={() => open(m)}>{r.text}</mark> : r.id === "found" ? <mark className="rounded-sm bg-sky-200/80 text-inherit dark:bg-sky-400/30">{r.text}</mark> : <span>{r.text}</span>;
+                const body = m ? <mark className={cn("cursor-pointer rounded-sm text-inherit", COLOR[m.color].mark, m.note && "underline decoration-dotted underline-offset-4")} onClick={() => open(m)}>{r.text}</mark> : r.id === "found" ? <mark className="rounded-sm bg-sky-200/80 text-inherit dark:bg-sky-400/30">{r.text}</mark> : <span>{r.text}</span>;
                 return (
                   <span key={k}>
                     {body}
@@ -260,7 +287,7 @@ export function Page({ work, chapter, chapters, title, author, chapterTitle, par
         })}
       </div>
       {note ? (
-        <div data-bar className="bg-background fixed inset-x-0 bottom-0 z-20 border-t shadow-lg">
+        <div data-bar className={cn("bg-background fixed inset-x-0 z-20 border-t shadow-lg", lift)}>
           <div className="mx-auto flex max-w-3xl items-start justify-between gap-3 px-4 py-3 sm:px-6">
             <p className="max-h-[40svh] overflow-y-auto text-sm"><span className="font-semibold">Note {note.replace("note-", "")}. </span>{noteText[note] ?? "This note is not in the text."}</p>
             <Button variant="ghost" size="icon" className="size-7 shrink-0" onClick={() => setNote(null)} aria-label="Close"><XIcon /></Button>
@@ -268,19 +295,36 @@ export function Page({ work, chapter, chapters, title, author, chapterTitle, par
         </div>
       ) : null}
       {picked ? (
-        <div data-bar className="bg-background fixed inset-x-0 bottom-0 z-20 border-t shadow-lg">
+        <div data-bar className={cn("bg-background fixed inset-x-0 z-20 border-t shadow-lg", lift)}>
           <div className="mx-auto flex max-h-[70svh] max-w-3xl flex-col gap-2 overflow-y-auto px-4 py-3 sm:px-6">
             <div className="flex items-start justify-between gap-3">
               <p className="text-muted-foreground line-clamp-2 text-sm"><QuoteIcon className="mr-1 inline size-3.5" />{picked.text}</p>
               <Button variant="ghost" size="icon" className="size-7 shrink-0" onClick={close} aria-label="Close"><XIcon /></Button>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {picked.id ? null : <Button size="sm" disabled={pending || !picked.span} onClick={highlight}><HighlighterIcon />Highlight</Button>}
+              {picked.id ? null : <Button size="sm" disabled={pending || !picked.span} onClick={() => highlight()}><HighlighterIcon />Highlight</Button>}
+              <span className="inline-flex items-center gap-1.5 px-1" role="group" aria-label={picked.id ? "Colour" : "Highlight in a colour"}>
+                {HIGHLIGHT_COLORS.map((c) => {
+                  const on = picked.id ? marks.find((x) => x.id === picked.id)?.color === c : false;
+                  return <button key={c} type="button" aria-label={COLOR[c].name} aria-pressed={on} disabled={pending || (!picked.id && !picked.span) || on} onClick={() => (picked.id ? revise({ color: c }) : highlight(c))} className={cn("size-5 rounded-full", COLOR[c].dot, on ? "ring-foreground/60 ring-2 ring-offset-1" : "opacity-70 hover:opacity-100")} />;
+                })}
+              </span>
+              {picked.id && writing === null ? <Button size="sm" variant="outline" onClick={() => setWriting(marks.find((x) => x.id === picked.id)?.note ?? "")}><MessageSquareIcon />{marks.find((x) => x.id === picked.id)?.note ? "Edit note" : "Add a note"}</Button> : null}
               <Button size="sm" variant="outline" onClick={copy}><CopyIcon />Copy quote</Button>
               {lookupWord(picked.text) ? <Button size="sm" variant="outline" disabled={pending} onClick={define}><BookAIcon />Look up</Button> : null}
               {picked.id ? <Button size="sm" variant="ghost" disabled={pending} onClick={remove}><Trash2Icon />Remove highlight</Button> : null}
               {done ? <span className="text-muted-foreground flex items-center gap-1 text-xs"><CheckIcon className="size-3.5" />{done}</span> : null}
             </div>
+            {picked.id && writing === null && marks.find((x) => x.id === picked.id)?.note ? <p className="text-sm"><span className="text-muted-foreground">Your note: </span>{marks.find((x) => x.id === picked.id)!.note}</p> : null}
+            {writing !== null ? (
+              <div className="space-y-2">
+                <Textarea value={writing} onChange={(e) => setWriting(e.target.value)} rows={2} placeholder="Your note on this passage" aria-label="Your note" />
+                <div className="flex gap-2">
+                  <Button size="sm" disabled={pending} onClick={() => revise({ note: writing })}>Save note</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setWriting(null)}>Cancel</Button>
+                </div>
+              </div>
+            ) : null}
             {defined === "none" ? <p className="text-muted-foreground text-sm">Wiktionary has no English entry for that word.</p> : defined ? <Defined found={defined} /> : null}
             {kept ? (
               <p className="flex items-center gap-1.5 text-sm"><CheckIcon className="size-4" />Kept as a claim: {kept}. It is in Claims, cited to {title}.</p>

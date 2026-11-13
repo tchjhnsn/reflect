@@ -231,3 +231,22 @@ export async function ideaProblems(root: string): Promise<string[]> {
   }
   return out;
 }
+
+/** How an idea bears on one thing it names: came from it, may have, or a recommendation placed on the spectrum. */
+export type IdeaBearing = { idea: Idea; how: "from" | "maybe" | Stance };
+
+/**
+ * The ideas that name one thing (a book on the person's shelves, by its ref such as `book:<id>`), each with how:
+ * it came from it, may have, or the thing is a recommendation on it. A target kept as text only counts when its
+ * text is the thing's title.
+ */
+export function ideasNaming(ideas: readonly Idea[], ref: string | null, title: string): IdeaBearing[] {
+  const t = title.replace(/\s+/g, " ").trim().toLowerCase();
+  const names = (x: Target) => (ref !== null && x.ref === ref) || (!x.ref && Boolean(t) && (x.text ?? "").replace(/\s+/g, " ").trim().toLowerCase() === t);
+  return ideas.flatMap((idea): IdeaBearing[] => {
+    if (idea.from.some(names)) return [{ idea, how: "from" }];
+    if (idea.maybe.some(names)) return [{ idea, how: "maybe" }];
+    const rec = idea.related.find(names);
+    return rec ? [{ idea, how: rec.stance }] : [];
+  });
+}

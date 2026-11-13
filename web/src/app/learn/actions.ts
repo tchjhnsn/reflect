@@ -5,9 +5,17 @@ import { BOOK_STATUS, type BookStatus } from "@reflect/core/learning";
 import { cleanEntry, workEntry } from "@reflect/core/openlibrary";
 import { importGoodreads, type ImportReport } from "@/server/goodreads-import";
 import { requireUser } from "@/server/session";
-import { addBook, keepPlace, setBookStatus, type BookPlace } from "@/server/learn-store";
+import { addBook, keepPlace, rankWant, setBookStatus, setFinishedOn, setGoal, type BookPlace } from "@/server/learn-store";
 import { keepClaim, setStance } from "@/server/claims-store";
-import { addExcerpt, removeExcerpt, type Anchor } from "@/server/excerpt-store";
+import { addExcerpt, allExcerpts, removeExcerpt, reviseExcerpt, type Anchor } from "@/server/excerpt-store";
+import { importKindle, type KindleReport } from "@/server/kindle-import";
+import { publishQuote, unpublishQuote } from "@/server/published-store";
+import { importWork } from "@/server/work-store";
+import { excerptsMarkdown, isHighlightColor } from "@reflect/core/excerpts";
+import { bestListMatch, listBookQuery, listById } from "@reflect/core/lists";
+import { searchBooks } from "@reflect/core/openlibrary";
+import { learnView } from "@/server/learn-store";
+import { highlightBooks } from "@/server/highlights";
 import { definitionsOf, lookupWord, type Definition } from "@reflect/core/wiktionary";
 
 const openLibrary = (url: string) => fetch(url, { headers: { "user-agent": "reflect-app" }, cache: "no-store" });
@@ -75,15 +83,36 @@ export async function importGoodreadsAction(text: string): Promise<{ error: stri
 
 
 /** Keep where the person is in a book on their shelves that they are reading in Reflect. Nothing is revalidated: the reader keeps its own place. */
-export async function keepPlaceAction(bookId: string, place: BookPlace): Promise<void> {
+export async function keepPlaceAction(bookId: string, place: BookPlace, day?: string): Promise<void> {
   const user = await requireUser();
-  await keepPlace(user.id, bookId, { chapter: Number(place?.chapter), chapters: Number(place?.chapters), at: Number(place?.at) });
+  await keepPlace(user.id, bookId, { chapter: Number(place?.chapter), chapters: Number(place?.chapters), at: Number(place?.at) }, typeof day === "string" ? day : undefined);
+}
+
+/** Set the day the person finished a read book. */
+export async function setFinishedAction(bookId: string, day: string): Promise<void> {
+  const user = await requireUser();
+  await setFinishedOn(user.id, String(bookId), String(day));
+  revalidatePath("/learn/reading");
+}
+
+/** Order Want to read as the person dragged it. */
+export async function rankWantAction(ids: string[]): Promise<void> {
+  const user = await requireUser();
+  await rankWant(user.id, Array.isArray(ids) ? ids.map(String) : []);
+  revalidatePath("/learn/reading");
+}
+
+/** Set or clear the person's reading goal for a year. */
+export async function setGoalAction(year: number, books: number | null): Promise<void> {
+  const user = await requireUser();
+  await setGoal(user.id, Number(year), books === null ? null : Number(books));
+  revalidatePath("/learn/reading");
 }
 
 /** Keep an excerpt from a book: a highlight in a text read in Reflect, or words typed with a page or place. Returns its id. */
-export async function addExcerptAction(e: { work: string; quote: string; anchor?: unknown; place?: string; note?: string }): Promise<string> {
+export async function addExcerptAction(e: { work: string; quote: string; anchor?: unknown; place?: string; note?: string; color?: string }): Promise<string> {
   const user = await requireUser();
-  const id = await addExcerpt(user.id, { work: String(e?.work ?? ""), quote: String(e?.quote ?? ""), anchor: (e?.anchor ?? null) as Anchor | null, place: e?.place ? String(e.place) : null, note: e?.note ? String(e.note) : null });
+  const id = await addExcerpt(user.id, { work: String(e?.work ?? ""), quote: String(e?.quote ?? ""), anchor: (e?.anchor ?? null) as Anchor | null, place: e?.place ? String(e.place) : null, note: e?.note ? String(e.note) : null, color: isHighlightColor(e?.color) ? e.color : null });
   revalidatePath(`/learn/works/${String(e.work)}`);
   return id;
 }
@@ -119,4 +148,74 @@ export async function defineAction(selection: string): Promise<{ word: string; d
   const forms = defs.flatMap((d) => d.senses).filter((s) => s.formOf).map((s) => s.formOf!);
   const lemma = forms[0] && forms[0] !== found ? { word: forms[0], definitions: await look(forms[0]) } : null;
   return { word: found, definitions: defs, ...(lemma?.definitions.length ? { lemma } : {}) };
+}
+
+/** Give an excerpt a new colour or note (an empty note removes it). Returns the excerpt's new id. */
+export async function reviseExcerptAction(id: string, work: string, change: { color?: string; note?: string | null }): Promise<string> {
+  const user = await requireUser();
+  const next = await reviseExcerpt(user.id, String(id), { ...(isHighlightColor(change?.color) ? { color: change.color } : {}), ...(change && "note" in change ? { note: change.note == null ? null : String(change.note) } : {}) });
+  revalidatePath(`/learn/works/${String(work)}`);
+  revalidatePath("/learn/highlights");
+  return next;
+}
+
+/** Bring Kindle highlights in: the browser reads My Clippings.txt and sends its text. */
+export async function importKindleAction(text: string): Promise<{ error: string } | KindleReport> {
+  const user = await requireUser();
+  if (new TextEncoder().encode(String(text)).length > 10_000_000) return { error: "That file is larger than 10 MB." };
+  try {
+    const r = await importKindle(user.id, String(text), openLibrary);
+    revalidatePath("/learn/highlights");
+    return r;
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+}
+
+/** Put all the person's highlights into their journal as one Markdown work. Returns the work's id. */
+export async function highlightsToJournalAction(): Promise<string> {
+  const user = await requireUser();
+  const md = excerptsMarkdown(await highlightBooks(user.id, await allExcerpts(user.id)));
+  const id = await importWork(user.id, "Highlights.md", md);
+  revalidatePath("/journal");
+  return id;
+}
+
+/** Publish one quote, with its author, book and place, at its own public page. Returns its id. */
+export async function publishQuoteAction(q: { quote: string; author: string; title: string; place?: string | null; work?: string | null }): Promise<string> {
+  const user = await requireUser();
+  const id = await publishQuote(user.id, { quote: String(q?.quote ?? ""), author: String(q?.author ?? ""), title: String(q?.title ?? ""), place: q?.place ? String(q.place) : null, work: q?.work ? String(q.work) : null });
+  revalidatePath("/learn/highlights");
+  return id;
+}
+
+/** Take a published quote down. */
+export async function unpublishQuoteAction(id: string): Promise<void> {
+  const user = await requireUser();
+  await unpublishQuote(user.id, String(id));
+  revalidatePath("/learn/highlights");
+}
+
+/**
+ * Put a list's books that are not on the person's shelves on Want to read, in the list's order, after the books
+ * already there. Returns how many were added.
+ */
+export async function followListAction(id: string): Promise<number> {
+  const user = await requireUser();
+  const list = listById(String(id));
+  if (!list) throw new Error("no such list");
+  const found = await Promise.all(list.books.map((b) => searchBooks(listBookQuery(b), openLibrary, 6).then((r) => bestListMatch(b, r)).catch(() => null)));
+  const view = await learnView(user.id);
+  const have = new Set(view.books.map((b) => b.catalog?.work).filter(Boolean));
+  const added: string[] = [];
+  for (const b of found) {
+    if (!b || have.has(b.work)) continue;
+    have.add(b.work);
+    added.push(await addBook(user.id, { title: b.title, authors: b.authors, status: "want", subjects: [], catalog: b }));
+  }
+  const before = view.books.filter((b) => b.status === "want").sort((a, b) => (a.wantRank ?? 1e9) - (b.wantRank ?? 1e9)).map((b) => b.id);
+  await rankWant(user.id, [...before, ...added]);
+  revalidatePath("/learn/reading");
+  revalidatePath(`/learn/lists/${list.id}`);
+  return added.length;
 }

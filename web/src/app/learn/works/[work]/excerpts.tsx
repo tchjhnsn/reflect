@@ -1,26 +1,23 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
-import { CheckIcon, CopyIcon, PlusIcon, Trash2Icon } from "lucide-react";
-import { citeQuote } from "@reflect/core/excerpts";
+import { PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { addExcerptAction, removeExcerptAction } from "../../actions";
+import { addExcerptAction } from "../../actions";
+import { ExcerptItem, type ExcerptRow } from "../../excerpt-item";
 
-/** One excerpt as the book page shows it: its words, where it is from, and, for a highlight, the chapter to read it in. */
-export type ExcerptRow = { id: string; quote: string; where: string | null; chapter: number | null; note: string | null };
+export type { ExcerptRow };
 
 /**
  * The person's excerpts from a book: highlights made while reading and passages they typed with a page or place.
- * Each can be copied as a quote cited to the author and book, or removed; a highlight opens its chapter.
+ * Each can be copied as a cited quote, coloured, noted, published or removed; a highlight opens its chapter.
  */
-export function Excerpts({ work, title, author, rows, reader }: { work: string; title: string; author: string; rows: ExcerptRow[]; /** Reflect's reader for the book, when it has its text. */ reader?: string }) {
+export function Excerpts({ work, rows, reader }: { work: string; rows: ExcerptRow[]; /** Reflect's reader for the book, when it has its text. */ reader?: string }) {
   const [adding, setAdding] = useState(false);
   const [quote, setQuote] = useState("");
   const [place, setPlace] = useState("");
-  const [copied, setCopied] = useState<string | null>(null);
   const [error, setError] = useState(false);
   const [pending, run] = useTransition();
 
@@ -35,22 +32,6 @@ export function Excerpts({ work, title, author, rows, reader }: { work: string; 
       setError(true);
     }
   });
-  const remove = (id: string) => run(async () => {
-    try {
-      await removeExcerptAction(id, work);
-    } catch {
-      setError(true);
-    }
-  });
-  const copy = async (r: ExcerptRow) => {
-    try {
-      await navigator.clipboard.writeText(citeQuote(r.quote, { author, title, ...(r.where ? { place: r.where } : {}) }));
-      setCopied(r.id);
-    } catch {
-      setError(true);
-    }
-  };
-
   return (
     <section className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -70,16 +51,7 @@ export function Excerpts({ work, title, author, rows, reader }: { work: string; 
       ) : null}
       {rows.length ? (
         <ul className="space-y-3">
-          {rows.map((r) => (
-            <li key={r.id} className="border-l-2 border-amber-300 pl-3">
-              <blockquote className="font-serif text-[15px] leading-relaxed">{r.quote}</blockquote>
-              <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-                {r.where ? reader && r.chapter ? <Link className="underline-offset-4 hover:underline" href={`${reader}?c=${r.chapter}`}>{r.where}</Link> : <span>{r.where}</span> : null}
-                <button type="button" className="hover:text-foreground inline-flex items-center gap-1" onClick={() => copy(r)}>{copied === r.id ? <CheckIcon className="size-3" /> : <CopyIcon className="size-3" />}{copied === r.id ? "Copied" : "Copy quote"}</button>
-                <button type="button" className="hover:text-foreground inline-flex items-center gap-1" disabled={pending} onClick={() => remove(r.id)}><Trash2Icon className="size-3" />Remove</button>
-              </div>
-            </li>
-          ))}
+          {rows.map((r) => <ExcerptItem key={r.id} row={r} {...(reader ? { reader } : {})} />)}
         </ul>
       ) : null}
       {error ? <p className="text-destructive text-xs">That did not work. Try again.</p> : null}

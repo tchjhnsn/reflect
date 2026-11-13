@@ -18,6 +18,7 @@ import { chatModel } from "@/server/chat-model";
 import { learnView } from "@/server/learn-store";
 import { listClaims, type ClaimOut } from "@/server/claims-store";
 import { shelvesOf } from "@/server/learn-shelves";
+import { quoteFromShelves } from "@/server/passages";
 import { buildSpec, type Piece } from "../../chat/spec";
 
 export const maxDuration = 60;
@@ -111,6 +112,24 @@ export async function POST(req: Request) {
               const q = c ? themaQuery(c) : null;
               if (!c || !q) return "That is not a Thema section or category Reflect knows.";
               return library((themaCategory(c) ?? themaSection(c))!.short, () => browseQuery(q, openLibrary, { limit: 5 }), `/learn/browse?cat=${c}`);
+            },
+          }),
+          quote_book: tool({
+            description: "Find words in the text of a book the person reads in Reflect (one they are reading, or the one named) and show each place with its chapter, to quote and cite.",
+            inputSchema: z.object({ words: z.string().min(2).max(100).describe("A few words that occur in the book, as they would be written in it"), book: z.string().max(200).optional().describe("Words of the book's title, when the person names one") }),
+            execute: async ({ words, book }) => {
+              const r = await quoteFromShelves(view.books, words, book).catch(() => null);
+              if (!r) {
+                show({ kind: "note", text: book ? `“${words}” was not found in ${book} in Reflect.` : `“${words}” was not found in the books you are reading in Reflect.` });
+                return "Not found. Do not quote from memory; say it was not found.";
+              }
+              const cites = r.hits.map((h, i) => {
+                const text = `${h.before}${h.match}${h.after}`.trim();
+                const cite = [r.author, r.title, r.chapters[i]].filter(Boolean).join(", ");
+                show({ kind: "quote", text, cite, href: `/learn/works/${r.work}/read?c=${h.chapter}&find=${encodeURIComponent(words)}&p=${h.p}` });
+                return `"${text}" (${cite})`;
+              });
+              return `Shown, ${r.total} ${r.total === 1 ? "place" : "places"} in all: ${cites.join("; ")}`;
             },
           }),
           propose_claim: tool({

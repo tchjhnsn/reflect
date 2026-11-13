@@ -79,6 +79,12 @@ export const { registry } = defineRegistry(catalog, {
         <Link href={props.href}>{props.label}<ArrowRightIcon /></Link>
       </Button>
     ),
+    Quote: ({ props }) => (
+      <Link href={props.href} className="hover:bg-muted block rounded-lg border bg-card p-4 shadow-xs">
+        <blockquote className="font-serif">{props.text}</blockquote>
+        <p className="text-muted-foreground mt-2 text-xs">{props.cite}</p>
+      </Link>
+    ),
     Note: ({ props }) => <p className="text-muted-foreground text-sm">{props.text}</p>,
   },
 });
