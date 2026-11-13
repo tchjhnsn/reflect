@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { browseClass, browseQuery, cleanEntry, coverUrl, searchBooks, trendingBooks, workDetails, workEntry, type Fetch } from "./openlibrary.ts";
+import { browseClass, browseQuery, LANGUAGE, cleanEntry, coverUrl, searchBooks, trendingBooks, workDetails, workEntry, type Fetch } from "./openlibrary.ts";
 
 const fake = (docs: unknown[], seen: string[]): Fetch => async (url) => {
   seen.push(url);
@@ -17,7 +17,7 @@ describe("open library", () => {
     const seen: string[] = [];
     const out = await browseClass("T", fake([{ key: "/works/OL2W", title: "Wiring" }, { title: "no key" }], seen), { page: 2, limit: 10 });
     expect(out.map((b) => b.title)).toEqual(["Wiring"]);
-    expect(seen[0]).toContain("q=lcc%3AT*");
+    expect(seen[0]).toContain(`q=${encodeURIComponent("(lcc:T*) language:eng")}`);
     expect(seen[0]).toContain("sort=rating");
     expect(seen[0]).toContain("page=2");
     await expect(browseClass("TK", fake([], []))).rejects.toThrow();
@@ -31,7 +31,7 @@ describe("open library", () => {
 
   it("reads this week's trending works with their covers, and looks one work up by id", async () => {
     const seen: string[] = [];
-    const trend: Fetch = async (url) => { seen.push(url); return { ok: true, status: 200, json: async () => ({ works: [{ key: "/works/OL9W", title: "Atomic Habits", author_name: ["James Clear"], cover_i: 12539702 }] }) }; };
+    const trend: Fetch = async (url) => { seen.push(url); return { ok: true, status: 200, json: async () => ({ works: [{ key: "/works/OL9W", title: "Atomic Habits", author_name: ["James Clear"], cover_i: 12539702, language: ["eng"] }] }) }; };
     const [t] = await trendingBooks(trend, 5);
     expect(t).toMatchObject({ work: "OL9W", title: "Atomic Habits", cover: 12539702 });
     expect(seen[0]).toContain("/trending/weekly.json?limit=5");
@@ -39,7 +39,7 @@ describe("open library", () => {
     expect(coverUrl({})).toBeNull();
     const w = await workEntry("OL9W", fake([{ key: "/works/OL9W", title: "Atomic Habits", lcc: ["BF-0335"] }], seen));
     expect(w?.lcc).toEqual(["BF-0335"]);
-    expect(seen[1]).toContain("q=key%3A%2Fworks%2FOL9W");
+    expect(seen[2]).toContain("q=key%3A%2Fworks%2FOL9W");
     expect(await workEntry("../etc", fake([], []))).toBeNull();
     expect(cleanEntry({ work: "OL9W", title: "x", cover: "12" })?.cover).toBe(12);
   });
@@ -49,7 +49,9 @@ describe("open library", () => {
     const [b] = await browseQuery("lcc:[BF-0000 TO BF-9999.99999999]", fake([{ key: "/works/OL3W", title: "Mind", ratings_average: 4.123, ratings_count: 80 }], seen), { limit: 6 });
     expect(b!.rating).toEqual({ average: 4.12, count: 80 });
     expect(seen[0]).toContain("sort=rating");
-    expect(seen[0]).toContain(encodeURIComponent("lcc:[BF-0000"));
+    expect(seen[0]).toContain(encodeURIComponent("(lcc:[BF-0000"));
+    expect(seen[0]).toContain(encodeURIComponent(") language:eng"));
+    expect(seen[0]).toContain("&lang=en");
   });
 
   it("reads a work's description, rating and editions, and refuses a bad id", async () => {
@@ -57,7 +59,7 @@ describe("open library", () => {
     const routes: Record<string, unknown> = {
       "/works/OL9W.json": { description: { value: "A book about [habits](https://x).\n\n----------\nSee also" }, subjects: ["Habit", "Habit", "accessible book"] },
       "/works/OL9W/ratings.json": { summary: { average: 3.968, count: 1495 } },
-      "/works/OL9W/editions.json?limit=6": { size: 42, entries: [{ title: "Atomic Habits", publish_date: "October 18, 2018", publishers: ["Avery"], isbn_13: ["9780735211292"], languages: [{ key: "/languages/eng" }] }, { publish_date: "1999" }] },
+      "/works/OL9W/editions.json?limit=30": { size: 42, entries: [{ title: "Atomic Habits", publish_date: "October 18, 2018", publishers: ["Avery"], isbn_13: ["9780735211292"], languages: [{ key: "/languages/eng" }] }, { publish_date: "1999" }] },
     };
     const f: Fetch = async (url) => {
       seen.push(url);
@@ -73,5 +75,28 @@ describe("open library", () => {
     });
     expect(await workDetails("OL0W", f)).toBeNull();
     expect(await workDetails("../x", f)).toBeNull();
+  });
+
+  it("lists books in English: English editions' titles and covers, an ISBN search in any language", async () => {
+    expect(LANGUAGE.code).toBe("eng");
+    const seen: string[] = [];
+    const [b] = await searchBooks("alchemist", fake([{ key: "/works/OL5W", title: "O Alquimista", cover_i: 1, language: ["por", "eng"], editions: { docs: [{ title: "The Alchemist.", cover_i: 2, language: ["eng"] }] } }], seen));
+    expect(b).toMatchObject({ title: "The Alchemist", cover: 2 });
+    expect(seen[0]).toContain(encodeURIComponent("(alchemist) language:eng"));
+    const [c] = await searchBooks("rich dad", fake([{ key: "/works/OL6W", title: "Rich Dad, Poor Dad", editions: { docs: [{ title: "Rich dad poor dad", language: ["eng"] }] } }], []));
+    expect(c!.title).toBe("Rich Dad, Poor Dad"); // same title, only its case differs: the work's is kept
+    await searchBooks("isbn:9780062315007", fake([], seen));
+    expect(seen[1]).toContain("q=isbn%3A9780062315007&");
+  });
+
+  it("keeps this week's reads that have an English edition, shown by it", async () => {
+    const seen: string[] = [];
+    const f: Fetch = async (url) => {
+      seen.push(url);
+      if (url.includes("/trending/")) return { ok: true, status: 200, json: async () => ({ works: [{ key: "/works/OL7W", title: "O Alquimista", language: ["por", "eng"] }, { key: "/works/OL8W", title: "Только по-русски", language: ["rus"] }] }) };
+      return { ok: true, status: 200, json: async () => ({ docs: [{ key: "/works/OL7W", title: "O Alquimista", editions: { docs: [{ title: "The Alchemist", language: ["eng"] }] } }] }) };
+    };
+    expect((await trendingBooks(f, 5)).map((b) => b.title)).toEqual(["The Alchemist"]);
+    expect(seen[1]).toContain(encodeURIComponent('key:("/works/OL7W")'));
   });
 });
