@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { browseClass, browseQuery, LANGUAGE, cleanEntry, coverUrl, searchBooks, trendingBooks, workDetails, workEntry, type Fetch } from "./openlibrary.ts";
+import { authorDetails, authorWorks, browseClass, browseQuery, isSort, searchAuthors, LANGUAGE, cleanEntry, coverUrl, searchBooks, trendingBooks, workDetails, workEntry, type Fetch } from "./openlibrary.ts";
 
 const fake = (docs: unknown[], seen: string[]): Fetch => async (url) => {
   seen.push(url);
@@ -98,5 +98,32 @@ describe("open library", () => {
     };
     expect((await trendingBooks(f, 5)).map((b) => b.title)).toEqual(["The Alchemist"]);
     expect(seen[1]).toContain(encodeURIComponent('key:("/works/OL7W")'));
+  });
+
+  it("reads an author, their books and authors by name, and refuses a bad id", async () => {
+    const seen: string[] = [];
+    const routes: Record<string, unknown> = {
+      "/authors/OL22060A.json": { name: "Augustine of Hippo", birth_date: "354", death_date: "430", bio: { value: "Bishop of [Hippo](https://x).\n\n----------\nsource" }, photos: [-1, 14343693], links: [{ url: "http://en.wikipedia.org/wiki/Augustine_of_Hippo" }] },
+    };
+    const f: Fetch = async (url) => {
+      seen.push(url);
+      const path = url.replace("https://openlibrary.org", "");
+      if (path.startsWith("/search/authors.json")) return { ok: true, status: 200, json: async () => ({ docs: [{ key: "OL22060A", name: "Augustine of Hippo", work_count: 2291, top_work: "Confessions" }, { key: "OL1A", name: "Augustin X", work_count: 1 }, { key: "bad", name: "Bad" }] }) };
+      if (path.startsWith("/search.json")) return { ok: true, status: 200, json: async () => ({ docs: [{ key: "/works/OL9W", title: "Confessions", author_name: ["Augustine of Hippo"], author_key: ["OL22060A", "nope"] }] }) };
+      return path in routes ? { ok: true, status: 200, json: async () => routes[path] } : { ok: false, status: 404, json: async () => ({}) };
+    };
+    expect(await authorDetails("OL22060A", f)).toEqual({ id: "OL22060A", name: "Augustine of Hippo", birth: "354", death: "430", bio: "Bishop of Hippo.", photo: 14343693, wikipedia: "https://en.wikipedia.org/wiki/Augustine_of_Hippo" });
+    expect(await authorDetails("OL0A", f)).toBeNull();
+    expect(await authorDetails("../x", f)).toBeNull();
+    const [w] = await authorWorks("OL22060A", f, { sort: "new", page: 2 });
+    expect(w!.authorKeys).toEqual(["OL22060A"]);
+    expect(seen.at(-1)).toContain(encodeURIComponent("(author_key:OL22060A) language:eng"));
+    expect(seen.at(-1)).toContain("sort=new");
+    expect(seen.at(-1)).toContain("page=2");
+    expect(await authorWorks("x", f)).toEqual([]);
+    expect((await searchAuthors("augustine", f)).map((a) => a.id)).toEqual(["OL22060A"]);
+    expect(await searchAuthors("isbn:123", f)).toEqual([]);
+    expect(isSort("old")).toBe(true);
+    expect(isSort("toString")).toBe(false);
   });
 });

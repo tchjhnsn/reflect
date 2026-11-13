@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { BookIcon, ExternalLinkIcon, StarIcon } from "lucide-react";
 import { googleVolume } from "@reflect/core/googlebooks";
-import { coverUrl, workDetails, workEntry } from "@reflect/core/openlibrary";
+import { authorWorks, coverUrl, workDetails, workEntry, type CatalogEntry } from "@reflect/core/openlibrary";
 import { categoryOf, showCall, themaCategory } from "@reflect/core/thema";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import { listClaims, type ClaimOut } from "@/server/claims-store";
 import { LearnHeader } from "../../header";
 import { AddBook } from "../../add-book";
 import { Reader } from "./reader";
+import { AuthorName, BookGrid } from "../../book-card";
 import { setBookStatusAction } from "../../actions";
 
 export const metadata: Metadata = { title: "Book" };
@@ -44,7 +45,12 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
   const mine = view.books.find((b) => b.catalog?.work === work);
   const title = entry?.title ?? mine?.title ?? "Untitled";
   const authors = entry?.authors ?? mine?.authors ?? [];
-  const google = await googleVolume({ title, authors, ...(entry?.isbn ? { isbn: entry.isbn } : {}) }, cached, process.env.GOOGLE_BOOKS_API_KEY).catch(() => null);
+  const authorKeys = entry?.authorKeys ?? mine?.catalog?.authorKeys ?? [];
+  const [google, byAuthor] = await Promise.all([
+    googleVolume({ title, authors, ...(entry?.isbn ? { isbn: entry.isbn } : {}) }, cached, process.env.GOOGLE_BOOKS_API_KEY).catch(() => null),
+    authorKeys[0] ? authorWorks(authorKeys[0], cached, { limit: 7, sort: "rating" }).then((b) => b.filter((x) => x.work !== work).slice(0, 6)).catch((): CatalogEntry[] => []) : Promise.resolve([] as CatalogEntry[]),
+  ]);
+  const shelved = new Map(view.books.filter((b) => b.catalog?.work).map((b) => [b.catalog!.work, b.status]));
   const subjects = details?.subjects.length ? details.subjects : entry?.subjects ?? [];
   const category = themaCategory(categoryOf({ ...(entry?.lcc ? { lcc: entry.lcc } : {}), subjects }) ?? "");
   const cover = entry?.cover ? coverUrl(entry, "L") : mine?.catalog ? coverUrl(mine.catalog, "L") : null;
@@ -68,7 +74,7 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
         <div className="min-w-0 space-y-6">
           <div className="space-y-2">
             <h2 className="text-3xl leading-tight font-semibold tracking-tight">{title}</h2>
-            <p className="text-muted-foreground">{authors.join(", ") || "Author not given"}{entry?.year ? ` · first published ${entry.year}` : ""}</p>
+            <p className="text-muted-foreground">{authors.length ? authors.map((name, i) => <span key={`${name}-${i}`}>{i ? ", " : ""}<AuthorName name={name} id={authorKeys[i]} /></span>) : "Author not given"}{entry?.year ? ` · first published ${entry.year}` : ""}</p>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
               {details?.rating ? <Rating source="Open Library" r={details.rating} /> : null}
               {!details?.rating ? <span className="text-muted-foreground">No ratings yet</span> : null}
@@ -126,6 +132,15 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
                 )) : <p className="text-muted-foreground">None yet. Claims you keep on this book&apos;s subjects, or that cite it, show here.</p>}
               </CardContent>
             </Card>
+          ) : null}
+          {byAuthor.length && authorKeys[0] ? (
+            <section className="space-y-4">
+              <div className="flex items-baseline justify-between gap-3">
+                <Label>More by {authors[0]}</Label>
+                <Link href={`/learn/authors/${authorKeys[0]}`} className="text-muted-foreground shrink-0 text-sm underline-offset-4 hover:underline">All their books</Link>
+              </div>
+              <BookGrid books={byAuthor} mine={shelved} cols="md:grid-cols-3 lg:grid-cols-6" />
+            </section>
           ) : null}
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="ghost" size="sm"><a href={`https://openlibrary.org/works/${work}`} target="_blank" rel="noreferrer">Open Library<ExternalLinkIcon /></a></Button>

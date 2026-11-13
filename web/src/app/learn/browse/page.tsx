@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { browseQuery, searchBooks, trendingBooks, type CatalogEntry } from "@reflect/core/openlibrary";
+import { browseQuery, isSort, searchAuthors, searchBooks, SORTS, trendingBooks, type AuthorHit, type CatalogEntry, type Sort } from "@reflect/core/openlibrary";
 import { THEMA, themaCategory, themaQuery, themaSection } from "@reflect/core/thema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,13 +12,13 @@ import { LearnHeader } from "../header";
 import { GoodreadsImport } from "../goodreads";
 import { BookGrid } from "../book-card";
 import { Menu } from "./category-menu";
+import { MoreBooks } from "./more-books";
+import { listBooks, openLibrary, PER, type BookSource } from "@/server/browse";
 
 export const metadata: Metadata = { title: "Browse books" };
 export const dynamic = "force-dynamic";
 
-const PER = 24;
 const ROW = 6;
-const openLibrary = (url: string) => fetch(url, { headers: { "user-agent": "reflect-app" }, next: { revalidate: 3600 } });
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
 // Catalog subjects too broad to make a list from.
 const BROAD = /^(fiction|nonfiction|history|biography|literature|juvenile fiction|juvenile literature|english language|large type books|textbooks|in library|accessible book)$/i;
@@ -35,30 +35,35 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
   const section = code ? themaSection(code) : undefined;
   const category = code.length === 2 ? themaCategory(code) : undefined;
   const week = !q && !section && one(sp.view) === "week";
-  const page = Math.max(1, Math.min(20, Number(one(sp.page)) || 1));
+  const sort: Sort | undefined = isSort(one(sp.sort)) ? (one(sp.sort) as Sort) : undefined;
   const view = await learnView(user.id);
   const mine = new Map(view.books.filter((b) => b.catalog?.work).map((b) => [b.catalog!.work, b.status]));
 
   let body: ReactNode;
-  if (q || section || week) {
-    let books: CatalogEntry[] | null;
-    let title: string;
-    if (q) {
-      books = await searchBooks(q, openLibrary, PER, page).catch(() => null);
-      title = `Results for “${q}”`;
-    } else if (section) {
-      books = await browseQuery(themaQuery(category?.code ?? section.code)!, openLibrary, { limit: PER, page }).catch(() => null);
-      title = `${(category ?? section).heading}, best rated`;
-    } else {
-      books = await trendingBooks(openLibrary, PER).catch(() => null);
-      title = "Read this week";
-    }
-    const more = !week && books?.length === PER ? `/learn/browse?${new URLSearchParams({ ...(q ? { q } : { cat: code }), page: String(page + 1) })}` : null;
+  if (q || section) {
+    const source: BookSource = q ? { kind: "q", q } : { kind: "cat", code: category?.code ?? section!.code };
+    const [books, authors] = await Promise.all([listBooks(source, 1, sort).catch(() => null), q ? searchAuthors(q, openLibrary).catch((): AuthorHit[] => []) : Promise.resolve([])]);
+    const title = q ? `Results for “${q}”` : `${(category ?? section)!.heading}, ${SORTS[sort ?? "rating"].toLowerCase()}`;
+    const base: Record<string, string> = q ? { q } : { cat: code };
     body = (
       <>
-        <h2 className="pt-2 text-lg font-semibold">{title}</h2>
+        {authors.length ? <Authors authors={authors} /> : null}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+          <h2 className="text-lg font-semibold">{title}</h2>
+          <SortMenu base={base} sort={sort} match={Boolean(q)} />
+        </div>
+        <div className="space-y-8">
+          <Books books={books} mine={mine} />
+          {books?.length ? <MoreBooks key={`${JSON.stringify(source)}-${sort ?? ""}`} source={source} {...(sort ? { sort } : {})} per={PER} first={books.length} /> : null}
+        </div>
+      </>
+    );
+  } else if (week) {
+    const books = await trendingBooks(openLibrary, PER).catch(() => null);
+    body = (
+      <>
+        <h2 className="pt-2 text-lg font-semibold">Read this week</h2>
         <Books books={books} mine={mine} />
-        {more ? <div className="flex justify-center pt-2"><Button asChild variant="outline"><Link href={more}>More</Link></Button></div> : null}
       </>
     );
   } else {
@@ -101,6 +106,36 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
         <p className="text-muted-foreground pt-6 text-center text-xs">Categories from Thema, the book trade&apos;s subject scheme (EDItEUR). Books, covers and ratings from Open Library.</p>
       </div>
     </main>
+  );
+}
+
+/** The orders a list can be in, as a menu; a search can also be in best-match order, its default. */
+function SortMenu({ base, sort, match }: { base: Record<string, string>; sort: Sort | undefined; match: boolean }) {
+  const href = (s?: Sort) => `/learn/browse?${new URLSearchParams({ ...base, ...(s ? { sort: s } : {}) })}`;
+  const items = (Object.keys(SORTS) as Sort[]).filter((s) => match || s !== "rating").map((s) => ({ href: href(s), label: SORTS[s], on: s === sort }));
+  return <Menu label="Sort" items={[{ href: href(), label: match ? "Best match" : SORTS.rating, on: !sort }, ...items]} />;
+}
+
+/** Authors whose name matches a search, each opening their page. */
+function Authors({ authors }: { authors: AuthorHit[] }) {
+  return (
+    <section className="space-y-3 pt-2">
+      <h2 className="text-lg font-semibold">Authors</h2>
+      <ul className="flex flex-wrap gap-2">
+        {authors.map((a) => (
+          <li key={a.id}>
+            <Link href={`/learn/authors/${a.id}`} className="hover:bg-muted flex items-center gap-3 rounded-md border py-2 pr-4 pl-2 transition">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`https://covers.openlibrary.org/a/olid/${a.id}-S.jpg`} alt="" className="bg-muted size-10 rounded-full object-cover" loading="lazy" />
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-medium">{a.name}</span>
+                <span className="text-muted-foreground block truncate text-xs">{[a.birth || a.death ? `${a.birth ?? ""}–${a.death ?? ""}` : null, a.topWork, `${a.works.toLocaleString("en-US")} works`].filter(Boolean).join(" · ")}</span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
