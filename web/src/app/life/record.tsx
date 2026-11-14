@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PenLineIcon, Trash2Icon } from "lucide-react";
+import { ORIGINS } from "@reflect/core/origins";
 import { shown, titleOf, type Body, type Field, type Kind, type LifeAppId } from "@reflect/core/life";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,21 @@ const today = () => new Date().toISOString().slice(0, 10);
 function FieldInput({ f, body }: { f: Field; body: Body }) {
   const v = body[f.key];
   const id = `f-${f.key}`;
+  if (f.kind === "origins") {
+    const on = typeof v === "string" ? v.split(",") : [];
+    return (
+      <fieldset className="grid gap-1.5 sm:col-span-2">
+        <legend className="text-sm font-medium">{f.label}</legend>
+        <div className="flex flex-wrap gap-2">
+          {ORIGINS.map((o) => (
+            <label key={o.id} className="has-[:checked]:bg-foreground has-[:checked]:text-background cursor-pointer rounded-full border px-3 py-1 text-sm">
+              <input type="checkbox" name={f.key} value={o.id} defaultChecked={on.includes(o.id)} className="sr-only" />{o.label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+    );
+  }
   if (f.kind === "check") {
     return (
       <label className="flex items-center gap-2 text-sm">
@@ -45,8 +61,9 @@ export function RecordForm({ app, kind, record, back, submit }: { app: LifeAppId
   return (
     <form action={action} className="grid gap-4">
       <input type="hidden" name="$back" value={back} />
+      {kind.hidden && typeof record?.body.ref === "string" ? <input type="hidden" name="ref" value={record.body.ref} /> : null}
       <div className="grid gap-4 sm:grid-cols-2">
-        {kind.fields.filter((f) => f.kind !== "check").map((f) => <FieldInput key={f.key} f={f} body={record?.body ?? {}} />)}
+        {kind.fields.filter((f) => f.kind !== "check" && !(kind.hidden && f.key === "ref")).map((f) => <FieldInput key={f.key} f={f} body={record?.body ?? {}} />)}
       </div>
       {checks.length ? <div className="grid gap-2 sm:grid-cols-2">{checks.map((f) => <FieldInput key={f.key} f={f} body={record?.body ?? {}} />)}</div> : null}
       <div><Button type="submit">{submit ?? (record ? "Save" : `Keep ${kind.one ? "it" : `this ${kind.label.toLowerCase()}`}`)}</Button></div>

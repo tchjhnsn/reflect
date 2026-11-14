@@ -10,6 +10,7 @@ import { lifeActs, lifeRecords, type LifeAct, type LifeRecord } from "@/server/l
 import { Acts, RecordCard, RecordForm, States } from "../record";
 import { Summary } from "../summary";
 import { restoreLifeAction } from "../actions";
+import { WorkHeader, type WorkTab } from "../work/parts";
 
 export const dynamic = "force-dynamic";
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
@@ -71,9 +72,9 @@ export default async function LifeAppPage({ params, searchParams }: { params: Pr
   const today = new Date().toISOString().slice(0, 10);
   return (
     <main className={PAGE}>
-      <SectionHeader back="/" backLabel="Home" title={a.label} tabs={
-        <Segmented label={`${a.label} parts`} items={[{ label: "Overview", href: `/life/${app}`, on: !kind }, ...a.kinds.map((k) => ({ label: k.plural, href: `/life/${app}?k=${k.id}`, on: kind?.id === k.id }))]} />
-      } />
+      {app === "work" ? <WorkHeader on={(kind?.id as WorkTab | undefined) ?? null} /> : <SectionHeader back="/" backLabel="Home" title={a.label} tabs={
+        <Segmented label={`${a.label} parts`} items={[{ label: "Overview", href: `/life/${app}`, on: !kind }, ...a.kinds.filter((k) => !k.hidden).map((k) => ({ label: k.plural, href: `/life/${app}?k=${k.id}`, on: kind?.id === k.id }))]} />
+      } />}
       {removed ? (
         <form action={restoreLifeAction.bind(null, removed, back)} className="bg-muted mt-4 flex items-center justify-between gap-3 rounded-lg px-4 py-2 text-sm">
           <span>Removed.</span><Button type="submit" variant="outline" size="sm">Undo</Button>
@@ -81,7 +82,7 @@ export default async function LifeAppPage({ params, searchParams }: { params: Pr
       ) : null}
       <div className="mt-4 grid max-w-4xl gap-6">
         <p className="text-muted-foreground text-sm">{kind ? kind.intro : a.intro}</p>
-        {kind ? <><Standard kind={kind} /><KindView app={app} kind={kind} records={records} acts={mine} back={back} /></> : <Summary app={app} records={records} acts={mine} today={today} />}
+        {kind ? <>{app === "work" && kind.id === "income" ? <Summary app={app} records={records} acts={mine} today={today} /> : null}<Standard kind={kind} /><KindView app={app} kind={kind} records={records} acts={mine} back={back} /></> : <Summary app={app} records={records} acts={mine} today={today} />}
         {!kind ? <p className="text-muted-foreground text-xs">Everything here is what you state. What you do is kept in your log; reflect on it in your journal.</p> : null}
       </div>
     </main>
