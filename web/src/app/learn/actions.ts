@@ -25,6 +25,8 @@ import { highlightBooks } from "@/server/highlights";
 import { definitionsOf, lookupWord, type Definition } from "@reflect/core/wiktionary";
 import { lectureOf, lecturesOf } from "@/server/courses";
 import { keepReason } from "@/server/learn-reason-store";
+import { makeQuiz } from "@/server/quiz-maker";
+import { checkAnswer, newQuiz, type Quiz } from "@/server/quiz-store";
 import { courseHref } from "./courses/shell";
 
 const openLibrary = (url: string) => fetch(url, { headers: { "user-agent": "reflect-app" }, cache: "no-store" });
@@ -502,4 +504,26 @@ export async function lectureMediaAction(courseUrl: string, n: number): Promise<
   if (!course || !ref) return null;
   const l = await lectureOf(course.site, ref);
   return { youtube: l?.youtube ?? ref.youtube, video: l?.video ?? null, audio: l?.audio ?? null };
+}
+
+/** Writes a new quiz from a lecture's transcript for a course the person keeps, and keeps it. */
+export async function quizAction(itemId: string, unit: string): Promise<Quiz | { error: string }> {
+  const user = await requireUser();
+  try {
+    const item = await getItem(user.id, itemId);
+    const course = item?.medium === "course" ? await lecturesOf(item.url) : null;
+    const ref = course?.lectures.find((l) => String(l.n) === unit);
+    if (!course || !ref) return { error: "That lecture is not on your shelves." };
+    const lecture = await lectureOf(course.site, ref);
+    if (!lecture) return { error: "The lecture did not load just now. Try again in a moment." };
+    return await newQuiz(user.id, itemId, unit, await makeQuiz(ref.title, lecture.transcript));
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "The quiz could not be written just now." };
+  }
+}
+
+/** Keeps the person's answer to a quiz question and whether they knew it. */
+export async function checkAnswerAction(quizId: string, seq: number, answer: string, knew: boolean): Promise<boolean> {
+  const user = await requireUser();
+  return checkAnswer(user.id, quizId, seq, answer, knew);
 }
