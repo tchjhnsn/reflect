@@ -1,12 +1,14 @@
 // The log, read from the apps' own records (docs/design/REFLECT_UI_2026-11-12.md section 8). Nothing is copied
 // or written here: each call opens Learn's books with their status history (migration 0013), claims with their stances, grasps, and items with their sessions and lessons (migrations 0023, 0024), and core turns them
-// into acts.
+// into acts. The apps behind the other tiles (migration 0029) give theirs too.
 import { db } from "@/db/pool";
 import { learnActs, type Act } from "@reflect/core/log";
 import type { BookStatus, Grasp } from "@reflect/core/learning";
 import type { Stance } from "@reflect/core/claims";
 import { open } from "./crypto";
 import { isMedium, mediumOf, type Medium } from "@reflect/core/ways";
+import { lifeLogActs } from "@reflect/core/life";
+import { lifeActs, lifeRecords, lifeStateChanges } from "./life-store";
 
 const iso = (d: unknown) => new Date(d as string).toISOString();
 
@@ -31,7 +33,8 @@ export async function logActs(userId: string): Promise<Act[]> {
        COALESCE((SELECT array_agg(s.day::text) FROM learn_item_session s WHERE s.item_id = i.id), '{}') AS sessions,
        COALESCE((SELECT array_agg(l.created_at) FROM learn_item_lesson l WHERE l.item_id = i.id), '{}') AS lessons
      FROM learn_item i WHERE i.user_id = $1 AND i.removed_at IS NULL`, [userId]).catch(() => ({ rows: [] as Record<string, unknown>[] }));
-  return learnActs({
+  const [records, states, acts] = await Promise.all([lifeRecords(userId), lifeStateChanges(userId), lifeActs(userId)]).catch(() => [[], [], []] as const);
+  return [...lifeLogActs(records, states, acts), ...learnActs({
     items: items.rows.filter((i) => isMedium(i.medium)).map((i) => ({
       title: (JSON.parse(open(userId, i.body_ct as string)) as { title: string }).title, done: mediumOf(i.medium as Medium).done, addedAt: iso(i.created_at),
       startedOn: (i.started_on as string | null) ?? null, finishedOn: (i.finished_on as string | null) ?? null,
@@ -40,5 +43,5 @@ export async function logActs(userId: string): Promise<Act[]> {
     books: books.rows.map((b) => ({ title: open(userId, b.title_ct as string), addedAt: iso(b.created_at), startedOn: (b.started_on as string | null) ?? null, finishedOn: (b.finished_on as string | null) ?? null, statuses: history.get(b.id as string) })),
     claims: [...claims.values()],
     grasps: grasps.rows.map((g) => ({ subject: open(userId, g.name_ct as string), grasp: g.grasp as Grasp, at: iso(g.created_at) })),
-  });
+  })];
 }

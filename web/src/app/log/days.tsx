@@ -7,7 +7,7 @@ import { actText, logByDay, type Act, type ActKind } from "@reflect/core/log";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-const ICON: Record<ActKind, typeof PlusIcon> = { intended: PlusIcon, started: BookOpenIcon, finished: CheckIcon, put_down: CircleSlashIcon, cited: BookmarkIcon, kept_claim: MessageSquareQuoteIcon, changed_stance: RefreshCwIcon, rated: SparklesIcon, item_added: PlusIcon, item_started: PlayIcon, item_finished: CheckIcon, practised: RepeatIcon, learned: PencilIcon };
+const ICON: Record<ActKind, typeof PlusIcon> = { intended: PlusIcon, started: BookOpenIcon, finished: CheckIcon, put_down: CircleSlashIcon, cited: BookmarkIcon, kept_claim: MessageSquareQuoteIcon, changed_stance: RefreshCwIcon, rated: SparklesIcon, item_added: PlusIcon, item_started: PlayIcon, item_finished: CheckIcon, practised: RepeatIcon, learned: PencilIcon, life_added: PlusIcon, life_state: RefreshCwIcon, life_act: CheckIcon };
 const dayName = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 const time = (a: Act) => (a.at.length === 10 ? "" : new Date(a.at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }));
 
