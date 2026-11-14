@@ -23,9 +23,36 @@ test("a friend kept from the Friends tile, with a state and a visit, shows in th
   await expect(page.getByText(`${name}: Close friend`)).toBeVisible();
 });
 
-test("income against the intended household on Work's overview", async ({ page }) => {
-  await page.goto("/life/work");
+test("income against the intended household on Work's income tab", async ({ page }) => {
+  await page.goto("/life/work?k=income");
   await expect(page.getByText("Income coming in")).toBeVisible({ timeout: 60_000 });
   await page.goto("/life/home?k=water");
   await expect(page.getByText(/gallon per person per day/)).toBeVisible();
+});
+
+test("browsing work, a job kept as an inspiration with what draws you to it", async ({ page }, info) => {
+  const draws = `Making things people use ${info.project.name} ${Date.now()}`;
+  // Each project keeps a different job, so runs in parallel on the shared open-mode user do not overwrite each other.
+  const job = info.project.name === "phone" ? "Data Scientists" : "Software Developers";
+  await page.goto("/life/work");
+  await expect(page.getByRole("heading", { name: "Forming now" })).toBeVisible({ timeout: 60_000 });
+  const search = page.getByRole("search");
+  await search.getByLabel("Search work").fill(job);
+  await search.getByRole("button", { name: "Search" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Browse work" })).toBeVisible({ timeout: 60_000 });
+  await page.getByRole("link", { name: new RegExp(`^Computers and mathematics ${job}`) }).first().click();
+  await expect(page.getByRole("heading", { level: 1, name: job })).toBeVisible({ timeout: 60_000 });
+  await page.waitForLoadState("networkidle");
+  await page.getByLabel("What draws me to it").fill(draws);
+  await expect(page.getByLabel("What draws me to it")).toHaveValue(draws);
+  await page.locator("label", { hasText: "Reasoning" }).click();
+  // The open-mode user is shared across runs, so the job may already be kept: then the button saves it.
+  const saved = page.waitForResponse((r) => r.request().method() === "POST", { timeout: 30_000 });
+  await page.locator("#inspires").getByRole("button", { name: /^(It inspires me|Save)$/ }).click();
+  await saved;
+  await expect(page.getByRole("heading", { name: "Why it inspires you" })).toBeVisible({ timeout: 30_000 });
+  await page.reload();
+  await expect(page.getByLabel("What draws me to it")).toHaveValue(draws, { timeout: 30_000 });
+  await page.goto("/life/work?k=inspired");
+  await expect(page.getByText(draws)).toBeVisible({ timeout: 30_000 });
 });

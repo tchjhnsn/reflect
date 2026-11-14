@@ -6,7 +6,12 @@ import { kindOf } from "@reflect/core/life";
 import { requireUser } from "@/server/session";
 import { addLifeRecord, keepLifeAct, lifeRecord, removeLifeRecord, restoreLifeRecord, saveLifeRecord, setLifeState } from "@/server/life-store";
 
-const fields = (form: FormData) => Object.fromEntries([...form.entries()].filter(([k]) => !k.startsWith("$")).map(([k, v]) => [k, String(v)]));
+/** The form's fields; a field sent more than once (the origins marked) is kept as its values joined by commas. */
+function fields(form: FormData): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of form.entries()) if (!k.startsWith("$")) out[k] = k in out ? `${out[k]},${String(v)}` : String(v);
+  return out;
+}
 const back = (form: FormData, fallback: string) => {
   const to = String(form.get("$back") ?? "");
   return to.startsWith("/life/") ? to : fallback;

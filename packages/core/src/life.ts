@@ -4,13 +4,16 @@
 // the person sets and acts they keep (a workout, a vote, a time you saw a friend). Everything is stated by the
 // person, never inferred; the journal is where they reflect on it. Pure data and arithmetic: no I/O.
 import type { Act } from "./log";
+import { ORIGINS } from "./origins";
+
+const ORIGIN_IDS: readonly string[] = ORIGINS.map((o) => o.id);
 
 export const LIFE_APPS = ["work", "home", "body", "friends", "mate", "kin", "polis", "legacy"] as const;
 export type LifeAppId = (typeof LIFE_APPS)[number];
 export const isLifeApp = (s: unknown): s is LifeAppId => typeof s === "string" && (LIFE_APPS as readonly string[]).includes(s);
 
 export type Option = { id: string; label: string };
-export type FieldKind = "text" | "long" | "number" | "money" | "day" | "choice" | "check";
+export type FieldKind = "text" | "long" | "number" | "money" | "day" | "choice" | "check" | "origins";
 export type Field = { key: string; label: string; kind: FieldKind; options?: readonly Option[]; hint?: string };
 export type State = { id: string; label: string; /** A record in this state is under way, which makes its tile "in action". */ active?: boolean };
 export type ActKind = { id: string; label: string; /** Past tense for the log: "Worked out". */ done: string; minutes?: boolean; amount?: boolean };
@@ -26,6 +29,8 @@ export type Kind = {
   acts?: readonly ActKind[];
   /** The person keeps one of these (their intended household, how food is met), not a list. */
   one?: boolean;
+  /** Kept from another page (an inspiration from a job's page), so the app shows no tab for it. */
+  hidden?: boolean;
   /** What the kind is for, in a sentence, shown above it. */
   intro: string;
   /** A standard to hold it against, with its source, shown beside it. */
@@ -97,6 +102,29 @@ export const APPS: readonly LifeApp[] = [
           { key: "need", label: "What it needs a year before taxes", kind: "money" },
           { key: "note", label: "Notes", kind: "long" },
         ],
+      },
+      {
+        id: "inspiration", label: "Inspiration", plural: "What inspires me", title: "title", hidden: true,
+        intro: "A job, a company or imagined work that inspires you, with what draws you to it and why.",
+        fields: [
+          { key: "ref", label: "What it is", kind: "text" },
+          { key: "title", label: "Name", kind: "text" },
+          { key: "draws", label: "What draws me to it", kind: "long" },
+          { key: "origins", label: "Where that comes from", kind: "origins" },
+          { key: "end", label: "For the sake of what", kind: "long" },
+        ],
+        states: [{ id: "drawn", label: "Drawn to it" }, { id: "exploring", label: "Exploring it", active: true }, { id: "pursuing", label: "Pursuing it", active: true }, { id: "let-go", label: "Let go" }],
+      },
+      {
+        id: "imagined", label: "Imagined work", plural: "Imagined", title: "name",
+        intro: "Work that does not exist yet, as you imagine it.",
+        fields: [
+          { key: "name", label: "Name it", kind: "text", hint: "What someone doing it would be called" },
+          { key: "what", label: "What it is", kind: "long" },
+          { key: "who", label: "Who it serves", kind: "long" },
+          { key: "take", label: "What it would take to exist", kind: "long" },
+        ],
+        states: [{ id: "imagined", label: "Imagined" }, { id: "forming", label: "Forming", active: true }, { id: "real", label: "Real now" }],
       },
       {
         id: "credential", label: "Credential", plural: "Credentials", title: "name",
@@ -351,6 +379,10 @@ export function cleanBody(k: Kind, raw: Record<string, unknown>): Body {
       if (/^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s))) out[f.key] = s;
     } else if (f.kind === "choice") {
       if (f.options?.some((o) => o.id === s)) out[f.key] = s;
+    } else if (f.kind === "origins") {
+      const given = (Array.isArray(v) ? v : s.split(",")).map((x) => String(x).trim());
+      const kept = ORIGIN_IDS.filter((o) => given.includes(o));
+      if (kept.length) out[f.key] = kept.join(",");
     } else out[f.key] = s.slice(0, f.kind === "long" ? 20000 : 300);
   }
   return out;
@@ -373,6 +405,7 @@ export function shown(f: Field, b: Body): string | null {
   if (f.kind === "check") return "Yes";
   if (f.kind === "choice") return f.options?.find((o) => o.id === v)?.label ?? String(v);
   if (f.kind === "money") return `$${Number(v).toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
+  if (f.kind === "origins") return String(v).split(",").map((o) => ORIGINS.find((x) => x.id === o)?.label ?? o).join(", ");
   return String(v);
 }
 
