@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { BookOpenIcon, FilmIcon, GraduationCapIcon, ImageIcon, MicIcon, MusicIcon, PresentationIcon, Gamepad2Icon, MessagesSquareIcon, TvIcon, DramaIcon } from "lucide-react";
 import { browseWay, playsHere, type BrowseMedium } from "@reflect/core/browse-media";
+import { courseSite } from "@reflect/core/courses";
 import type { Found } from "@reflect/core/lookup";
 import { WAYS, mediumOf, type Medium } from "@reflect/core/ways";
 import { Badge } from "@/components/ui/badge";
@@ -28,17 +29,21 @@ function MediaCard({ f, mine, showMedium }: { f: Find; mine: Map<string, string>
   const here = f.here ?? playsHere(f);
   const m = mediumOf(f.medium);
   const square = f.medium === "music" || f.medium === "podcast" || f.medium === "art";
+  // A course or a show has its own page in Reflect to explore before keeping it.
+  const page = f.medium === "course" && courseSite(f.url) ? `/learn/courses?u=${encodeURIComponent(f.url!)}&t=${encodeURIComponent(f.title)}${f.by ? `&by=${encodeURIComponent(f.by)}` : ""}`
+    : f.medium === "podcast" && f.url && playsHere(f) ? `/learn/podcasts?u=${encodeURIComponent(f.url)}&t=${encodeURIComponent(f.title)}${f.by ? `&by=${encodeURIComponent(f.by)}` : ""}${f.image ? `&i=${encodeURIComponent(f.image)}` : ""}`
+    : id ? `/learn/items/${id}` : null;
   return (
     <li className="flex min-w-0 flex-col gap-2">
-      <div className={`bg-muted text-muted-foreground relative flex items-center justify-center overflow-hidden rounded-lg border [&_svg]:size-8 ${square ? "aspect-square" : f.medium === "course" || f.medium === "lecture" || f.medium === "debate" ? "aspect-video" : "aspect-[2/3]"}`}>
+      <Link href={page ?? "#"} aria-hidden tabIndex={-1} className={page ? "" : "pointer-events-none"}><div className={`bg-muted text-muted-foreground relative flex items-center justify-center overflow-hidden rounded-lg border [&_svg]:size-8 ${square ? "aspect-square" : f.medium === "course" || f.medium === "lecture" || f.medium === "debate" ? "aspect-video" : "aspect-[2/3]"}`}>
         {f.image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={f.image} alt="" loading="lazy" className="size-full object-cover" />
         ) : ICON[f.medium]}
         {here ? <span className="bg-background/90 text-foreground absolute top-1.5 left-1.5 rounded px-1.5 py-0.5 text-[11px] font-medium" title="Can be done in Reflect">Here</span> : null}
-      </div>
+      </div></Link>
       <div className="min-w-0 space-y-0.5">
-        <p className="line-clamp-2 text-sm font-medium">{id ? <Link href={`/learn/items/${id}`} className="hover:underline">{f.title}</Link> : f.title}</p>
+        <p className="line-clamp-2 text-sm font-medium">{page ? <Link href={page} className="hover:underline">{f.title}</Link> : f.title}</p>
         {f.by ? <p className="text-muted-foreground line-clamp-1 text-xs">{f.by}</p> : null}
         <p className="text-muted-foreground text-[11px]">{[showMedium ? m.label : null, wayLabel(f.medium), f.year].filter(Boolean).join(" · ")}</p>
       </div>

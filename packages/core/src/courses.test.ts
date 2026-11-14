@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { courseLecture, courseLectures, courseSite, ocwLectures, oycLecture, oycLectures, passageAt, passagesFromCaptions, plain } from "./courses";
+import { courseInfo, courseLecture, courseLectures, courseSite, linesOf, ocwCourse, ocwLectures, ocwSyllabus, oycCourse, oycLecture, oycLectures, passageAt, passagesFromCaptions, plain } from "./courses";
 
 const OYC_COURSE = `<td class="views-field views-field-field-session-display-title"><a href="/philosophy/phil-176/lecture-2" hreflang="en">The Nature of Persons: Dualism vs. Physicalism</a></td>
 <td class="views-field views-field-field-session-display-title"><a href="/philosophy/phil-176/lecture-1" hreflang="en">Course Introduction</a></td>`;
@@ -57,5 +57,28 @@ describe("courses taken in Reflect", () => {
     expect(l).toMatchObject({ title: "Lecture 1: The geometry of linear equations", youtube: "J7DzL2_Na80", video: "https://www.archive.org/download/MIT18.06S05_MP4/01.mp4" });
     expect(l?.transcript).toHaveLength(2);
     expect(await courseLectures("https://example.com/x", f)).toBeNull();
+  });
+
+  it("reads a course's description and syllabus, to explore it before taking it", async () => {
+    expect(linesOf("<p>One.</p><p>Two<br/>Three</p><ul><li>Four</li></ul>")).toEqual(["One.", "Two", "Three", "Four"]);
+    const yale = `<title>Death | Open Yale Courses</title>
+<div class="views-field"><span class="views-label views-label-field-about-the-course">About the Course</span> <div class="field-content"><p>There is one way to die.</p><p>Second paragraph.</p></div></div>
+<div class="views-field"><span class="views-label views-label-field-professor">Professor</span> <div class="field-content">Shelly Kagan</div></div>
+<div class="views-field"><span class="views-label views-label-field-texts">Texts</span> <div class="field-content"><p>Plato, Phaedo</p><p>Tolstoy, The Death of Ivan Ilych</p><p>For more, click here.</p></div></div>
+<div class="views-field"><span class="views-label views-label-field-grading">Grading</span> <div class="field-content"><p>Papers: 50%</p></div></div>`;
+    expect(oycCourse(yale)).toEqual({
+      title: "Death", by: "Shelly Kagan", image: null, about: ["There is one way to die.", "Second paragraph."],
+      syllabus: [{ heading: "Texts", lines: ["Plato, Phaedo", "Tolstoy, The Death of Ivan Ilych"] }, { heading: "Grading", lines: ["Papers: 50%"] }],
+    });
+    const home = `<meta property="og:image" content="https://ocw.mit.edu/x.jpg" /><h1> <a href="/courses/18-06/">Linear Algebra</a></h1><div id="full-description"><p>A basic subject on matrix theory.</p></div>`;
+    expect(ocwCourse(home)).toEqual({ title: "Linear Algebra", by: null, image: "https://ocw.mit.edu/x.jpg", about: ["A basic subject on matrix theory."] });
+    const syllabus = `<main id="course-content-section"><h2>Course Meeting Times</h2><p>Lectures: 3 sessions / week</p><h2>Textbook</h2><p>Strang, Introduction to Linear Algebra.</p><h2>Empty</h2></main>`;
+    expect(ocwSyllabus(syllabus)).toEqual([{ heading: "Course Meeting Times", lines: ["Lectures: 3 sessions / week"] }, { heading: "Textbook", lines: ["Strang, Introduction to Linear Algebra."] }]);
+    const base = "https://ocw.mit.edu/courses/18-06-linear-algebra-spring-2010/";
+    const pages: Record<string, string> = { [base]: home + `<a href="/courses/18-06-linear-algebra-spring-2010/video_galleries/video-lectures/">Videos</a>`, [`${base}video_galleries/video-lectures/`]: OCW_GALLERY, [`${base}pages/syllabus/`]: syllabus };
+    const info = await courseInfo(base, async (u) => pages[u] ?? null);
+    expect(info).toMatchObject({ site: "ocw", title: "Linear Algebra", syllabus: [{ heading: "Course Meeting Times" }, { heading: "Textbook" }] });
+    expect(info?.lectures).toHaveLength(2);
+    expect(await courseInfo("https://example.com/x", async () => null)).toBeNull();
   });
 });

@@ -1,6 +1,6 @@
 // Courses taken in Reflect: each course's lectures and each lecture read from its publisher's public pages
 // (@reflect/core/courses), cached a day by Next's fetch cache and never stored in the database.
-import { courseLecture, courseLectures, type CourseSite, type Lecture, type LectureRef } from "@reflect/core/courses";
+import { courseInfo, courseLecture, courseLectures, type CourseInfo, type CourseSite, type Lecture, type LectureRef } from "@reflect/core/courses";
 
 const page = async (url: string): Promise<string | null> => {
   try {
@@ -17,4 +17,8 @@ export async function lecturesOf(url: string | null): Promise<{ site: CourseSite
 
 export async function lectureOf(site: CourseSite, ref: LectureRef): Promise<Lecture | null> {
   return courseLecture(site, ref, page);
+}
+
+export async function courseInfoOf(url: string): Promise<CourseInfo | null> {
+  return courseInfo(url, page);
 }

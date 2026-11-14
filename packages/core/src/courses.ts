@@ -149,3 +149,61 @@ export function passageAt(transcript: readonly Passage[], s: number): number {
   transcript.forEach((p, i) => { if (p.at !== null && p.at <= s) at = i; });
   return at;
 }
+
+export type SyllabusPart = { heading: string; lines: string[] };
+export type CourseInfo = { site: CourseSite; url: string; title: string; by: string | null; image: string | null; about: string[]; syllabus: SyllabusPart[]; lectures: LectureRef[] };
+
+/** An HTML fragment as lines of plain text: one per paragraph, line break or list item. */
+export function linesOf(html: string): string[] {
+  return html.split(/<\/p>|<br\s*\/?>|<\/li>|<\/h\d>/i).map(plain).filter((l) => l && l !== " ");
+}
+
+/** Open Yale: a course page's title, professor, description and syllabus (structure, texts, requirements, grading). */
+export function oycCourse(html: string): Omit<CourseInfo, "site" | "url" | "lectures"> {
+  const fields: { label: string; html: string }[] = [];
+  for (const m of html.matchAll(/views-label-[\w-]+">([\s\S]*?)<\/span>\s*<div class="field-content">([\s\S]*?)<\/div>\s*<\/div>/g)) fields.push({ label: plain(m[1]!), html: m[2]! });
+  const pick = (l: string) => fields.find((f) => f.label === l);
+  const title = plain(/<title>([\s\S]*?)(?:\||<\/title>)/.exec(html)?.[1] ?? "");
+  const prof = pick("Professor");
+  const syllabus: SyllabusPart[] = [];
+  const seen = new Set<string>();
+  for (const f of fields) {
+    if (["Course Number", "About the Course", "Description", "Professor"].includes(f.label) || seen.has(f.label)) continue;
+    seen.add(f.label);
+    const lines = linesOf(f.html).filter((l) => !/click here|^The Open Yale Courses Series$/i.test(l));
+    if (lines.length) syllabus.push({ heading: f.label, lines });
+  }
+  return { title, by: prof ? plain(prof.html) : null, image: null, about: linesOf((pick("About the Course") ?? pick("Description"))?.html ?? ""), syllabus };
+}
+
+/** MIT OpenCourseWare: a course home page's title, picture and description. */
+export function ocwCourse(html: string): Omit<CourseInfo, "site" | "url" | "lectures" | "syllabus"> {
+  const title = plain(/<h1>\s*<a[^>]*>([\s\S]*?)<\/a>/.exec(html)?.[1] ?? /<title>([\s\S]*?)(?:\||<\/title>)/.exec(html)?.[1] ?? "");
+  const image = /property="og:image" content="(https:[^"]+)"/.exec(html)?.[1] ?? null;
+  const about = /id="full-description"[^>]*>([\s\S]*?)<\/div>/.exec(html)?.[1];
+  return { title, by: null, image, about: about ? linesOf(about) : [] };
+}
+
+/** MIT OpenCourseWare: a syllabus page's sections, each heading with its lines. */
+export function ocwSyllabus(html: string): SyllabusPart[] {
+  const main = /<main id="course-content-section">([\s\S]*?)<\/main>/.exec(html)?.[1];
+  if (!main) return [];
+  const out: SyllabusPart[] = [];
+  for (const part of main.split(/(?=<h[23][^>]*>)/)) {
+    const h = /^<h[23][^>]*>([\s\S]*?)<\/h[23]>/.exec(part);
+    const lines = linesOf(h ? part.slice(h[0].length) : part).slice(0, 40);
+    if (h || lines.length) out.push({ heading: h ? plain(h[1]!) : "Syllabus", lines });
+  }
+  return out.filter((p) => p.lines.length);
+}
+
+/** Everything to explore a course before taking it: its description, syllabus and lectures. */
+export async function courseInfo(raw: string, f: Fetch): Promise<CourseInfo | null> {
+  const c = courseSite(raw);
+  if (!c) return null;
+  const [home, lectures] = await Promise.all([f(c.url), courseLectures(c.url, f)]);
+  if (!home) return null;
+  if (c.site === "oyc") return { ...c, ...oycCourse(home), lectures: lectures?.lectures ?? [] };
+  const syl = await f(`${c.url}pages/syllabus/`);
+  return { ...c, ...ocwCourse(home), syllabus: syl ? ocwSyllabus(syl) : [], lectures: lectures?.lectures ?? [] };
+}

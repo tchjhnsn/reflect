@@ -104,7 +104,7 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
             <div className="flex flex-wrap items-center gap-2"><Badge variant="secondary">{m.label}</Badge>{item.tookPart ? <Badge variant="outline">Took part</Badge> : null}</div>
             <h1 className="text-2xl font-semibold tracking-tight">{item.title}</h1>
             {item.by ? <p className="text-muted-foreground">{item.by}</p> : null}
-            {course ? <p className="text-muted-foreground text-sm">From {COURSE_SITES[course.site].name} · {lectures.length} lectures · {finished.size} finished</p> : null}
+            {course ? <p className="text-muted-foreground text-sm">From {COURSE_SITES[course.site].name} · {lectures.length} lectures · {finished.size} finished · <Link href={`/learn/courses?u=${encodeURIComponent(course.url)}&t=${encodeURIComponent(item.title)}`} className="underline underline-offset-4">About the course and its syllabus</Link></p> : null}
             {adapts ? <p className="text-sm">Adapts <Link href={`/learn/works/${item.work}`} className="underline underline-offset-4">{adapts.title}</Link></p> : null}
           </div>
         </header>
