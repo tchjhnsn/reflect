@@ -14,6 +14,7 @@ import { PAGE } from "@/components/page-header";
 import { requireUser } from "@/server/session";
 import { getItem, listUnits } from "@/server/ways-store";
 import { lecturesOf } from "@/server/courses";
+import { reasonFor } from "@/server/learn-reason-store";
 import { showFor } from "@/server/podcasts";
 import { openLibrary } from "@/server/browse";
 import "@/server/free";
@@ -62,10 +63,11 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
   const [view, claims, published, ideas] = await Promise.all([learnView(user.id), listClaims(user.id).catch(() => []), publishedBy(user.id).catch(() => []), listIdeas(user.id).catch((): IdeaOut[] => [])]);
   // An item merged from an older input keeps its id, so an idea may name it either way.
   const bearing = [...new Map([...ideasNaming(ideas, `item:${item.id}`, item.title), ...ideasNaming(ideas, `input:${item.id}`, item.title)].map((b) => [b.idea.id, b])).values()];
-  const [course, show, units] = await Promise.all([
+  const [course, show, units, reason] = await Promise.all([
     item.medium === "course" ? lecturesOf(item.url) : null,
     item.medium === "podcast" ? showFor(item.url) : null,
     item.medium === "course" || item.medium === "podcast" ? listUnits(user.id, item.id) : [],
+    item.medium === "course" && item.url ? reasonFor(user.id, item.url) : null,
   ]);
   // A play or a debate kept in writing is read (and often heard) in Reflect, as a book.
   const text = (item.medium === "theatre" || (item.medium === "debate" && !embedOf(item.url)))
@@ -105,6 +107,7 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
             <h1 className="text-2xl font-semibold tracking-tight">{item.title}</h1>
             {item.by ? <p className="text-muted-foreground">{item.by}</p> : null}
             {course ? <p className="text-muted-foreground text-sm">From {COURSE_SITES[course.site].name} · {lectures.length} lectures · {finished.size} finished · <Link href={`/learn/courses?u=${encodeURIComponent(course.url)}&t=${encodeURIComponent(item.title)}`} className="underline underline-offset-4">About the course and its syllabus</Link></p> : null}
+            {course ? <p className="max-w-prose text-sm leading-relaxed"><span className="font-medium">Why I am learning this: </span>{reason ? <>{reason.cause.length > 220 ? `${reason.cause.slice(0, 217)}...` : reason.cause} <Link href={`/journal/w/${reason.workId}`} className="text-muted-foreground underline underline-offset-4">In your journal</Link></> : <Link href={`/learn/courses/why?u=${encodeURIComponent(course.url)}&t=${encodeURIComponent(item.title)}`} className="underline underline-offset-4">Write it</Link>}</p> : null}
             {adapts ? <p className="text-sm">Adapts <Link href={`/learn/works/${item.work}`} className="underline underline-offset-4">{adapts.title}</Link></p> : null}
           </div>
         </header>

@@ -63,3 +63,24 @@ test("put yourself under examination on a course", async ({ page }) => {
   await page.goto(link);
   await expect(page.getByRole("heading", { name: "Your examination" })).toBeVisible({ timeout: 60_000 });
 });
+
+// Before a course: what is causing you to learn it, with its origins, and for the sake of what. It is kept in the
+// journal, shown on the course, and read again before an examination.
+test("write why you are learning a course", async ({ page }) => {
+  test.setTimeout(240_000);
+  const u = encodeURIComponent("https://oyc.yale.edu/history/hist-210");
+  await page.goto(`/learn/courses/why?u=${u}&t=Early%20Middle%20Ages`);
+  await expect(page.getByRole("heading", { name: "Why I am learning this" })).toBeVisible({ timeout: 60_000 });
+  await page.waitForLoadState("networkidle");
+  const cause = `Rome fell and I never knew what came after (${Date.now()}).`;
+  await page.getByLabel("What is causing me to learn this").fill(cause);
+  await page.getByLabel("Spirit", { exact: true }).check({ force: true });
+  await page.getByLabel("For the sake of what").fill("To understand it.");
+  await page.getByLabel("For its own sake").check({ force: true });
+  await page.getByRole("button", { name: "Keep it" }).click();
+  // The desktop and phone runs write the same course at once, so either one's words may be the latest.
+  await expect(page.locator("#why").getByText(/Rome fell and I never knew what came after/)).toBeVisible({ timeout: 60_000 });
+  await expect(page.locator("#why").getByText(/From .*spirit/)).toBeVisible();
+  await page.goto(`/learn/examinations/new?u=${u}&t=Early%20Middle%20Ages`);
+  await expect(page.getByText(/Rome fell and I never knew what came after/)).toBeVisible({ timeout: 60_000 });
+});

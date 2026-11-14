@@ -65,5 +65,6 @@ describe("the book of your life", () => {
 
   it("origins are Aristotle's seven, once each, in his order", () => {
     expect(cleanOrigins(["appetite", "chance", "appetite", "whim"])).toEqual(["chance", "appetite"]);
+    expect(cleanOrigins(["anger", "spirit", "habit"])).toEqual(["habit", "spirit"]);
   });
 });

@@ -61,6 +61,12 @@ export const TEMPLATES: Template[] = [
     about: "Decide how to carry something out.",
     body: "## What I mean to do\n\n\n\n## Why\n\n\n\n## Steps\n\n- \n\n## When\n\n",
   },
+  {
+    id: "why-learn", name: "Why I am learning this", kind: "entry",
+    about: "Before you take up a course or a subject: what is causing you to learn it, and for the sake of what.",
+    source: "Aristotle, Rhetoric I.10 (the seven causes of action) and Physics II.3 (the moving cause and the end)",
+    body: "## What is causing me to learn this\n\n\n\n## For the sake of what\n\n",
+  },
   { id: "letter", name: "Letter", kind: "letter", about: "Write to someone, sent or not.", body: "Dear ,\n\n\n\n" },
   {
     id: "legacy", name: "What I want the world to know", kind: "memoir",
