@@ -24,6 +24,7 @@ export function WorkHeader({ on }: { on: WorkTab | null }) {
         { label: "Income", href: "/life/work?k=income", on: on === "income" },
         { label: "Intended household", href: "/life/work?k=household", on: on === "household" },
         { label: "Credentials", href: "/life/work?k=credential", on: on === "credential" },
+        { label: "Calendar", href: "/calendar?tile=work", on: false },
       ]} />
     } />
   );

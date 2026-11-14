@@ -73,7 +73,7 @@ export default async function LifeAppPage({ params, searchParams }: { params: Pr
   return (
     <main className={PAGE}>
       {app === "work" ? <WorkHeader on={(kind?.id as WorkTab | undefined) ?? null} /> : <SectionHeader back="/" backLabel="Home" title={a.label} tabs={
-        <Segmented label={`${a.label} parts`} items={[{ label: "Overview", href: `/life/${app}`, on: !kind }, ...a.kinds.filter((k) => !k.hidden).map((k) => ({ label: k.plural, href: `/life/${app}?k=${k.id}`, on: kind?.id === k.id }))]} />
+        <Segmented label={`${a.label} parts`} items={[{ label: "Overview", href: `/life/${app}`, on: !kind }, ...a.kinds.filter((k) => !k.hidden).map((k) => ({ label: k.plural, href: `/life/${app}?k=${k.id}`, on: kind?.id === k.id })), { label: "Calendar", href: `/calendar?tile=${app}`, on: false }]} />
       } />}
       {removed ? (
         <form action={restoreLifeAction.bind(null, removed, back)} className="bg-muted mt-4 flex items-center justify-between gap-3 rounded-lg px-4 py-2 text-sm">
