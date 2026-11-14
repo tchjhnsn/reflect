@@ -158,6 +158,13 @@ export function linesOf(html: string): string[] {
   return html.split(/<\/p>|<br\s*\/?>|<\/li>|<\/h\d>/i).map(plain).filter((l) => l && l !== " ");
 }
 
+/** Open Yale runs the professor's name into their title ("John Merriman Charles Seymour Professor of History"): the name alone. */
+export function yaleName(s: string): string {
+  if (!/\b(Professor|Lecturer|Dean|Chair|Instructor)\b/.test(s)) return s;
+  const w = s.split(/\s+/);
+  return w.slice(0, /^[A-Z]\.$/.test(w[1] ?? "") ? 3 : 2).join(" ");
+}
+
 /** Open Yale: a course page's title, professor, description and syllabus (structure, texts, requirements, grading). */
 export function oycCourse(html: string): Omit<CourseInfo, "site" | "url" | "lectures"> {
   const fields: { label: string; html: string }[] = [];
@@ -173,7 +180,7 @@ export function oycCourse(html: string): Omit<CourseInfo, "site" | "url" | "lect
     const lines = linesOf(f.html).filter((l) => !/click here|^The Open Yale Courses Series$/i.test(l));
     if (lines.length) syllabus.push({ heading: f.label, lines });
   }
-  return { title, by: prof ? plain(prof.html) : null, image: null, about: linesOf((pick("About the Course") ?? pick("Description"))?.html ?? ""), syllabus };
+  return { title, by: prof ? yaleName(plain(prof.html)) : null, image: null, about: linesOf((pick("About the Course") ?? pick("Description"))?.html ?? ""), syllabus };
 }
 
 /** MIT OpenCourseWare: a course home page's title, picture and description. */
@@ -181,7 +188,9 @@ export function ocwCourse(html: string): Omit<CourseInfo, "site" | "url" | "lect
   const title = plain(/<h1>\s*<a[^>]*>([\s\S]*?)<\/a>/.exec(html)?.[1] ?? /<title>([\s\S]*?)(?:\||<\/title>)/.exec(html)?.[1] ?? "");
   const image = /property="og:image" content="(https:[^"]+)"/.exec(html)?.[1] ?? null;
   const about = /id="full-description"[^>]*>([\s\S]*?)<\/div>/.exec(html)?.[1];
-  return { title, by: null, image, about: about ? linesOf(about) : [] };
+  // The instructors are linked to a search for their names.
+  const people = [...new Set([...html.matchAll(/href="\/search\/\?q=[^"]*"[^>]*>\s*([^<]+?)\s*</g)].map((m) => plain(m[1]!).replace(/^(Prof\.|Dr\.)\s+/, "")))].slice(0, 4);
+  return { title, by: people.length ? people.join(", ") : null, image, about: about ? linesOf(about) : [] };
 }
 
 /** MIT OpenCourseWare: a syllabus page's sections, each heading with its lines. */
@@ -237,4 +246,34 @@ export function textCitation(line: string): TextCitation | null {
   const plain = /^([A-Z][\p{L}.'’ -]{1,40}?), (.+)$/u.exec(l);
   if (plain && plain[1]!.split(" ").length <= 4 && !/[.:;]/.test(plain[2]!.replace(/\.$/, ""))) return { title: plain[2]!.replace(/\.$/, "").trim(), author: plain[1]!.trim(), isbn };
   return isbn ? { title: "", author: null, isbn } : null;
+}
+
+/** The tabs every course page has, in order, whatever its publisher calls the parts of its syllabus. */
+export const OUTLINE = [
+  { id: "about", label: "About" }, { id: "texts", label: "Required texts" }, { id: "prerequisites", label: "Prerequisites" },
+  { id: "assignments", label: "Assignments" }, { id: "grading", label: "Grading" }, { id: "more", label: "More" },
+] as const;
+export type OutlineId = (typeof OUTLINE)[number]["id"];
+export type Outline = { description: string[]; sections: Record<OutlineId, SyllabusPart[]> };
+
+/** Which tab a part of a syllabus belongs in, from its heading. */
+export function outlineOf(heading: string): OutlineId {
+  const h = heading.replace(/:$/, "").trim();
+  if (/prereq|co-?req|background/i.test(h)) return "prerequisites";
+  if (isTextsHeading(h) || /course (packet|reader|materials)|reading list/i.test(h)) return "texts";
+  if (/grad|evaluat|assessment/i.test(h)) return "grading";
+  if (/requirement|assignment|homework|problem set|exam|quiz|paper|essay|project|lab/i.test(h)) return "assignments";
+  if (/structure|meeting|format|goal|objective|outcome|description|overview|about|professor|instructor|calendar|schedule/i.test(h)) return "about";
+  return "more";
+}
+
+/**
+ * A course's syllabus put into the same tabs whatever its source (Open Yale's Course Structure, Texts, Requirements and
+ * Grading; MIT's Meeting Times, Prerequisites, Text, Goals, Homework, Exams, Grading and the rest), so every course
+ * page reads the same way: its description first, then the parts under About, each other part under its tab.
+ */
+export function courseOutline(info: Pick<CourseInfo, "about" | "syllabus">): Outline {
+  const sections = Object.fromEntries(OUTLINE.map((o) => [o.id, [] as SyllabusPart[]])) as Record<OutlineId, SyllabusPart[]>;
+  for (const part of info.syllabus) sections[outlineOf(part.heading)].push({ ...part, heading: part.heading.replace(/:$/, "").trim() });
+  return { description: info.about, sections };
 }

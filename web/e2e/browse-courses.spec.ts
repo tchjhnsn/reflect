@@ -35,7 +35,7 @@ test("explore a course before keeping it", async ({ page }) => {
   test.setTimeout(240_000);
   await page.goto(`/learn/courses?u=${encodeURIComponent("https://oyc.yale.edu/history/hist-202")}`);
   await expect(page.getByRole("heading", { level: 1, name: /European Civilization/ })).toBeVisible({ timeout: 60_000 });
-  await page.getByRole("tab", { name: "Texts" }).click();
+  await page.getByRole("tab", { name: "Required texts" }).click();
   await expect(page.getByRole("tabpanel").getByRole("link", { name: "Germinal" }).first()).toBeVisible();
   await page.locator("#lectures li").nth(1).getByRole("button").first().click();
   await expect(page.locator("#lectures iframe")).toBeVisible({ timeout: 60_000 });
