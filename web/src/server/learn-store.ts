@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { PoolClient } from "@neondatabase/serverless";
 import { BOOK_STATUS, GRASP, cleanIsbn, isGrasp, namedSubjects, type BookStatus, type Grasp } from "@reflect/core/learning";
 import type { CatalogEntry } from "@reflect/core/openlibrary";
+import { isWay, type Way } from "@reflect/core/ways";
 import { db } from "@/db/pool";
 import { open, seal, tag } from "./crypto";
 
@@ -12,7 +13,7 @@ import { open, seal, tag } from "./crypto";
  * grasp counts, and recalls and grasps are never changed.
  */
 
-export type BookOut = { id: string; title: string; authors: string[]; isbn: string | null; status: BookStatus; startedOn: string | null; finishedOn: string | null; subjects: SubjectOut[]; catalog: CatalogEntry | null; recalls: { at: string; text: string }[]; /** Where the person is in it, when they read it in Reflect (migration 0019). */ place: BookPlace | null; /** Its place in Want to read as the person ordered it (migration 0022), or null. */ wantRank: number | null };
+export type BookOut = { id: string; title: string; authors: string[]; isbn: string | null; status: BookStatus; startedOn: string | null; finishedOn: string | null; subjects: SubjectOut[]; catalog: CatalogEntry | null; recalls: { at: string; text: string }[]; /** Where the person is in it, when they read it in Reflect (migration 0019). */ place: BookPlace | null; /** Its place in Want to read as the person ordered it (migration 0022), or null. */ wantRank: number | null; /** The way the person learns from it, when they moved it (migration 0023); null follows its category. */ way: Way | null };
 /** A chapter of a book and how far down it, from 0 to 1. */
 export type BookPlace = { chapter: number; chapters: number; at: number };
 export type SubjectOut = { id: string; name: string; vouches: number; shown: number; suggested: number; grasp: { grasp: Grasp; at: string; bookId: string | null } | null };
@@ -227,6 +228,7 @@ async function books(userId: string, only?: string): Promise<BookOut[]> {
       recalls: recalls.rows.map((x) => ({ at: new Date(x.created_at as string).toISOString(), text: open(userId, x.text_ct as string) })),
       place: place.rows[0] ? { chapter: Number(place.rows[0].chapter), chapters: Number(place.rows[0].chapters), at: Number(place.rows[0].at) } : null,
       wantRank: b.want_rank === null || b.want_rank === undefined ? null : Number(b.want_rank),
+      way: isWay(b.way) ? b.way : null,
     });
   }
   return out;
