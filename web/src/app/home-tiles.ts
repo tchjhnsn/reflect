@@ -1,6 +1,8 @@
 // The home screen's tiles: one per area of life, several opening the same app (docs/design/REFLECT_UI_2026-11-12.md,
 // sections 1 to 3). A tile's tone says its state: in action when something in its app is under way, in thought
-// when something is stated, unstated otherwise. Only apps that exist link anywhere; the rest say so.
+// when something is stated, unstated otherwise. MINE's tiles all open their apps (Learn, the journal, and the
+// apps in `@reflect/core/life`); OURS, the shared spaces, is not built yet.
+import { TILE_KIND } from "@reflect/core/life";
 
 /** Solid glyphs on a 100 by 100 box, drawn for Reflect. */
 export const GLYPHS: Record<string, string> = {
@@ -63,17 +65,23 @@ export const OURS: readonly Tile[] = [
   { id: "village", label: "Village", app: "village" },
 ];
 
-/** Where a tile goes: its app, when the app is built in the current design. Ideas and Journal open the journal. */
+/**
+ * Where a tile goes: Learn, the journal (Ideas and Journal), or its app in `@reflect/core/life`, at the part it
+ * names (Income opens Work's income, Food opens Home's food). OURS's tiles go nowhere yet.
+ */
 export function hrefOf(t: Tile): string | null {
-  return t.app === "learn" ? "/learn" : t.app === "journal" ? "/journal" : null;
+  if (t.app === "learn") return "/learn";
+  if (t.app === "journal") return "/journal";
+  const life = TILE_KIND[t.id];
+  return life ? `/life/${life.app}${life.kind ? `?k=${life.kind}` : ""}` : null;
 }
 
 export type Tone = "action" | "thought" | "unstated";
-export type Facts = { learn: { underway: boolean; stated: boolean }; journal: { stated: boolean; open: boolean } };
+export type Facts = { learn: { underway: boolean; stated: boolean }; journal: { stated: boolean; open: boolean }; /** Each life tile's tone, from `lifeTone`. */ life?: Record<string, Tone> };
 
 /** A tile's tone from what the person has, never from a guess. */
 export function toneOf(t: Tile, f: Facts): Tone {
   if (t.app === "learn") return f.learn.underway ? "action" : f.learn.stated ? "thought" : "unstated";
   if (t.id === "journal") return f.journal.open ? "action" : f.journal.stated ? "thought" : "unstated";
-  return "unstated";
+  return f.life?.[t.id] ?? "unstated";
 }

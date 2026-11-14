@@ -10,9 +10,10 @@ describe("home tiles", () => {
     for (const t of [...MINE, ...OURS]) expect(GLYPHS[t.id], t.id).toBeTruthy();
   });
 
-  it("links only apps built in the new design", () => {
+  it("opens every tile of mine, at the part it names, and none of ours yet", () => {
     const links = Object.fromEntries([...MINE, ...OURS].map((t) => [t.id, hrefOf(t)]));
-    expect(links).toMatchObject({ learn: "/learn", journal: "/journal", ideas: "/journal", legacy: null, food: null, marriage: null });
+    expect(links).toMatchObject({ learn: "/learn", journal: "/journal", ideas: "/journal", legacy: "/life/legacy", food: "/life/home?k=food", income: "/life/work?k=income", standing: "/life/polis?k=standing", marriage: null });
+    for (const t of MINE) expect(hrefOf(t), t.id).not.toBeNull();
   });
 
   it("takes tone from what the person has, unstated by default", () => {
@@ -21,6 +22,7 @@ describe("home tiles", () => {
     expect(toneOf(learn, { ...none, learn: { underway: false, stated: true } })).toBe("thought");
     expect(toneOf(learn, { ...none, learn: { underway: true, stated: true } })).toBe("action");
     expect(toneOf(MINE.find((t) => t.id === "food")!, { learn: { underway: true, stated: true }, journal: { stated: true, open: true } })).toBe("unstated");
+    expect(toneOf(MINE.find((t) => t.id === "food")!, { ...none, life: { food: "thought" } })).toBe("thought");
     const journal = MINE.find((t) => t.id === "journal")!;
     expect(toneOf(journal, none)).toBe("unstated");
     expect(toneOf(journal, { ...none, journal: { stated: true, open: false } })).toBe("thought");

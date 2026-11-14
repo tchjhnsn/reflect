@@ -6,11 +6,12 @@
 import type { BookStatus, Grasp } from "./learning";
 import type { Stance } from "./claims";
 
-export type ActKind = "intended" | "started" | "finished" | "put_down" | "cited" | "kept_claim" | "changed_stance" | "rated" | "item_added" | "item_started" | "item_finished" | "practised" | "learned";
+export type ActKind = "intended" | "started" | "finished" | "put_down" | "cited" | "kept_claim" | "changed_stance" | "rated" | "item_added" | "item_started" | "item_finished" | "practised" | "learned" | "life_added" | "life_state" | "life_act";
 export type Act = {
   /** An ISO timestamp, or a date (YYYY-MM-DD) when the record keeps only the day. */
   at: string;
-  app: "learn";
+  /** Learn, or one of the apps in `./life` (Work, Home, Body, Friends, Mate, Kin, Polis, Legacy). */
+  app: "learn" | "work" | "home" | "body" | "friends" | "mate" | "kin" | "polis" | "legacy";
   kind: ActKind;
   /** What the act was on: a book's title, a claim's text, a subject's name. */
   object: string;
@@ -86,6 +87,9 @@ export function actText(a: Act): string {
     case "item_finished": return `${a.detail ?? "Finished"} ${a.object}`;
     case "practised": return `Practised ${a.object}`;
     case "learned": return `Wrote what ${a.object} taught you`;
+    case "life_added": return `Kept ${a.object} in ${a.detail ?? "an app"}`;
+    case "life_state": return `${a.object}: ${a.detail ?? ""}`;
+    case "life_act": return `${a.detail ?? "Did"} ${a.object}`;
   }
 }
 

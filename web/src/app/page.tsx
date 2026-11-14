@@ -8,6 +8,8 @@ import { requireUser } from "@/server/session";
 import { learnView } from "@/server/learn-store";
 import { listEntries } from "@/server/journal-store";
 import { CHAT_PROMPT } from "@reflect/core/chat-journal";
+import { lifeTone, TILE_KIND } from "@reflect/core/life";
+import { lifeActs, lifeRecords } from "@/server/life-store";
 import { GLYPHS, hrefOf, MINE, OURS, toneOf, type Facts, type Tone } from "./home-tiles";
 
 export const metadata: Metadata = { title: "Reflect" };
@@ -17,15 +19,17 @@ const FILL: Record<Tone, string> = { action: "fill-foreground", thought: "fill-n
 const DOT: Record<Tone, string> = { action: "bg-foreground", thought: "bg-neutral-400", unstated: "bg-neutral-200" };
 const SAY: Record<Tone, string> = { action: "in action", thought: "in thought", unstated: "unstated" };
 
-/** Home: your life as objects. MINE is the private vault; OURS, the shared spaces, is not built yet. */
+/** Home: your life as objects, each opening its app. MINE is the private vault; OURS, the shared spaces, is not built yet. */
 export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const user = await requireUser();
   const ours = (await searchParams).view === "ours";
-  const [learn, all] = await Promise.all([learnView(user.id), listEntries(user.id, 40)]);
+  const [learn, all, records, acts] = await Promise.all([learnView(user.id), listEntries(user.id, 40), lifeRecords(user.id), lifeActs(user.id)]);
+  const today = new Date().toISOString().slice(0, 10);
   const recent = all.filter((e) => e.promptId !== CHAT_PROMPT);
   const facts: Facts = {
     learn: { underway: learn.books.some((b) => b.status === "reading"), stated: learn.books.length > 0 || learn.known.length > 0 },
     journal: { stated: recent.length > 0, open: recent.some((e) => !e.closedAt) },
+    life: Object.fromEntries(Object.entries(TILE_KIND).map(([tile, t]) => [tile, lifeTone(t.app, t.kind, records.filter((r) => r.app === t.app), acts, today)])),
   };
   const tiles = ours ? OURS : MINE;
   return (
