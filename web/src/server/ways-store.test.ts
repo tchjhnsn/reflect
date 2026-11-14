@@ -6,7 +6,7 @@ import { addBook, getBook } from "./learn-store";
 import { addInput } from "./ideas-store";
 import {
   addItem, addItemNote, addSession, changeItem, getItem, listItems, mergeInputs, removeItem, restoreItem,
-  setBookWay, setItemDates, setItemFacts, setTranscript,
+  setBookWay, setItemDates, setItemFacts, setTranscript, keepUnitPlace, listUnits, setUnitDone,
 } from "./ways-store";
 
 const live = Boolean(process.env.DATABASE_URL && process.env.REFLECT_DATA_KEY);
@@ -81,5 +81,23 @@ describe.skipIf(!live)("ways of learning on Neon", () => {
     const merged = (await listItems(user)).find((i) => i.id === input);
     expect(merged).toMatchObject({ medium: "lecture", title: "The Last Lecture", by: "Randy Pausch" });
     expect(await mergeInputs(user)).toBe(0);
+  });
+
+  it("keeps each lecture's place and finishing, moving the course forward and finishing it with its last lecture", async () => {
+    const user = await newUser("Units Test");
+    const now = new Date("2026-11-14T12:00:00Z");
+    const course = await addItem(user, { medium: "course", title: "Death (PHIL 176)", url: "https://oyc.yale.edu/philosophy/phil-176", status: "want" });
+    await keepUnitPlace(user, course, "1", 125.7, "2026-11-14", now);
+    expect((await getItem(user, course))!).toMatchObject({ status: "doing", startedOn: "2026-11-14" });
+    await setUnitDone(user, course, "1", true, 2, "2026-11-14", now);
+    expect((await getItem(user, course))!).toMatchObject({ status: "doing", part: 1, parts: 2 });
+    await setUnitDone(user, course, "2", true, 2, "2026-11-14", now);
+    expect((await getItem(user, course))!).toMatchObject({ status: "done", part: 2, finishedOn: "2026-11-14" });
+    await setUnitDone(user, course, "2", false, 2, "2026-11-14", now);
+    expect((await getItem(user, course))!).toMatchObject({ part: 1, finishedOn: null });
+    expect((await listUnits(user, course)).sort((a, b) => a.unit.localeCompare(b.unit))).toEqual([{ unit: "1", place: 125, doneOn: "2026-11-14" }, { unit: "2", place: null, doneOn: null }]);
+    await addItemNote(user, course, { at: 30, note: "Dualism", unit: "1" });
+    expect((await getItem(user, course))!.notes).toEqual([expect.objectContaining({ unit: "1", note: "Dualism" })]);
+    await expect(keepUnitPlace(await newUser("Other"), course, "1", 5)).rejects.toThrow();
   });
 });

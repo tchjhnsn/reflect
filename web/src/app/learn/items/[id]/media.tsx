@@ -8,29 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { addItemNoteAction, keepItemPlaceAction, removeItemNoteAction } from "../../actions";
+import { loadYouTube, localDay, type YTPlayer } from "../youtube";
 
 type Note = { id: string; at: number | null; quote: string | null; note: string | null };
-type YTPlayer = { getCurrentTime(): number; seekTo(s: number, allow: boolean): void; playVideo(): void; destroy(): void };
-type YTNamespace = { Player: new (el: HTMLElement, o: Record<string, unknown>) => YTPlayer; PlayerState: { PAUSED: number; ENDED: number } };
-declare global {
-  interface Window { YT?: YTNamespace; onYouTubeIframeAPIReady?: () => void }
-}
-
-const localDay = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
-
-function loadYouTube(): Promise<YTNamespace> {
-  return new Promise((resolve) => {
-    if (window.YT?.Player) return resolve(window.YT);
-    const prev = window.onYouTubeIframeAPIReady;
-    window.onYouTubeIframeAPIReady = () => { prev?.(); resolve(window.YT!); };
-    if (!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
-      const s = document.createElement("script");
-      s.src = "https://www.youtube.com/iframe_api";
-      document.head.appendChild(s);
-    }
-  });
-}
-
 /**
  * Watching or listening inside Reflect. A YouTube video plays through YouTube's player API: the place is kept as
  * it plays (every 15 seconds and on pause), notes are taken at the current moment, and a note's time seeks there.

@@ -12,7 +12,7 @@ import { addExcerpt, allExcerpts, removeExcerpt, reviseExcerpt, type Anchor } fr
 import { importKindle, type KindleReport } from "@/server/kindle-import";
 import { publishLesson, publishQuote, unpublishQuote } from "@/server/published-store";
 import { importWork } from "@/server/work-store";
-import { addItem, addItemNote, addItems, addItemSubjects, addSession, changeItem, editItem, getItem, keepItemPlace, linkItemClaim, removeItem, removeItemNote, removeItemSubject, removeSession, restoreItem, setBookWay, setItemDates, setItemFacts, setTranscript } from "@/server/ways-store";
+import { addItem, addItemNote, addItems, addItemSubjects, addSession, changeItem, editItem, getItem, listItems, keepItemPlace, keepUnitPlace, linkItemClaim, removeItem, removeItemNote, removeItemSubject, removeSession, restoreItem, setBookWay, setItemDates, setItemFacts, setTranscript, setUnitDone } from "@/server/ways-store";
 import { mediumOf } from "@reflect/core/ways";
 import { lookLink, searchMedium, type Fetch, type Found, type Searched } from "@reflect/core/lookup";
 import type { Candidate } from "@reflect/core/item-imports";
@@ -254,6 +254,23 @@ export async function addItemAction(form: FormData): Promise<void> {
   revalidatePath("/learn");
 }
 
+/**
+ * Adds a find from Browse to Want to, once (an item of the same medium and title already kept is reused); with
+ * `go` it is started and its page opened, so it can be done straight away in Reflect.
+ */
+export async function browseAddAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  const medium = field(form, "medium");
+  const title = field(form, "title");
+  const go = field(form, "go") === "start";
+  const same = (await listItems(user.id)).find((i) => i.medium === medium && i.title.toLowerCase() === title.trim().toLowerCase());
+  const id = same?.id ?? await addItem(user.id, { medium, title, by: field(form, "by"), url: field(form, "url"), image: field(form, "image"), status: go ? "doing" : "want", day: field(form, "day") });
+  if (same && go && same.status === "want") await changeItem(user.id, id, { status: "doing", day: field(form, "day") });
+  revalidatePath("/learn");
+  revalidatePath("/learn/browse");
+  if (go) redirect(`/learn/items/${id}`);
+}
+
 /** Keeps the candidates the person picked from an import; returns how many were new. */
 export async function importItemsAction(list: Candidate[]): Promise<number> {
   const user = await requireUser();
@@ -334,8 +351,21 @@ export async function keepItemPlaceAction(id: string, seconds: number, day?: str
   await keepItemPlace(user.id, id, seconds, day);
 }
 
+/** Where the person is in a lecture or episode. */
+export async function keepUnitPlaceAction(id: string, unit: string, seconds: number, day?: string): Promise<void> {
+  const user = await requireUser();
+  await keepUnitPlace(user.id, id, unit, seconds, day);
+}
+
+/** A lecture or episode finished, or not; `of` is how many the item has. */
+export async function setUnitDoneAction(id: string, unit: string, done: boolean, of: number | null, day?: string): Promise<void> {
+  const user = await requireUser();
+  await setUnitDone(user.id, id, unit, done, of, day);
+  revalidatePath(itemPath(id));
+}
+
 /** A note at a moment, with words quoted from the transcript if any. */
-export async function addItemNoteAction(id: string, n: { at?: number | null; quote?: string; note?: string }): Promise<string> {
+export async function addItemNoteAction(id: string, n: { at?: number | null; quote?: string; note?: string; unit?: string | null }): Promise<string> {
   const user = await requireUser();
   const nid = await addItemNote(user.id, id, n);
   revalidatePath(itemPath(id));

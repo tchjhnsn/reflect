@@ -45,7 +45,7 @@ export default async function ItemListPage({ params }: { params: Promise<{ id: s
               <li key={i.title} className="flex flex-wrap items-center gap-3 rounded-md border p-3">
                 <span className="text-muted-foreground w-6 text-right text-sm tabular-nums">{n + 1}</span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium">{i.url ? <a href={i.url} target="_blank" rel="noreferrer" className="hover:underline">{i.title}</a> : i.title}</span>
+                  <span className="block text-sm font-medium">{mine ? <Link href={`/learn/items/${mine}`} className="hover:underline">{i.title}</Link> : i.title}</span>
                   <span className="text-muted-foreground block text-xs">{i.by}</span>
                 </span>
                 <Badge variant="secondary">{mediumOf(i.medium).label}</Badge>
