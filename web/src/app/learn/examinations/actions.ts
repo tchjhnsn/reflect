@@ -3,8 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/server/session";
-import { attest, closeExamination, createExamination, examinationAsExaminer, getExamination, joinExamination } from "@/server/examination-store";
-import { callFor, endCall } from "@/server/video";
+import { attest, closeExamination, createExamination, joinExamination } from "@/server/examination-store";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "");
 
@@ -32,16 +31,6 @@ export async function closeExaminationAction(form: FormData): Promise<void> {
   const user = await requireUser();
   const id = str(form, "id");
   await closeExamination(user.id, id);
-  await endCall(id);
   revalidatePath(`/learn/examinations/${id}`);
 }
 
-/** A place in the examination's call, for its candidate or one of its examiners only. */
-export async function examCallAction(id: string): Promise<{ url: string } | null> {
-  const user = await requireUser();
-  const mine = await getExamination(user.id, String(id));
-  if (mine) return mine.status === "open" ? callFor(mine.id, { name: mine.name, owner: true }) : null;
-  const theirs = await examinationAsExaminer(user.id, String(id));
-  const me = theirs?.examiners.find((x) => x.userId === user.id);
-  return theirs && me && theirs.status === "open" ? callFor(theirs.id, { name: me.name, owner: false }) : null;
-}

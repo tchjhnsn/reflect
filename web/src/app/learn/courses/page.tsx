@@ -68,7 +68,7 @@ export default async function CoursePage({ searchParams }: { searchParams: Promi
   );
 
   return (
-    <CourseShell course={title} overview={courseHref(site.url, title)} lectures={lectures} current={null} toc={toc} on={kept ? "shelves" : "browse"}>
+    <CourseShell course={title} overview={courseHref(site.url, title)} lectures={lectures} current={null} toc={toc} sidebar={false} on={kept ? "shelves" : "browse"}>
       <header className="space-y-4">
         <p className="text-muted-foreground text-sm"><Link href="/learn/browse?m=course" className="hover:underline">Courses</Link> · {credit.name}</p>
         <div className="flex flex-col gap-5 sm:flex-row">

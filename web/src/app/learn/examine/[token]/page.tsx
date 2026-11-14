@@ -7,17 +7,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { PAGE } from "@/components/page-header";
 import { currentUser } from "@/server/session";
 import { examinationByToken } from "@/server/examination-store";
-import { videoReady } from "@/server/video";
 import { LearnHeader } from "../../header";
 import { attestAction, joinExaminationAction } from "../../examinations/actions";
-import { ExamCall } from "../../examinations/call";
 import { ExamRecord } from "../../examinations/record";
 
 export const metadata: Metadata = { title: "Examine" };
 export const dynamic = "force-dynamic";
 
 /**
- * Asked to examine someone: what they answer for, joining with your name, the call, and your attestation in your own
+ * Asked to examine someone: what they answer for, joining with your name, and, after you have talked it through, your attestation in your own
  * words, written once.
  */
 export default async function ExaminePage({ params }: { params: Promise<{ token: string }> }) {
@@ -48,12 +46,6 @@ export default async function ExaminePage({ params }: { params: Promise<{ token:
           ) : <p className="text-muted-foreground text-sm">This examination is closed.</p>
         ) : (
           <>
-            {e.status === "open" ? (
-              <section className="space-y-2">
-                <h2 className="text-lg font-semibold">The call</h2>
-                {videoReady() ? <ExamCall id={e.id} /> : <p className="text-muted-foreground text-sm">Calls in Reflect are not switched on yet. Meet in person for now, and attest here.</p>}
-              </section>
-            ) : null}
             {!me.attestation && e.status === "open" ? (
               <form action={attestAction} className="space-y-3">
                 <input type="hidden" name="id" value={e.id} /><input type="hidden" name="token" value={token} />
