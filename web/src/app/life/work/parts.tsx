@@ -11,17 +11,16 @@ import { cn } from "@/lib/utils";
 import type { LifeRecord } from "@/server/life-store";
 import { inspireAction } from "./inspire-action";
 
-export type WorkTab = "browse" | "inspired" | "imagined" | "work" | "income" | "household" | "credential";
+export type WorkTab = "space" | "browse" | "work" | "income" | "household" | "credential";
 
-/** Work's header: browsing first, then what inspires you and what you imagine, then your own work and income. */
+/** Work's header: the person's own workspace first, then browsing work, then the work they do, income and credentials. */
 export function WorkHeader({ on }: { on: WorkTab | null }) {
   return (
     <SectionHeader back="/" backLabel="Home" title="Work" tabs={
       <Segmented label="Work parts" items={[
-        { label: "Browse", href: "/life/work", on: on === "browse" },
-        { label: "What inspires me", href: "/life/work?k=inspired", on: on === "inspired" },
-        { label: "Imagined", href: "/life/work?k=imagined", on: on === "imagined" },
-        { label: "My work", href: "/life/work?k=work", on: on === "work" },
+        { label: "Workspace", href: "/life/work", on: on === "space" },
+        { label: "Browse", href: "/life/work/browse", on: on === "browse" },
+        { label: "Work you do", href: "/life/work?k=work", on: on === "work" },
         { label: "Income", href: "/life/work?k=income", on: on === "income" },
         { label: "Intended household", href: "/life/work?k=household", on: on === "household" },
         { label: "Credentials", href: "/life/work?k=credential", on: on === "credential" },

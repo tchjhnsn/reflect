@@ -14,9 +14,9 @@ export const isLifeApp = (s: unknown): s is LifeAppId => typeof s === "string" &
 
 export type Option = { id: string; label: string };
 export type FieldKind = "text" | "long" | "number" | "money" | "day" | "choice" | "check" | "origins";
-export type Field = { key: string; label: string; kind: FieldKind; options?: readonly Option[]; hint?: string };
+export type Field = { key: string; label: string; kind: FieldKind; options?: readonly Option[]; hint?: string; /** Set by Reflect (what it points at, what is learned toward it), kept as it is when the form saves. */ internal?: boolean };
 export type State = { id: string; label: string; /** A record in this state is under way, which makes its tile "in action". */ active?: boolean };
-export type ActKind = { id: string; label: string; /** Past tense for the log: "Worked out". */ done: string; minutes?: boolean; amount?: boolean };
+export type ActKind = { id: string; label: string; /** Past tense for the log: "Worked out". */ done: string; minutes?: boolean; amount?: boolean; /** Kept by another action (a journal entry written toward it), so no form offers it. */ hidden?: boolean };
 export type Kind = {
   id: string;
   /** One record ("Friend") and many ("Friends"). */
@@ -107,13 +107,16 @@ export const APPS: readonly LifeApp[] = [
         id: "inspiration", label: "Inspiration", plural: "What inspires me", title: "title", hidden: true,
         intro: "A job, a company or imagined work that inspires you, with what draws you to it and why.",
         fields: [
-          { key: "ref", label: "What it is", kind: "text" },
+          { key: "ref", label: "What it is", kind: "text", internal: true },
           { key: "title", label: "Name", kind: "text" },
+          { key: "type", label: "Kind of work", kind: "choice", options: opts("Job", "Career", "Venture", "Company", "Other") },
           { key: "draws", label: "What draws me to it", kind: "long" },
           { key: "origins", label: "Where that comes from", kind: "origins" },
           { key: "end", label: "For the sake of what", kind: "long" },
+          { key: "learning", label: "Learning toward it", kind: "text", internal: true },
         ],
         states: [{ id: "drawn", label: "Drawn to it" }, { id: "exploring", label: "Exploring it", active: true }, { id: "pursuing", label: "Pursuing it", active: true }, { id: "let-go", label: "Let go" }],
+        acts: [{ id: "wrote", label: "Journal entry", done: "Wrote toward", hidden: true }],
       },
       {
         id: "imagined", label: "Imagined work", plural: "Imagined", title: "name",
@@ -123,8 +126,15 @@ export const APPS: readonly LifeApp[] = [
           { key: "what", label: "What it is", kind: "long" },
           { key: "who", label: "Who it serves", kind: "long" },
           { key: "take", label: "What it would take to exist", kind: "long" },
+          { key: "learning", label: "Learning toward it", kind: "text", internal: true },
         ],
         states: [{ id: "imagined", label: "Imagined" }, { id: "forming", label: "Forming", active: true }, { id: "real", label: "Real now" }],
+        acts: [{ id: "wrote", label: "Journal entry", done: "Wrote toward", hidden: true }],
+      },
+      {
+        id: "now", label: "Right now", plural: "Right now", title: "hours", one: true, hidden: true,
+        intro: "What you can give to work right now.",
+        fields: [{ key: "hours", label: "Hours a week you can give to work", kind: "number" }],
       },
       {
         id: "credential", label: "Credential", plural: "Credentials", title: "name",
@@ -383,7 +393,7 @@ export function cleanBody(k: Kind, raw: Record<string, unknown>): Body {
       const given = (Array.isArray(v) ? v : s.split(",")).map((x) => String(x).trim());
       const kept = ORIGIN_IDS.filter((o) => given.includes(o));
       if (kept.length) out[f.key] = kept.join(",");
-    } else out[f.key] = s.slice(0, f.kind === "long" ? 20000 : 300);
+    } else out[f.key] = s.slice(0, f.kind === "long" ? 20000 : f.internal ? 4000 : 300);
   }
   return out;
 }

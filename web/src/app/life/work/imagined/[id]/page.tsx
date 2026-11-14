@@ -6,6 +6,7 @@ import { requireUser } from "@/server/session";
 import { lifeRecords } from "@/server/life-store";
 import { CREDIT, fictionWork, wikiById } from "@/server/work-catalog";
 import { Credit, EntryTop, Inspires, inspirationsOf, Part, WikiCard } from "../../parts";
+import { Toward } from "../../toward";
 
 export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -27,6 +28,7 @@ export default async function ImaginedWorkPage({ params }: { params: Promise<{ i
         {w.image ? <img src={`${w.image}?width=960`} alt="" className="bg-muted max-h-96 w-full rounded-xl object-contain" /> : null}
         {w.about ? <p className="text-base leading-relaxed first-letter:uppercase">{w.about}.</p> : null}
         <Inspires target={`fiction:${id}`} title={w.name} kept={kept} />
+        {kept ? <Toward userId={user.id} record={kept} back={`/life/work/imagined/${id}`} /> : null}
         {more.length ? <Part title="Other imagined work"><ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{more.map((x) => <WikiCard key={x.id} w={x} />)}</ul></Part> : null}
         <Credit>From <a href={`https://www.wikidata.org/wiki/${id}`} className="underline underline-offset-2">{CREDIT.wikidata.name}</a>.</Credit>
       </div>

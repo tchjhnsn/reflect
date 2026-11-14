@@ -8,6 +8,7 @@ import { requireUser } from "@/server/session";
 import { lifeRecords } from "@/server/life-store";
 import { companies, companyBySlug, CREDIT } from "@/server/work-catalog";
 import { CompanyCard, Credit, EntryTop, Inspires, inspirationsOf, Part } from "../../parts";
+import { Toward } from "../../toward";
 
 export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -47,6 +48,7 @@ export default async function CompanyPage({ params }: { params: Promise<{ slug: 
           <ul className="flex flex-wrap gap-2">{c.industries.map((i) => <li key={i}><Link href={`/life/work/browse?m=companies&industry=${encodeURIComponent(i)}`} className="hover:bg-accent block rounded-full border px-3 py-1 text-sm">{i}</Link></li>)}</ul>
         ) : null}
         <Inspires target={`company:${slug}`} title={c.name} kept={kept} />
+        {kept ? <Toward userId={user.id} record={kept} back={`/life/work/companies/${slug}`} /> : null}
         {near.length ? <Part title={`Other companies in ${c.industries[0]}`}><ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{near.map((x) => <CompanyCard key={x.slug} c={x} />)}</ul></Part> : null}
         <Credit>From <a href={`https://www.ycombinator.com/companies/${slug}`} className="underline underline-offset-2">{CREDIT.yc.name}</a>.</Credit>
       </div>

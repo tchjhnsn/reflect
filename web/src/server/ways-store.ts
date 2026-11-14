@@ -391,3 +391,9 @@ export async function mergeInputs(userId: string): Promise<number> {
 export async function setBookWay(userId: string, bookId: string, way: string | null): Promise<void> {
   await db().query("UPDATE learn_book SET way = $3 WHERE id = $1 AND user_id = $2", [bookId, userId, isWay(way) ? way : null]);
 }
+
+/** Minutes the person kept learning, from their sessions, on the days from `since` through today. */
+export async function learningMinutes(userId: string, since: string): Promise<number> {
+  const r = await db().query("SELECT coalesce(sum(s.minutes), 0)::int AS m FROM learn_item_session s JOIN learn_item i ON i.id = s.item_id WHERE s.user_id = $1 AND s.day >= $2 AND i.removed_at IS NULL", [userId, since]);
+  return Number(r.rows[0]?.m ?? 0);
+}

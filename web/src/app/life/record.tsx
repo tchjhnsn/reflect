@@ -61,9 +61,9 @@ export function RecordForm({ app, kind, record, back, submit }: { app: LifeAppId
   return (
     <form action={action} className="grid gap-4">
       <input type="hidden" name="$back" value={back} />
-      {kind.hidden && typeof record?.body.ref === "string" ? <input type="hidden" name="ref" value={record.body.ref} /> : null}
+      {kind.fields.filter((f) => f.internal && typeof record?.body[f.key] === "string").map((f) => <input key={f.key} type="hidden" name={f.key} value={String(record!.body[f.key])} />)}
       <div className="grid gap-4 sm:grid-cols-2">
-        {kind.fields.filter((f) => f.kind !== "check" && !(kind.hidden && f.key === "ref")).map((f) => <FieldInput key={f.key} f={f} body={record?.body ?? {}} />)}
+        {kind.fields.filter((f) => f.kind !== "check" && !f.internal).map((f) => <FieldInput key={f.key} f={f} body={record?.body ?? {}} />)}
       </div>
       {checks.length ? <div className="grid gap-2 sm:grid-cols-2">{checks.map((f) => <FieldInput key={f.key} f={f} body={record?.body ?? {}} />)}</div> : null}
       <div><Button type="submit">{submit ?? (record ? "Save" : `Keep ${kind.one ? "it" : `this ${kind.label.toLowerCase()}`}`)}</Button></div>
@@ -87,9 +87,10 @@ export function States({ kind, record, back }: { kind: Kind; record: LifeRecord;
 
 /** What was done with a record: a form to keep an act, and those kept, newest first. */
 export function Acts({ kind, record, acts, back }: { kind: Kind; record: LifeRecord; acts: LifeAct[]; back: string }) {
-  if (!kind.acts?.length) return null;
-  const minutes = kind.acts.some((a) => a.minutes);
-  const amount = kind.acts.some((a) => a.amount);
+  const offered = kind.acts?.filter((a) => !a.hidden) ?? [];
+  if (!offered.length) return null;
+  const minutes = offered.some((a) => a.minutes);
+  const amount = offered.some((a) => a.amount);
   const label = (id: string) => kind.acts!.find((a) => a.id === id)?.label ?? id;
   return (
     <section aria-labelledby="acts" className="grid gap-3">
@@ -97,7 +98,7 @@ export function Acts({ kind, record, acts, back }: { kind: Kind; record: LifeRec
       <form action={actLifeAction.bind(null, record.id)} className="flex flex-wrap items-end gap-2">
         <input type="hidden" name="$back" value={back} />
         <label className="grid gap-1 text-sm">What
-          <select name="kind" className={cn(SELECT, "w-44")}>{kind.acts.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}</select>
+          <select name="kind" className={cn(SELECT, "w-44")}>{offered.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}</select>
         </label>
         <label className="grid gap-1 text-sm">Day<Input type="date" name="day" defaultValue={today()} className="w-40" required /></label>
         {minutes ? <label className="grid gap-1 text-sm">Minutes<Input name="minutes" inputMode="numeric" className="w-24" /></label> : null}
