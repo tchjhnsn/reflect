@@ -14,7 +14,8 @@ import { loadYouTube, localDay, type YTPlayer } from "./youtube";
 
 type Note = { id: string; at: number | null; quote: string | null; note: string | null };
 export type UnitProps = {
-  item: string; unit: string; title: string; by: string | null; cite: string;
+  /** The person's item, or null when the course is only being explored (nothing is kept). */
+  item: string | null; unit: string; title: string; by: string | null; cite: string;
   youtube: string | null; media: { src: string; kind: "audio" | "video" } | null;
   place: number | null; done: boolean; of: number | null;
   transcript: Passage[]; notes: Note[]; next: string | null;
@@ -40,20 +41,25 @@ export function UnitPlayer(p: UnitProps) {
   const router = useRouter();
 
   const time = useCallback(() => (yt.current ? yt.current.getCurrentTime() : el.current ? el.current.currentTime : 0), []);
-  const keep = useCallback(() => { const s = time(); if (s > 1) keepUnitPlaceAction(p.item, p.unit, s, localDay()).catch(() => {}); }, [p.item, p.unit, time]);
+  const keep = useCallback(() => { const s = time(); if (s > 1 && p.item) keepUnitPlaceAction(p.item, p.unit, s, localDay()).catch(() => {}); }, [p.item, p.unit, time]);
 
   useEffect(() => {
     if (!p.youtube || !holder.current) return;
     let live = true;
+    let player: YTPlayer | null = null;
     loadYouTube().then((YT) => {
       if (!live || !holder.current) return;
-      yt.current = new YT.Player(holder.current, {
+      // The player is only asked for its time once it is ready; before that its methods do not exist yet.
+      player = new YT.Player(holder.current, {
         videoId: p.youtube,
         playerVars: { start: Math.floor(p.place ?? 0), rel: 0, modestbranding: 1 },
-        events: { onStateChange: (e: { data: number }) => { if (e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.ENDED) keep(); } },
+        events: {
+          onReady: () => { if (live) yt.current = player; },
+          onStateChange: (e: { data: number }) => { if (e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.ENDED) keep(); },
+        },
       });
     });
-    return () => { live = false; keep(); yt.current?.destroy(); yt.current = null; };
+    return () => { live = false; keep(); try { player?.destroy(); } catch { /* not ready yet */ } player = null; yt.current = null; };
   }, [p.youtube, p.place, keep]);
 
   useEffect(() => {
@@ -81,8 +87,8 @@ export function UnitPlayer(p: UnitProps) {
   // A passage without its own time takes the time of the chapter it falls under.
   const timeOf = (i: number) => { for (let j = i; j >= 0; j--) if (p.transcript[j]!.at !== null) return p.transcript[j]!.at!; return null; };
   const quoteOf = (x: Passage, i: number) => { const t = timeOf(i); return `“${x.text}” (${p.cite}${t !== null ? `, at ${clock(t)}` : ""})`; };
-  const note = (n: { at: number | null; quote?: string; note?: string }) => run(async () => { await addItemNoteAction(p.item, { ...n, unit: p.unit }); setText(""); router.refresh(); });
-  const finish = (done: boolean) => run(async () => { keep(); await setUnitDoneAction(p.item, p.unit, done, p.of, localDay()); if (done && p.next) router.push(p.next); else router.refresh(); });
+  const note = (n: { at: number | null; quote?: string; note?: string }) => run(async () => { if (!p.item) return; await addItemNoteAction(p.item, { ...n, unit: p.unit }); setText(""); router.refresh(); });
+  const finish = (done: boolean) => run(async () => { if (!p.item) return; keep(); await setUnitDoneAction(p.item, p.unit, done, p.of, localDay()); if (done && p.next) router.push(p.next); else router.refresh(); });
   const shown = hits ?? p.transcript.map((x, i) => ({ x, i }));
 
   return (
@@ -97,7 +103,7 @@ export function UnitPlayer(p: UnitProps) {
         ) : <p className="text-muted-foreground text-sm">This one has no recording Reflect can play.</p>}
         {p.place ? <p className="text-muted-foreground text-xs">Picks up at {clock(p.place)}, where you stopped.</p> : null}
 
-        <div className="flex flex-wrap items-center gap-2">
+        {p.item ? <><div className="flex flex-wrap items-center gap-2">
           {p.done ? (
             <>
               <span className="flex items-center gap-1 text-sm"><CheckIcon className="size-4" /> Finished</span>
@@ -118,14 +124,14 @@ export function UnitPlayer(p: UnitProps) {
                     {n.quote ? <span className="block italic">“{n.quote}”</span> : null}
                     {n.note ? <span className="block">{n.note}</span> : null}
                   </span>
-                  <Button type="button" size="icon" variant="ghost" aria-label="Remove note" disabled={pending} onClick={() => run(async () => { await removeItemNoteAction(p.item, n.id); router.refresh(); })}><XIcon /></Button>
+                  <Button type="button" size="icon" variant="ghost" aria-label="Remove note" disabled={pending} onClick={() => run(async () => { if (p.item) await removeItemNoteAction(p.item, n.id); router.refresh(); })}><XIcon /></Button>
                 </li>
               ))}
             </ul>
           ) : null}
           <Textarea aria-label="Note" rows={2} maxLength={4000} value={text} onChange={(e) => setText(e.target.value)} placeholder="A note" />
           <Button type="button" size="sm" disabled={pending || !text.trim()} onClick={() => note({ at: Math.floor(time()), note: text })}>Note at {clock(Math.floor(now))}</Button>
-        </div>
+        </div></> : p.next ? <Button size="sm" variant="outline" asChild><Link href={p.next}>Next lecture</Link></Button> : null}
       </div>
 
       <div className="min-w-0 space-y-2">
@@ -152,7 +158,7 @@ export function UnitPlayer(p: UnitProps) {
                         {x.who ? <span className="font-medium">{x.who}: </span> : null}{x.text}
                       </p>
                     )}
-                    {!x.heading ? (
+                    {!x.heading && p.item ? (
                       <span className="mt-1 hidden gap-1 group-hover:flex group-focus-within:flex">
                         <Button type="button" size="sm" variant="outline" className="h-7" disabled={pending} onClick={() => note({ at: t, quote: x.text })}>Quote in a note</Button>
                         <Button type="button" size="icon" variant="ghost" className="size-7" aria-label="Copy as a cited quote" onClick={() => { navigator.clipboard?.writeText(quoteOf(x, i)).catch(() => {}); setCopied(i); }}><CopyIcon /></Button>

@@ -27,3 +27,15 @@ test("browse courses, start one, and take its first lecture in Reflect", async (
     await expect(page).toHaveURL(/\/lectures\/2$/, { timeout: 60_000 });
   }
 });
+
+// A course's own page, explored before keeping it: its description, syllabus and lectures, one of which plays here.
+test("explore a course before keeping it", async ({ page }) => {
+  test.setTimeout(240_000);
+  await page.goto(`/learn/courses?u=${encodeURIComponent("https://oyc.yale.edu/history/hist-202")}`);
+  await expect(page.getByRole("heading", { level: 1, name: /European Civilization/ })).toBeVisible({ timeout: 60_000 });
+  await expect(page.locator("#syllabus")).toBeVisible();
+  const lecture = page.locator("#lectures a").nth(1);
+  await expect(lecture).toBeVisible();
+  await lecture.click();
+  await expect(page.getByRole("button", { name: /^Chapter 1\./ })).toBeVisible({ timeout: 60_000 });
+});
