@@ -9,7 +9,7 @@ import { lectureOf, lecturesOf } from "@/server/courses";
 import { browseAddAction } from "../../actions";
 import { LocalDay } from "../../items/local-day";
 import { UnitPlayer } from "../../items/unit-player";
-import { CourseShell, courseHref, lectureHref } from "../shell";
+import { CourseShell, courseHref, lectureHeader, lectureHref } from "../shell";
 
 export const metadata: Metadata = { title: "Lecture" };
 export const dynamic = "force-dynamic";
@@ -35,10 +35,9 @@ export default async function PreviewLecturePage({ searchParams }: { searchParam
   const nav = course.lectures.map((l) => ({ n: l.n, title: l.title, href: lectureHref(site.url, l.n, title, undefined), done: false }));
   const prev = nav[at - 1], next = nav[at + 1];
   return (
-    <CourseShell course={title || "The course"} overview={courseHref(site.url, title)} lectures={nav} current={ref.n} prev={prev} next={next} on="browse">
+    <CourseShell course={title || "The course"} overview={courseHref(site.url, title)} lectures={nav} current={ref.n} prev={prev} next={next} header={lectureHeader({ course: title || "The course", overview: courseHref(site.url, title), at: at + 1, of: course.lectures.length, prev, next })}>
       <div className="space-y-5">
         <header className="space-y-2">
-          <p className="text-muted-foreground text-sm"><Link href={courseHref(site.url, title)} className="hover:underline">{title || "The course"}</Link> · Lecture {at + 1} of {course.lectures.length}</p>
           <h1 className="text-3xl font-semibold tracking-tight">{ref.title}</h1>
           {lecture?.overview ? <p className="max-w-prose leading-relaxed">{lecture.overview}</p> : null}
         </header>

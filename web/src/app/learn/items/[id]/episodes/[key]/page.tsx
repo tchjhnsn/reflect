@@ -6,7 +6,7 @@ import { PAGE } from "@/components/page-header";
 import { requireUser } from "@/server/session";
 import { getItem, listUnits } from "@/server/ways-store";
 import { showFor, transcriptOf } from "@/server/podcasts";
-import { LearnHeader } from "../../../../header";
+import { TaskHeader } from "@/components/headers";
 import { UnitPlayer } from "../../../unit-player";
 
 export const metadata: Metadata = { title: "Learn" };
@@ -27,9 +27,8 @@ export default async function EpisodePage({ params }: { params: Promise<{ id: st
   const older = show.episodes[at + 1];
   return (
     <main className={PAGE}>
-      <LearnHeader on="shelves" />
+      <TaskHeader back={{ href: `/learn/items/${id}`, label: "Back to the show" }} title={item.title} position={[e.date, e.seconds ? clock(e.seconds) : ""].filter(Boolean).join(" · ") || undefined} />
       <div className="mt-6 space-y-5">
-        <p className="text-muted-foreground text-sm"><Link href={`/learn/items/${id}`} className="hover:underline">{item.title}</Link>{e.date ? ` · ${e.date}` : ""}{e.seconds ? ` · ${clock(e.seconds)}` : ""}</p>
         <header className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">{e.title}</h1>
           {item.by ? <p className="text-muted-foreground">{item.by}</p> : null}

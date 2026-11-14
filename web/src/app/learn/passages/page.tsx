@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { requireUser } from "@/server/session";
 import { PASSAGE_BOOKS, searchShelves } from "@/server/passages";
-import { LearnHeader } from "../header";
+import { ThingHeader } from "@/components/headers";
+import { LEARN } from "../crumbs";
 
 export const metadata: Metadata = { title: "Search inside your books" };
 export const dynamic = "force-dynamic";
@@ -22,9 +23,9 @@ export default async function PassagesPage({ searchParams }: { searchParams: Pro
   const q = one((await searchParams).q).replace(/\s+/g, " ").trim().slice(0, 100);
   return (
     <>
-      <LearnHeader on="shelves" />
+      <ThingHeader back="/learn/highlights" crumbs={[LEARN, { label: "Highlights", href: "/learn/highlights" }]} title="Search inside your books" />
       <main className="mx-auto w-full max-w-3xl px-4 pt-4 pb-24 sm:px-6">
-        <h2 className="text-2xl font-semibold tracking-tight">Search inside your books</h2>
+        <h1 id="page-title" className="text-2xl font-semibold tracking-tight">Search inside your books</h1>
         <p className="text-muted-foreground mt-1 text-sm">Looks for words in the whole text of the books on your shelves that you can read free in Reflect (up to {PASSAGE_BOOKS} of them, the ones you are reading first).</p>
         <form className="mt-4 flex gap-2" role="search">
           <Input name="q" defaultValue={q} placeholder="A word or phrase" aria-label="A word or phrase" className="h-9" />

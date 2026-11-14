@@ -9,7 +9,8 @@ import { PAGE } from "@/components/page-header";
 import { requireUser } from "@/server/session";
 import { listItems } from "@/server/ways-store";
 import { addFromItemListAction } from "../../../actions";
-import { LearnHeader } from "../../../header";
+import { ThingHeader } from "@/components/headers";
+import { browseCrumbs } from "../../../crumbs";
 
 export const metadata: Metadata = { title: "List" };
 export const dynamic = "force-dynamic";
@@ -24,11 +25,10 @@ export default async function ItemListPage({ params }: { params: Promise<{ id: s
   const left = list.items.filter((i) => !kept.has(`${i.medium}|${i.title.toLowerCase()}`)).length;
   return (
     <main className={PAGE}>
-      <LearnHeader on="browse" />
+      <ThingHeader back="/learn/lists" crumbs={[...browseCrumbs(), { label: "Lists", href: "/learn/lists" }]} title={list.name} />
       <section className="mt-8 space-y-5">
         <div className="space-y-1">
-          <p className="text-muted-foreground text-sm"><Link href="/learn/lists" className="hover:underline">Lists</Link></p>
-          <h2 className="text-2xl font-semibold tracking-tight">{list.name}</h2>
+          <h1 id="page-title" className="text-2xl font-semibold tracking-tight">{list.name}</h1>
           <p className="text-muted-foreground text-sm">{list.about}</p>
           <p className="text-muted-foreground text-xs">{list.source}</p>
         </div>

@@ -7,7 +7,7 @@ import { PAGE } from "@/components/page-header";
 import { requireUser } from "@/server/session";
 import { listItems } from "@/server/ways-store";
 import { showFor, transcriptOf } from "@/server/podcasts";
-import { LearnHeader } from "../../header";
+import { TaskHeader } from "@/components/headers";
 import { browseAddAction } from "../../actions";
 import { LocalDay } from "../../items/local-day";
 import { UnitPlayer } from "../../items/unit-player";
@@ -33,9 +33,8 @@ export default async function PreviewEpisodePage({ searchParams }: { searchParam
   const transcript = await transcriptOf(e);
   return (
     <main className={PAGE}>
-      <LearnHeader on="browse" />
+      <TaskHeader back={{ href: `/learn/podcasts?u=${encodeURIComponent(url)}&t=${encodeURIComponent(title)}`, label: "Back to the show" }} title={title} position={[e.date, e.seconds ? clock(e.seconds) : ""].filter(Boolean).join(" · ") || undefined} />
       <div className="mt-6 space-y-5">
-        <p className="text-muted-foreground text-sm"><Link href={`/learn/podcasts?u=${encodeURIComponent(url)}&t=${encodeURIComponent(title)}`} className="hover:underline">{title}</Link>{e.date ? ` · ${e.date}` : ""}{e.seconds ? ` · ${clock(e.seconds)}` : ""}</p>
         <header className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">{e.title}</h1>
           {e.about ? <p className="max-w-prose whitespace-pre-line text-sm">{e.about}</p> : null}

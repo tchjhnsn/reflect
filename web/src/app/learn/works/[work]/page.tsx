@@ -16,7 +16,8 @@ import { listClaims, type ClaimOut } from "@/server/claims-store";
 import { listIdeas, type IdeaOut } from "@/server/ideas-store";
 import { hardcoverFor } from "@/server/hardcover";
 import { ideasNaming } from "@reflect/core/ideas";
-import { LearnHeader } from "../../header";
+import { ThingHeader } from "@/components/headers";
+import { browseCrumbs, shelfCrumbs } from "../../crumbs";
 import { AddBook } from "../../add-book";
 import { Reader, type ReadLink } from "./reader";
 import { textSource } from "@/server/texts";
@@ -95,7 +96,7 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
 
   return (
     <main className={PAGE}>
-      <LearnHeader on={mine ? "shelves" : "browse"} />
+      <ThingHeader back={mine ? "/learn" : "/learn/browse"} crumbs={mine ? shelfCrumbs(mine.way) : browseCrumbs("books")} title={title} action={text ? <Button asChild size="sm"><Link href={`/learn/works/${work}/read`}>{mine?.place ? "Continue reading" : "Read"}</Link></Button> : undefined} />
       <div className="mt-8 grid gap-8 md:grid-cols-[13rem_1fr]">
         <div className="mx-auto w-40 md:mx-0 md:w-full">
           <div className="bg-muted aspect-[2/3] overflow-hidden rounded-md border shadow-sm">
@@ -107,7 +108,7 @@ export default async function WorkPage({ params }: { params: Promise<{ work: str
         </div>
         <div className="min-w-0 space-y-6">
           <div className="space-y-2">
-            <h2 className="text-3xl leading-tight font-semibold tracking-tight">{title}</h2>
+            <h1 id="page-title" className="text-3xl leading-tight font-semibold tracking-tight">{title}</h1>
             <p className="text-muted-foreground">{authors.length ? authors.map((name, i) => <span key={`${name}-${i}`}>{i ? ", " : ""}<AuthorName name={name} id={authorKeys[i]} /></span>) : "Author not given"}{entry?.year ? ` · first published ${entry.year}` : ""}</p>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
               {details?.rating ? <Rating source="Open Library" r={details.rating} /> : null}

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { PAGE } from "@/components/page-header";
 import { requireUser } from "@/server/session";
 import { getExamination } from "@/server/examination-store";
-import { LearnHeader } from "../../header";
+import { TaskHeader } from "@/components/headers";
 import { closeExaminationAction } from "../actions";
 import { CopyLink } from "../copy-link";
 import { ExamRecord } from "../record";
@@ -21,10 +21,9 @@ export default async function ExaminationPage({ params }: { params: Promise<{ id
   if (!e) notFound();
   return (
     <main className={PAGE}>
-      <LearnHeader on="shelves" />
+      <TaskHeader back={{ href: `/learn/courses?u=${encodeURIComponent(e.courseUrl)}&t=${encodeURIComponent(e.courseTitle)}`, label: "Back to the course" }} title={e.courseTitle} position={`Examination, ${e.status === "open" ? "open" : "closed"}`} />
       <div className="mt-6 max-w-3xl space-y-8">
         <header className="space-y-2">
-          <p className="text-muted-foreground text-sm"><Link href={`/learn/courses?u=${encodeURIComponent(e.courseUrl)}&t=${encodeURIComponent(e.courseTitle)}`} className="hover:underline">{e.courseTitle}</Link> · {e.status === "open" ? "Open" : "Closed"}</p>
           <h1 className="text-3xl font-semibold tracking-tight">Your examination</h1>
         </header>
         {e.status === "open" ? (
