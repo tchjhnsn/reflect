@@ -11,6 +11,7 @@ import { addExcerpt, allExcerpts, removeExcerpt, reviseExcerpt, type Anchor } fr
 import { importKindle, type KindleReport } from "@/server/kindle-import";
 import { publishQuote, unpublishQuote } from "@/server/published-store";
 import { importWork } from "@/server/work-store";
+import { addItem, changeItem, removeItem, setBookWay } from "@/server/ways-store";
 import { excerptsMarkdown, isHighlightColor } from "@reflect/core/excerpts";
 import { bestListMatch, listBookQuery, listById } from "@reflect/core/lists";
 import { searchBooks } from "@reflect/core/openlibrary";
@@ -218,4 +219,37 @@ export async function followListAction(id: string): Promise<number> {
   revalidatePath("/learn/reading");
   revalidatePath(`/learn/lists/${list.id}`);
   return added.length;
+}
+
+/** Keep a lecture, debate, discussion, podcast, film, music, art or game, with what it taught the person. */
+export async function addItemAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  const s = (k: string) => String(form.get(k) ?? "");
+  await addItem(user.id, { medium: s("medium"), way: s("way") || null, status: s("status"), title: s("title"), by: s("by"), url: s("url"), lesson: s("lesson") });
+  revalidatePath("/learn");
+}
+
+/** Change an item's way (empty follows its kind), status, or what it taught the person. */
+export async function changeItemAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  const id = String(form.get("item") ?? "");
+  await changeItem(user.id, id, {
+    ...(form.has("way") ? { way: String(form.get("way")) || null } : {}),
+    ...(form.has("status") ? { status: String(form.get("status")) } : {}),
+    ...(form.has("lesson") ? { lesson: String(form.get("lesson")) } : {}),
+  });
+  revalidatePath("/learn");
+}
+
+export async function removeItemAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  await removeItem(user.id, String(form.get("item") ?? ""));
+  revalidatePath("/learn");
+}
+
+/** Move a book to another way of learning, or back to the way its category gives (empty). */
+export async function setBookWayAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  await setBookWay(user.id, String(form.get("book") ?? ""), String(form.get("way") ?? "") || null);
+  revalidatePath("/learn");
 }
