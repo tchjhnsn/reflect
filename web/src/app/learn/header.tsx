@@ -20,6 +20,7 @@ export function LearnHeader({ on }: { on: "shelves" | "reading" | "claims" | "hi
             { label: "Reading", href: "/learn/reading", on: on === "reading" },
             { label: "Highlights", href: "/learn/highlights", on: on === "highlights" },
             { label: "Claims", href: "/learn?tab=claims", on: on === "claims" },
+            { label: "Calendar", href: "/calendar?tile=learn", on: false },
           ]}
         />
         <Button asChild variant={on === "browse" ? "default" : "outline"} aria-current={on === "browse" ? "page" : undefined} className="shrink-0">
