@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { courseInfo, isTextsHeading, textCitation, courseLecture, courseLectures, courseSite, linesOf, ocwCourse, ocwLectures, ocwSyllabus, oycCourse, oycLecture, oycLectures, passageAt, passagesFromCaptions, plain } from "./courses";
+import { yaleName, courseInfo, courseOutline, outlineOf, isTextsHeading, textCitation, courseLecture, courseLectures, courseSite, linesOf, ocwCourse, ocwLectures, ocwSyllabus, oycCourse, oycLecture, oycLectures, passageAt, passagesFromCaptions, plain } from "./courses";
 
 const OYC_COURSE = `<td class="views-field views-field-field-session-display-title"><a href="/philosophy/phil-176/lecture-2" hreflang="en">The Nature of Persons: Dualism vs. Physicalism</a></td>
 <td class="views-field views-field-field-session-display-title"><a href="/philosophy/phil-176/lecture-1" hreflang="en">Course Introduction</a></td>`;
@@ -70,8 +70,8 @@ describe("courses taken in Reflect", () => {
       title: "Death", by: "Shelly Kagan", image: null, about: ["There is one way to die.", "Second paragraph."],
       syllabus: [{ heading: "Texts", lines: ["Plato, Phaedo", "Tolstoy, The Death of Ivan Ilych"] }, { heading: "Grading", lines: ["Papers: 50%"] }],
     });
-    const home = `<meta property="og:image" content="https://ocw.mit.edu/x.jpg" /><h1> <a href="/courses/18-06/">Linear Algebra</a></h1><div id="full-description"><p>A basic subject on matrix theory.</p></div>`;
-    expect(ocwCourse(home)).toEqual({ title: "Linear Algebra", by: null, image: "https://ocw.mit.edu/x.jpg", about: ["A basic subject on matrix theory."] });
+    const home = `<meta property="og:image" content="https://ocw.mit.edu/x.jpg" /><h1> <a href="/courses/18-06/">Linear Algebra</a></h1><div id="full-description"><p>A basic subject on matrix theory.</p></div><a href="/search/?q=Prof.&#43;Gilbert&#43;Strang"  >Prof. Gilbert Strang</a>`;
+    expect(ocwCourse(home)).toEqual({ title: "Linear Algebra", by: "Gilbert Strang", image: "https://ocw.mit.edu/x.jpg", about: ["A basic subject on matrix theory."] });
     const syllabus = `<main id="course-content-section"><h2>Course Meeting Times</h2><p>Lectures: 3 sessions / week</p><h2>Textbook</h2><p>Strang, Introduction to Linear Algebra.</p><h2>Empty</h2></main>`;
     expect(ocwSyllabus(syllabus)).toEqual([{ heading: "Course Meeting Times", lines: ["Lectures: 3 sessions / week"] }, { heading: "Textbook", lines: ["Strang, Introduction to Linear Algebra."] }]);
     const base = "https://ocw.mit.edu/courses/18-06-linear-algebra-spring-2010/";
@@ -92,5 +92,17 @@ describe("courses taken in Reflect", () => {
     expect(textCitation("The readings are assigned in: Strang, Gilbert. Introduction to Linear Algebra. 4th ed. Wellesley-Cambridge Press, 2009. ISBN: 9780980232714.")).toEqual({ title: "Introduction to Linear Algebra", author: "Gilbert Strang", isbn: "9780980232714" });
     expect(textCitation("Course Packet:")).toBeNull();
     expect(textCitation("NOTE: More material is in Professor Strang’s 2014 textbook.")).toBeNull();
+  });
+
+  it("puts every source's syllabus into the same tabs", () => {
+    expect(yaleName("John Merriman Charles Seymour Professor of History")).toBe("John Merriman");
+    expect(yaleName("Shelly Kagan")).toBe("Shelly Kagan");
+    expect(["Course Structure", "Texts", "Requirements:", "Grading"].map(outlineOf)).toEqual(["about", "texts", "assignments", "grading"]);
+    expect(["Course Meeting Times", "Prerequisites", "Text", "Goals", "Homework", "Exams", "Calculators"].map(outlineOf)).toEqual(["about", "prerequisites", "texts", "about", "assignments", "assignments", "more"]);
+    const o = courseOutline({ about: ["A survey."], syllabus: [{ heading: "Requirements:", lines: ["Three papers."] }, { heading: "Texts", lines: ["Plato, Phaedo"] }] });
+    expect(o.description).toEqual(["A survey."]);
+    expect(o.sections.assignments).toEqual([{ heading: "Requirements", lines: ["Three papers."] }]);
+    expect(o.sections.texts).toHaveLength(1);
+    expect(o.sections.prerequisites).toEqual([]);
   });
 });
