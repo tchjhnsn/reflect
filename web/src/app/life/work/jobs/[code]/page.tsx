@@ -7,6 +7,7 @@ import { requireUser } from "@/server/session";
 import { lifeRecords } from "@/server/life-store";
 import { CREDIT, jobByCode } from "@/server/work-catalog";
 import { Credit, EntryTop, Inspires, inspirationsOf, JobCard, Part } from "../../parts";
+import { Toward } from "../../toward";
 
 export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
@@ -43,11 +44,13 @@ export default async function JobPage({ params }: { params: Promise<{ code: stri
             </Part>
           ) : null}
           {job.zone ? <Part title="Preparation"><p className="text-sm">{ZONES[job.zone]}</p></Part> : null}
+          {job.pay ? <Part title="Pay"><p className="text-sm">${job.pay.toLocaleString("en-US")} a year, the national median{job.people ? `, across ${job.people.toLocaleString("en-US")} people in this work` : ""}.</p></Part> : null}
         </div>
         {job.titles.length ? <Part title="What people call it"><p className="text-muted-foreground text-sm">{job.titles.join(", ")}</p></Part> : null}
         <Inspires target={`job:${code}`} title={job.title} kept={kept} />
+        {kept ? <Toward userId={user.id} record={kept} back={`/life/work/jobs/${code}`} /> : null}
         {related.length ? <Part title="Jobs near it"><ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{related.map((j) => <JobCard key={j.code} job={j} />)}</ul></Part> : null}
-        <Credit>From the <a href={`https://www.onetonline.org/link/summary/${code}`} className="underline underline-offset-2">{CREDIT.onet.name}</a>.</Credit>
+        <Credit>From the <a href={`https://www.onetonline.org/link/summary/${code}`} className="underline underline-offset-2">{CREDIT.onet.name}</a>{job.pay ? <>; pay from <a href={CREDIT.bls.href} className="underline underline-offset-2">{CREDIT.bls.name}</a></> : null}.</Credit>
       </div>
     </main>
   );

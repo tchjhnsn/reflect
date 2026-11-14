@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SearchIcon } from "lucide-react";
 import { batchOrder, FAMILIES, formingBatches, industries, ranked, type Company, type Job, type WikiWork } from "@reflect/core/work-browse";
-import { ThingHeader } from "@/components/headers";
 import { PAGE } from "@/components/page-header";
 import { Segmented } from "@/components/segmented";
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,8 @@ import { cn } from "@/lib/utils";
 import { requireUser } from "@/server/session";
 import { lifeRecords } from "@/server/life-store";
 import { companies, filingsThisWeek, fictionWork, jobs, pastWork } from "@/server/work-catalog";
-import { CompanyCard, FilingList, JobCard, WikiCard } from "../parts";
+import { CompanyCard, FilingList, JobCard, WikiCard, WorkHeader } from "../parts";
+import { BrowseFront } from "./front";
 
 export const metadata: Metadata = { title: "Browse work" };
 export const dynamic = "force-dynamic";
@@ -40,7 +40,8 @@ export default async function BrowseWorkPage({ searchParams }: { searchParams: P
   await requireUser();
   const sp = await searchParams;
   const q = one(sp.q).trim();
-  const m = (MODES.find((x) => x.id === one(sp.m))?.id ?? (q ? "all" : "jobs")) as Mode;
+  const front = !q && !one(sp.m);
+  const m = (MODES.find((x) => x.id === one(sp.m))?.id ?? "all") as Mode;
   const n = Math.max(PAGE_SIZE, Math.min(2000, Number(one(sp.n)) || PAGE_SIZE));
   const family = one(sp.family);
   const industry = one(sp.industry);
@@ -60,7 +61,9 @@ export default async function BrowseWorkPage({ searchParams }: { searchParams: P
   const all = companies();
 
   let body: React.ReactNode;
-  if (m === "all") {
+  if (front) {
+    body = <BrowseFront />;
+  } else if (m === "all") {
     const sections: { title: string; mode: Mode; count: number; cards: React.ReactNode }[] = [];
     const j = findJobs(jobs());
     sections.push({ title: "Jobs that exist", mode: "jobs", count: j.length, cards: j.slice(0, 8).map((x) => <JobCard key={x.code} job={x} />) });
@@ -163,15 +166,14 @@ export default async function BrowseWorkPage({ searchParams }: { searchParams: P
 
   return (
     <main className={PAGE}>
-      <ThingHeader back="/life/work" backLabel="Work" crumbs={[{ label: "Home", href: "/" }, { label: "Work", href: "/life/work" }]} title="Browse work" />
+      <WorkHeader on="browse" />
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-6">
-        <h1 id="page-title" className="scroll-mt-20 text-3xl font-semibold tracking-tight">Browse work</h1>
         <form action="/life/work/browse" className="flex max-w-xl gap-2" role="search">
-          <input type="hidden" name="m" value={m} />
+          {front ? null : <input type="hidden" name="m" value={m} />}
           <Input name="q" defaultValue={q} placeholder="Search jobs, companies and imagined work" aria-label="Search work" className="h-10" />
           <Button type="submit" variant="outline" className="h-10" aria-label="Search"><SearchIcon /></Button>
         </form>
-        <div className="-mx-1 overflow-x-auto px-1"><Segmented label="Kinds of work" items={MODES.map((x) => ({ label: x.label, href: url({ m: x.id, family: null, industry: null, status: null, new: null }), on: m === x.id }))} /></div>
+        <div className="-mx-1 overflow-x-auto px-1"><Segmented label="Kinds of work" items={MODES.map((x) => ({ label: x.label, href: url({ m: x.id, family: null, industry: null, status: null, new: null }), on: !front && m === x.id }))} /></div>
         {body}
       </div>
     </main>

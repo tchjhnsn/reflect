@@ -51,9 +51,7 @@ export const MINE: readonly Tile[] = [
   { id: "mate", label: "Mate", app: "mate" },
   { id: "kin", label: "Kin", app: "kin" },
   { id: "polis", label: "Polis", app: "polis" },
-  { id: "legacy", label: "Legacy", app: "legacy" },
-  { id: "ideas", label: "Ideas", app: "journal" },
-  { id: "journal", label: "Journal", app: "journal" },
+  // Journal is a tool, and Ideas, Legacy and the log are lenses over tiles and tools, not tiles (Torian, 2026-11-14 17:52Z, confirmed 17:56Z).
 ];
 
 export const OURS: readonly Tile[] = [

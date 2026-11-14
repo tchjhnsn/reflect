@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { batchOrder, daily, familyOf, filingsFrom, formingBatches, matches, parseRef, ranked, refHref, type Company } from "./work-browse";
+import { batchOrder, daily, familyOf, filingsFrom, forLater, forNow, formingBatches, matches, needsNow, parseRef, ranked, refHref, stemsOf, toEarn, type Company, type Job } from "./work-browse";
 
 const co = (name: string, batch: string): Company => ({ slug: name.toLowerCase(), name, line: "", about: "", batch, status: "Active", industries: ["B2B"], logo: null, site: null, team: null, where: null, launched: null });
 
@@ -49,5 +49,34 @@ describe("browsing work", () => {
     expect(daily(list, 5, "2026-11-14")).toEqual(daily(list, 5, "2026-11-14"));
     expect(daily(list, 5, "2026-11-14")).not.toEqual(daily(list, 5, "2026-11-15"));
     expect(new Set(daily(list, 50, "2026-11-14")).size).toBe(50);
+  });
+});
+
+const job = (code: string, title: string, o: Partial<Job> = {}): Job => ({ code, title, about: "", zone: 2, tasks: [], emerging: [], interests: ["Realistic"], titles: [], related: [], pay: 40000, people: 1000, ...o });
+
+describe("the workspace", () => {
+  it("counts what the person pays for needs and what others cover", () => {
+    const n = needsNow([{ label: "Shelter", by: "kin", cost: 900 }, { label: "Food", by: "market", cost: 400 }, { label: "Transport", by: "self", cost: null }]);
+    expect(n).toEqual({ pay: 4800, covered: [{ label: "Shelter", by: "kin", cost: 10800 }], unknown: ["Transport"] });
+    expect(toEarn(4800, 6000)).toBe(0);
+    expect(toEarn(null, 100)).toBeNull();
+  });
+
+  it("suggests work now that covers the need at the hours given, near work the person wants", () => {
+    const want = job("15-1252.00", "Software Developers", { zone: 4, related: ["15-1232.00"], interests: ["Investigative"] });
+    const support = job("15-1232.00", "Computer User Support Specialists", { zone: 3, pay: 60000 });
+    const cashier = job("41-2011.00", "Cashiers", { zone: 1, pay: 30000 });
+    const all = [want, support, cashier];
+    const now = forNow(all, { toEarn: 20000, hours: 20, wanted: [want], stems: [] });
+    expect(now.map((s) => s.job.title)).toEqual(["Computer User Support Specialists"]);
+    expect(now[0]!.why[0]).toBe("Near Software Developers, which you want");
+    expect(now[0]!.pay).toBe(30000);
+    expect(forNow(all, { toEarn: 20000, hours: 20, wanted: [], stems: [] }).map((s) => s.job.title)).toEqual(["Computer User Support Specialists"]);
+  });
+
+  it("finds the work that what the person is learning leads to", () => {
+    const all = [job("15-2041.00", "Statisticians", { zone: 5 }), job("43-9111.00", "Statistical Assistants"), job("41-2011.00", "Cashiers")];
+    const stems = stemsOf(["Introduction to Statistics", "Statistical inference"]);
+    expect(forLater(all, { stems, wanted: [] }).map((s) => s.job.title)).toEqual(["Statisticians", "Statistical Assistants"]);
   });
 });

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FolderIcon, ListIcon, PlusIcon } from "lucide-react";
+import { FolderIcon, PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Segmented } from "@/components/segmented";
 import { cn } from "@/lib/utils";
@@ -40,9 +40,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
         </Button>
         <Segmented label="Whose" items={[{ label: "Mine", href: "/", on: !ours }, { label: "Ours", href: "/?view=ours", on: ours }]} />
         <div className="flex items-center gap-1 justify-self-end">
-          <Button asChild variant="ghost" size="icon" aria-label="Your log" title="Log">
-            <Link href="/log"><ListIcon /></Link>
-          </Button>
           <Button asChild variant="ghost" size="icon" aria-label="Your journal" title="Journal">
             <Link href="/journal"><FolderIcon /></Link>
           </Button>

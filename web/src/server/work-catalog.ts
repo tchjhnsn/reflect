@@ -48,4 +48,5 @@ export const CREDIT = {
   wikidata: { name: "Wikidata (CC0)", href: "https://www.wikidata.org" },
   yc: { name: "Y Combinator's company directory", href: "https://www.ycombinator.com/companies" },
   sec: { name: "SEC EDGAR", href: "https://efts.sec.gov/LATEST/search-index" },
+  bls: { name: "BLS Occupational Employment and Wage Statistics, May 2024", href: "https://www.bls.gov/oes/" },
 } as const;

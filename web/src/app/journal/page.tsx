@@ -5,12 +5,13 @@ import { KINDS, workTitle } from "@reflect/core/works";
 import { DOMAINS } from "@reflect/core/book";
 import { CHAT_PROMPT } from "@reflect/core/chat-journal";
 import { Button } from "@/components/ui/button";
-import { PAGE, PageHeader } from "@/components/page-header";
+import { PAGE } from "@/components/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireUser } from "@/server/session";
 import { listWorks } from "@/server/work-store";
 import { listEntries } from "@/server/journal-store";
 import { ImportButton } from "./import";
+import { JournalHeader } from "./header";
 
 export const metadata: Metadata = { title: "Journal" };
 export const dynamic = "force-dynamic";
@@ -26,12 +27,12 @@ export default async function JournalPage() {
   const earlier = entries.filter((e) => e.promptId !== CHAT_PROMPT && e.parts.length);
   return (
     <main className={PAGE}>
-      <PageHeader back="/" backLabel="Home" title="Journal">
+      <JournalHeader on="writing">
         <Button asChild variant="ghost" size="icon" aria-label="Export"><a href="/api/journal/export" download><DownloadIcon /></a></Button>
         <Button asChild variant="ghost"><Link href="/journal/book"><BookOpenIcon />Book</Link></Button>
         <ImportButton />
         <Button asChild><Link href="/journal/new"><PlusIcon />Create</Link></Button>
-      </PageHeader>
+      </JournalHeader>
       <nav aria-label="Domains" className="mt-6 flex flex-wrap gap-1.5">
         {DOMAINS.map((d) => {
           const n = works.filter((w) => w.domain === d.id).length;

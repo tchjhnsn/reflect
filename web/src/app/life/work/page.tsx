@@ -1,100 +1,164 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PlusIcon, SearchIcon } from "lucide-react";
-import { daily, FAMILIES, formingBatches } from "@reflect/core/work-browse";
+import { redirect } from "next/navigation";
+import { PenLineIcon, PlusIcon, SearchIcon, SparklesIcon } from "lucide-react";
+import { familyOf, ZONES, type Suggestion } from "@reflect/core/work-browse";
 import { PAGE } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { requireUser } from "@/server/session";
-import { lifeRecords } from "@/server/life-store";
-import { companies, CREDIT, filingsThisWeek, fictionWork, jobs, pastWork } from "@/server/work-catalog";
+import { workspace, type Wanted } from "@/server/work-space";
+import { CREDIT } from "@/server/work-catalog";
 import LifeAppPage from "../[app]/page";
-import { CompanyCard, Credit, FilingList, InspirationCard, JobCard, Row, WikiCard, WorkHeader } from "./parts";
+import { Credit, WorkHeader } from "./parts";
+import { addOwnAction, hoursAction } from "./space-actions";
 
 export const metadata: Metadata = { title: "Work" };
 export const dynamic = "force-dynamic";
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
+const money = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
+const BY: Record<string, string> = { kin: "family", polis: "the polis", gifts: "gifts", nature: "nature" };
+const TYPE: Record<string, string> = { job: "Job", career: "Career", venture: "Venture", company: "Company", other: "Work" };
+const STATE: Record<string, string> = { drawn: "Drawn to it", exploring: "Exploring it", pursuing: "Pursuing it", imagined: "Imagined", forming: "Forming", real: "Real now" };
+const SELECT = "border-input bg-background h-9 rounded-md border px-3 text-sm";
+
+function WantedCard({ w }: { w: Wanted }) {
+  const kind = w.record.kind === "imagined" ? "Imagined" : TYPE[String(w.record.body.type ?? "")] ?? (w.job ? "Job" : "Work");
+  return (
+    <li>
+      <Link href={`/life/work/${w.record.id}`} className="bg-card hover:bg-accent flex h-full flex-col gap-2 rounded-xl border p-4 shadow-xs transition">
+        <span className="text-muted-foreground text-xs">{kind}{w.record.state ? ` · ${STATE[w.record.state] ?? w.record.state}` : ""}</span>
+        <span className="font-medium leading-snug first-letter:uppercase">{w.title}</span>
+        {typeof w.record.body.draws === "string" && w.record.body.draws ? <span className="text-muted-foreground line-clamp-2 text-sm">{w.record.body.draws}</span> : null}
+        <span className="text-muted-foreground mt-auto text-xs">
+          {w.entries ? `${w.entries} ${w.entries === 1 ? "entry" : "entries"}, last ${w.lastEntry}` : "No entries yet"}
+          {w.learning.length ? ` · learning ${w.learning.length} toward it` : ""}
+        </span>
+      </Link>
+    </li>
+  );
+}
+
+function SuggestionCard({ s, hours }: { s: Suggestion; hours: number | null }) {
+  return (
+    <li>
+      <Link href={`/life/work/jobs/${s.job.code}`} className="bg-card hover:bg-accent flex h-full flex-col gap-2 rounded-xl border p-4 shadow-xs transition">
+        <span className="text-muted-foreground text-xs">{familyOf(s.job.code)?.label ?? "Work"}</span>
+        <span className="font-medium leading-snug">{s.job.title}</span>
+        <span className="text-sm">{s.pay ? `${money(s.pay)} a year${hours && hours < 40 ? ` at ${hours} hours a week` : ""}` : "Pay not published"}{s.job.zone ? <span className="text-muted-foreground"> · {ZONES[s.job.zone]}</span> : null}</span>
+        <ul className="text-muted-foreground mt-auto grid gap-0.5 text-xs">{s.why.map((y) => <li key={y}>{y}</li>)}</ul>
+      </Link>
+    </li>
+  );
+}
+
+const GRID = "grid gap-3 sm:grid-cols-2 lg:grid-cols-4";
 
 /**
- * Work (Torian, 2026-11-14 16:30Z): first a place to browse work and be inspired, "not about income yet; it's
- * about purpose and puzzle and reason". Work that is forming now, jobs that exist and the new tasks forming in them,
- * jobs that have existed, companies young and ended, and work imagined in fiction; each opens its page, where the
- * person can keep it with why it inspires them. Their own work and income are the tabs after.
+ * Work's workspace (Torian, 2026-11-14 17:44Z): the work this person wants, with what moves them toward each; what
+ * their needs leave to earn now, after what family covers, and the time learning takes; and the jobs that fit now
+ * and that what they are learning leads to. Browse, income and the rest are the tabs after it.
  */
 export default async function WorkPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams;
   const k = one(sp.k);
-  if (k && k !== "inspired") return LifeAppPage({ params: Promise.resolve({ app: "work" }), searchParams: Promise.resolve(sp) });
+  if (k === "inspired") redirect("/life/work");
+  if (k) return LifeAppPage({ params: Promise.resolve({ app: "work" }), searchParams: Promise.resolve(sp) });
   const user = await requireUser();
-  const records = await lifeRecords(user.id, "work");
-  const inspirations = records.filter((r) => r.kind === "inspiration").reverse();
-  if (k === "inspired") {
-    return (
-      <main className={PAGE}>
-        <WorkHeader on="inspired" />
-        <div className="mt-4 grid gap-6">
-          <p className="text-muted-foreground text-sm">The jobs, companies and imagined work you kept, each with what draws you to it and where that comes from.</p>
-          {inspirations.length ? (
-            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{inspirations.map((r) => <InspirationCard key={r.id} r={r} />)}</ul>
-          ) : <p className="text-muted-foreground text-sm">Nothing yet. <Link href="/life/work" className="underline underline-offset-2">Browse work</Link> and keep what inspires you.</p>}
-        </div>
-      </main>
-    );
-  }
-  const today = new Date().toISOString().slice(0, 10);
-  const all = companies();
-  const batches = formingBatches(all);
-  const forming = all.filter((c) => batches.includes(c.batch));
-  const [raising, public_] = await Promise.all([filingsThisWeek("D"), filingsThisWeek("S-1")]);
-  const imagined = records.filter((r) => r.kind === "imagined");
+  const s = await workspace(user.id);
+  const needNote = s.need.from === "home" ? "What your needs from Home cost you a year" : s.need.from === "household" ? "What your intended household needs a year" : null;
   return (
     <main className={PAGE}>
-      <WorkHeader on="browse" />
+      <WorkHeader on="space" />
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-10">
-        <form action="/life/work/browse" className="flex max-w-xl gap-2" role="search">
-          <Input name="q" placeholder="Search jobs, companies and imagined work" aria-label="Search work" className="h-10" />
-          <Button type="submit" variant="outline" className="h-10" aria-label="Search"><SearchIcon /></Button>
-        </form>
-        {inspirations.length ? <Row title="What inspires you" all="/life/work?k=inspired">{inspirations.slice(0, 10).map((r) => <InspirationCard key={r.id} r={r} />)}</Row> : null}
-        <Row title="Forming now" note={`Companies in Y Combinator's newest batches: ${batches.join(" and ")}.`} all="/life/work/browse?m=forming">
-          {daily(forming, 12, today, "forming").map((c) => <CompanyCard key={c.slug} c={c} />)}
-        </Row>
-        <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-2">
-          <section className="grid gap-3">
-            <div><h2 className="text-lg font-semibold tracking-tight">Raising money this week</h2><p className="text-muted-foreground text-sm">Companies that filed with the SEC to raise money (Form D) in the last seven days.</p></div>
-            <FilingList list={raising.slice(0, 10)} />
-          </section>
-          <section className="grid gap-3">
-            <div><h2 className="text-lg font-semibold tracking-tight">Going public this week</h2><p className="text-muted-foreground text-sm">Companies that filed to sell shares to the public (Form S-1) in the last seven days.</p></div>
-            <FilingList list={public_.slice(0, 10)} />
-          </section>
-        </div>
-        <Row title="New work forming inside jobs" note="Tasks that people in these jobs have newly reported doing." all="/life/work/browse?m=jobs&new=1">
-          {daily(jobs().filter((j) => j.emerging.length), 12, today, "emerging").map((j) => <JobCard key={j.code} job={j} forming />)}
-        </Row>
         <section className="grid gap-3">
-          <div><h2 className="text-lg font-semibold tracking-tight">Jobs that exist</h2><p className="text-muted-foreground text-sm">{jobs().length} occupations and what people in them do, by family.</p></div>
-          <ul className="flex flex-wrap gap-2">
-            {FAMILIES.map((f) => <li key={f.id}><Link href={`/life/work/browse?m=jobs&family=${f.id}`} className="hover:bg-accent block rounded-full border px-3 py-1 text-sm">{f.label}</Link></li>)}
-          </ul>
-        </section>
-        <Row title="Jobs that have existed" note="Work people once did, from gladiators to scribes." all="/life/work/browse?m=past">
-          {daily(pastWork().slice(0, 200), 12, today, "past").map((w) => <WikiCard key={w.id} w={w} />)}
-        </Row>
-        <Row title="Companies that ended" note="Startups that closed or were bought." all="/life/work/browse?m=companies&status=ended">
-          {daily(all.filter((c) => c.status === "Inactive" || c.status === "Acquired"), 12, today, "ended").map((c) => <CompanyCard key={c.slug} c={c} />)}
-        </Row>
-        <Row title="Imagined in fiction" note="Work that stories imagined: jobs and companies from books, films and games." all="/life/work/browse?m=imagined">
-          {daily(fictionWork().slice(0, 250), 12, today, "fiction").map((w) => <WikiCard key={w.id} w={w} />)}
-        </Row>
-        <section className="grid gap-3">
-          <div className="flex items-end justify-between gap-3">
-            <div><h2 className="text-lg font-semibold tracking-tight">Imagined by you</h2><p className="text-muted-foreground text-sm">Work that does not exist yet.</p></div>
-            <Button asChild variant="outline" size="sm"><Link href="/life/work?k=imagined"><PlusIcon />Imagine one</Link></Button>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight">Work you want</h2>
+              <p className="text-muted-foreground text-sm">Jobs, careers and ventures you like. Open one to write what moves you toward it.</p>
+            </div>
+            <Button asChild variant="outline" size="sm"><Link href="/life/work/browse"><SearchIcon />Find work</Link></Button>
           </div>
-          {imagined.length ? <ul className="flex flex-wrap gap-2">{imagined.map((r) => <li key={r.id}><Link href={`/life/work/${r.id}`} className="hover:bg-accent block rounded-lg border px-3 py-2 text-sm font-medium">{String(r.body.name ?? "")}</Link></li>)}</ul> : null}
+          {s.wanted.length ? <ul className={GRID}>{s.wanted.map((w) => <WantedCard key={w.record.id} w={w} />)}</ul> : <p className="text-muted-foreground text-sm">Nothing yet. Browse work and press It inspires me on what you like, or add your own.</p>}
+          <form action={addOwnAction} className="flex flex-wrap items-center gap-2">
+            <Input name="title" placeholder="Add your own: a job, a career or a venture" aria-label="Name of the work" className="h-9 max-w-sm" required />
+            <select name="type" aria-label="Kind of work" className={SELECT} defaultValue="venture">
+              <option value="job">Job</option><option value="career">Career</option><option value="venture">Venture</option><option value="other">Other</option>
+            </select>
+            <Button type="submit" variant="outline" size="sm"><PlusIcon />Add</Button>
+            <Link href="/life/work?k=imagined" className="text-muted-foreground hover:text-foreground text-sm underline-offset-2 hover:underline">Imagine work that does not exist yet</Link>
+          </form>
         </section>
-        <Credit>Jobs from the <a href={CREDIT.onet.href} className="underline underline-offset-2">{CREDIT.onet.name}</a>. Past and imagined work from <a href={CREDIT.wikidata.href} className="underline underline-offset-2">{CREDIT.wikidata.name}</a>. Companies from <a href={CREDIT.yc.href} className="underline underline-offset-2">{CREDIT.yc.name}</a> and filings from <a href={CREDIT.sec.href} className="underline underline-offset-2">{CREDIT.sec.name}</a>.</Credit>
+
+        <section id="now" className="grid scroll-mt-20 gap-3">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight">Right now</h2>
+            <p className="text-muted-foreground text-sm">What your other tiles say about the work you need this season.</p>
+          </div>
+          <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl border p-4">
+              <dt className="text-muted-foreground text-xs">Needs a year</dt>
+              <dd className="mt-1 text-2xl font-semibold">{s.need.pay !== null ? money(s.need.pay) : "Not known"}</dd>
+              <dd className="text-muted-foreground mt-1 text-xs">{needNote ?? <>Give what your needs cost in <Link href="/life/home" className="underline underline-offset-2">Home</Link>, or your <Link href="/life/work?k=household" className="underline underline-offset-2">intended household</Link>.</>}{s.need.unknown.length && s.need.from === "home" ? `. No cost given yet for ${s.need.unknown.join(", ").toLowerCase()}.` : ""}</dd>
+            </div>
+            <div className="rounded-xl border p-4">
+              <dt className="text-muted-foreground text-xs">Covered by others</dt>
+              <dd className="mt-1 text-base font-medium">{s.need.covered.length ? s.need.covered.map((c) => `${c.label} by ${BY[c.by] ?? c.by}`).join(", ") : "None recorded"}</dd>
+              <dd className="text-muted-foreground mt-1 text-xs">From who meets each need in <Link href="/life/home" className="underline underline-offset-2">Home</Link>.</dd>
+            </div>
+            <div className="rounded-xl border p-4">
+              <dt className="text-muted-foreground text-xs">Left to earn a year</dt>
+              <dd className="mt-1 text-2xl font-semibold">{s.left !== null ? money(s.left) : "Not known"}</dd>
+              <dd className="text-muted-foreground mt-1 text-xs">After {money(s.income.year)} a year coming in (<Link href="/life/work?k=income" className="underline underline-offset-2">income</Link>){s.income.unknown ? `, ${s.income.unknown} not counted` : ""}.</dd>
+            </div>
+            <div className="rounded-xl border p-4">
+              <dt className="text-muted-foreground text-xs">Time</dt>
+              <dd className="mt-1 text-sm">{s.learningHours ? <>Learning <span className="font-semibold">{s.learningHours} hours a week</span>, from your sessions in <Link href="/learn" className="underline underline-offset-2">Learn</Link> over four weeks.</> : <>No learning sessions kept in <Link href="/learn" className="underline underline-offset-2">Learn</Link> these four weeks.</>}</dd>
+              <dd className="mt-2">
+                <form action={hoursAction} className="flex flex-wrap items-center gap-2 text-sm">
+                  <label className="flex items-center gap-2"><Input name="hours" type="number" min={0} max={100} defaultValue={s.hours ?? ""} className="h-8 w-16" aria-label="Hours a week you can give to work" />hours a week for work</label>
+                  <Button type="submit" variant="outline" size="sm" className="h-8">Save</Button>
+                </form>
+              </dd>
+            </div>
+          </dl>
+        </section>
+
+        <section className="grid gap-3">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight">Work for now</h2>
+            <p className="text-muted-foreground text-sm">Jobs you could start without long preparation that cover what is left to earn{s.hours ? ` at ${s.hours} hours a week` : ""}, nearest first to the work you want and what you are learning.</p>
+          </div>
+          {s.now.length ? <ul className={GRID}>{s.now.map((x) => <SuggestionCard key={x.job.code} s={x} hours={s.hours} />)}</ul> : <p className="text-muted-foreground text-sm">No job covers what is left to earn at those hours. Try more hours, or add work you want.</p>}
+        </section>
+
+        <section className="grid gap-3">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight">Work for later</h2>
+            <p className="text-muted-foreground text-sm">Where what you are learning, or want to learn, leads.</p>
+          </div>
+          {s.later.length ? <ul className={GRID}>{s.later.map((x) => <SuggestionCard key={x.job.code} s={x} hours={null} />)}</ul> : <p className="text-muted-foreground text-sm">Add what you are learning or want to learn in <Link href="/learn" className="underline underline-offset-2">Learn</Link>, and the work it leads to shows here.</p>}
+        </section>
+
+        <section className="grid gap-3">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight">What moves you toward it</h2>
+            <p className="text-muted-foreground text-sm">Your journal entries toward the work you want, newest first.</p>
+          </div>
+          {s.entries.length ? (
+            <ul className="divide-y rounded-xl border text-sm">
+              {s.entries.map((e) => (
+                <li key={e.id} className="flex items-baseline justify-between gap-3 px-4 py-2">
+                  <Link href={`/journal/w/${e.id}`} className="min-w-0 truncate font-medium hover:underline"><PenLineIcon className="mr-1.5 inline size-3.5" />{e.title}</Link>
+                  <span className="text-muted-foreground shrink-0 text-xs"><Link href={`/life/work/${e.towardId}`} className="hover:underline">{e.toward}</Link> · {e.day}</span>
+                </li>
+              ))}
+            </ul>
+          ) : <p className={cn("text-muted-foreground text-sm")}>{s.wanted.length ? <>Open work you want and press <span className="font-medium">Write an entry</span>.</> : <><SparklesIcon className="mr-1 inline size-3.5" />Add work you want first.</>}</p>}
+        </section>
+
+        <Credit>Jobs from the <a href={CREDIT.onet.href} className="underline underline-offset-2">{CREDIT.onet.name}</a>; pay is the national median from <a href={CREDIT.bls.href} className="underline underline-offset-2">{CREDIT.bls.name}</a>.</Credit>
       </div>
     </main>
   );

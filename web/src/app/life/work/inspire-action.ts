@@ -14,9 +14,11 @@ export async function inspireAction(ref: string, title: string, form: FormData):
   const user = await requireUser();
   const r = parseRef(ref);
   if (!r) throw new Error("Nothing to keep.");
-  const body = { ref: refString(r), title: title.slice(0, 300), draws: String(form.get("draws") ?? ""), origins: form.getAll("origins").map(String).join(","), end: String(form.get("end") ?? "") };
+  const type = r.kind === "job" || r.kind === "past" ? "job" : r.kind === "company" ? "company" : "other";
+  const body = { ref: refString(r), title: title.slice(0, 300), type, draws: String(form.get("draws") ?? ""), origins: form.getAll("origins").map(String).join(","), end: String(form.get("end") ?? "") };
   const had = (await lifeRecords(user.id, "work")).find((x) => x.kind === "inspiration" && x.body.ref === body.ref);
-  if (had) await saveLifeRecord(user.id, had.id, body);
+  // Keep what the form does not carry (what is learned toward it, its kind of work when the person set it).
+  if (had) await saveLifeRecord(user.id, had.id, { ...had.body, ...body, type: had.body.type ?? type });
   else await addLifeRecord(user.id, "work", "inspiration", body);
   revalidatePath("/", "layout");
   redirect(`${refHref(r)}#inspires`);

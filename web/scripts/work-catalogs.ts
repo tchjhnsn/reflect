@@ -2,6 +2,7 @@
 // professions (jobs that have existed), Wikidata's fictional professions and companies (work imagined in fiction),
 // and Y Combinator's company directory (companies, with the newest batch forming now). Run it again to refresh:
 //   npx tsx scripts/work-catalogs.ts
+// BLS OEWS (public domain) gives median pay a year by occupation.
 // O*NET 29.0 Database by the U.S. Department of Labor, Employment and Training Administration, CC BY 4.0.
 // Wikidata is CC0. The Y Combinator directory is read from yc-oss.github.io, which republishes YC's public pages.
 import { execFileSync } from "node:child_process";
@@ -29,7 +30,29 @@ for (const [code, task, cat] of tsv("Emerging Tasks.txt")) { const o = occ.get(c
 for (const [code, , name, scale, value] of tsv("Interests.txt")) { const o = occ.get(code!); if (o && scale === "OI" && ["Realistic", "Investigative", "Artistic", "Social", "Enterprising", "Conventional"].includes(name!)) o.interests.push([name!, Number(value)]); }
 for (const [code, title, shown] of tsv("Sample of Reported Titles.txt")) { const o = occ.get(code!); if (o && shown === "Y" && o.titles.length < 8) o.titles.push(title!); }
 for (const [code, rel, tier] of tsv("Related Occupations.txt")) { const o = occ.get(code!); if (o && tier?.startsWith("Primary") && o.related.length < 8) o.related.push(rel!); }
-out("onet.json", [...occ.values()].filter((o) => o.tasks.length).map((o) => ({ ...o, interests: o.interests.sort((a, b) => b[1] - a[1]).slice(0, 3).map(([n]) => n) })));
+// BLS Occupational Employment and Wage Statistics, May 2024, national: median pay a year and how many hold the job,
+// by SOC code (the first seven characters of an O*NET code). Public domain. Read from the xlsx's own XML.
+writeFileSync(join(dir, "oes.zip"), Buffer.from(await (await fetch("https://www.bls.gov/oes/special-requests/oesm24nat.zip", UA)).arrayBuffer()));
+execFileSync("unzip", ["-q", "-o", join(dir, "oes.zip"), "-d", join(dir, "oes")]);
+execFileSync("unzip", ["-q", "-o", join(dir, "oes", "oesm24nat", "national_M2024_dl.xlsx"), "-d", join(dir, "oes", "x")]);
+const xml = (f: string) => readFileSync(join(dir, "oes", "x", "xl", f), "utf8");
+const unxml = (t: string) => t.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, "&");
+const strings = [...xml("sharedStrings.xml").matchAll(/<si>([\s\S]*?)<\/si>/g)].map((m) => unxml([...m[1]!.matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map((t) => t[1]).join("")));
+const rows = [...xml("worksheets/sheet1.xml").matchAll(/<row[^>]*>([\s\S]*?)<\/row>/g)].map((r) => {
+  const cells: Record<string, string> = {};
+  for (const c of r[1]!.matchAll(/<c r="([A-Z]+)\d+"([^>]*?)(?:\/>|>(?:<f>[\s\S]*?<\/f>)?(?:<v>([\s\S]*?)<\/v>)?(?:<is><t[^>]*>([\s\S]*?)<\/t><\/is>)?<\/c>)/g)) {
+    const v = c[3] ?? c[4] ?? "";
+    cells[c[1]!] = /t="s"/.test(c[2]!) ? strings[Number(v)] ?? "" : unxml(v);
+  }
+  return cells;
+});
+const head = rows[0]!;
+const col = (name: string) => Object.keys(head).find((k) => head[k] === name)!;
+const [cCode, cMed, cEmp] = [col("OCC_CODE"), col("A_MEDIAN"), col("TOT_EMP")];
+const pay = new Map<string, { median: number | null; people: number | null }>();
+const num = (v: string | undefined) => (v && /^\d+(\.\d+)?$/.test(v) ? Math.round(Number(v)) : null);
+for (const r of rows.slice(1)) if (r[cCode!]) pay.set(r[cCode!]!, { median: r[cMed!] === "#" ? 239200 : num(r[cMed!]), people: num(r[cEmp!]) });
+out("onet.json", [...occ.values()].filter((o) => o.tasks.length).map((o) => ({ ...o, interests: o.interests.sort((a, b) => b[1] - a[1]).slice(0, 3).map(([n]) => n), pay: pay.get(o.code.slice(0, 7))?.median ?? null, people: pay.get(o.code.slice(0, 7))?.people ?? null })));
 
 // Wikidata: historical professions and fictional professions and companies, each with its picture and, for fiction, the work it is from.
 async function sparql(q: string): Promise<Record<string, { value: string }>[]> {

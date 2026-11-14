@@ -18,7 +18,7 @@ test("a friend kept from the Friends tile, with a state and a visit, shows in th
   await expect(page.getByRole("button", { name: "Close friend" })).toHaveAttribute("aria-pressed", "true", { timeout: 30_000 });
   await page.getByRole("button", { name: "Keep", exact: true }).click();
   await expect(page.getByText("Time together").last()).toBeVisible({ timeout: 30_000 });
-  await page.goto("/log");
+  await page.goto("/journal/log");
   await expect(page.getByText(`Spent time with ${name}`)).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText(`${name}: Close friend`)).toBeVisible();
 });
@@ -34,12 +34,12 @@ test("browsing work, a job kept as an inspiration with what draws you to it", as
   const draws = `Making things people use ${info.project.name} ${Date.now()}`;
   // Each project keeps a different job, so runs in parallel on the shared open-mode user do not overwrite each other.
   const job = info.project.name === "phone" ? "Data Scientists" : "Software Developers";
-  await page.goto("/life/work");
+  await page.goto("/life/work/browse");
   await expect(page.getByRole("heading", { name: "Forming now" })).toBeVisible({ timeout: 60_000 });
   const search = page.getByRole("search");
   await search.getByLabel("Search work").fill(job);
   await search.getByRole("button", { name: "Search" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Browse work" })).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByRole("heading", { name: "Jobs that exist" })).toBeVisible({ timeout: 60_000 });
   await page.getByRole("link", { name: new RegExp(`^Computers and mathematics ${job}`) }).first().click();
   await expect(page.getByRole("heading", { level: 1, name: job })).toBeVisible({ timeout: 60_000 });
   await page.waitForLoadState("networkidle");
@@ -53,6 +53,20 @@ test("browsing work, a job kept as an inspiration with what draws you to it", as
   await expect(page.getByRole("heading", { name: "Why it inspires you" })).toBeVisible({ timeout: 30_000 });
   await page.reload();
   await expect(page.getByLabel("What draws me to it")).toHaveValue(draws, { timeout: 30_000 });
-  await page.goto("/life/work?k=inspired");
+  await page.goto("/life/work");
   await expect(page.getByText(draws)).toBeVisible({ timeout: 30_000 });
+});
+
+test("a venture of your own in Work's workspace, with a journal entry toward it", async ({ page }, info) => {
+  const name = `A bakery ${info.project.name} ${Date.now()}`;
+  await page.goto("/life/work");
+  await expect(page.getByRole("heading", { name: "Right now" })).toBeVisible({ timeout: 60_000 });
+  await page.getByLabel("Name of the work").fill(name);
+  await page.getByRole("button", { name: "Add" }).click();
+  await expect(page.getByRole("heading", { level: 1, name })).toBeVisible({ timeout: 30_000 });
+  await page.getByRole("button", { name: "Write an entry" }).click();
+  await expect(page).toHaveURL(/\/journal\/w\//, { timeout: 30_000 });
+  await page.goto("/life/work");
+  await expect(page.getByRole("link", { name: new RegExp(name) }).first()).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/1 entry, last/).first()).toBeVisible();
 });
