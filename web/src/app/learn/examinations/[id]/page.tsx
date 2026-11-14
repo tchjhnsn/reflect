@@ -5,17 +5,15 @@ import { Button } from "@/components/ui/button";
 import { PAGE } from "@/components/page-header";
 import { requireUser } from "@/server/session";
 import { getExamination } from "@/server/examination-store";
-import { videoReady } from "@/server/video";
 import { LearnHeader } from "../../header";
 import { closeExaminationAction } from "../actions";
-import { ExamCall } from "../call";
 import { CopyLink } from "../copy-link";
 import { ExamRecord } from "../record";
 
 export const metadata: Metadata = { title: "Examination" };
 export const dynamic = "force-dynamic";
 
-/** Your examination: the link to invite examiners, the call, and the record as it stands. */
+/** Your examination: the link to invite examiners and the record as it stands. */
 export default async function ExaminationPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   const { id } = await params;
@@ -33,12 +31,8 @@ export default async function ExaminationPage({ params }: { params: Promise<{ id
           <>
             <section className="space-y-2">
               <h2 className="text-lg font-semibold">Invite your examiners</h2>
-              <p className="text-muted-foreground text-sm">Send this link to the people you ask to examine you. They sign in, give their name and join; up to 12 can.</p>
+              <p className="text-muted-foreground text-sm">Send this link to the people you ask to examine you. They sign in, give their name and join; up to 12 can. You meet and talk it through in person, and each attests here afterwards.</p>
               <CopyLink path={`/learn/examine/${e.token}`} />
-            </section>
-            <section className="space-y-2">
-              <h2 className="text-lg font-semibold">The call</h2>
-              {videoReady() ? <ExamCall id={e.id} /> : <p className="text-muted-foreground text-sm">Calls in Reflect are not switched on yet. Meet in person for now; your examiners can still attest here.</p>}
             </section>
           </>
         ) : null}
