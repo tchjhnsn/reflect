@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CheckIcon, CopyIcon, XIcon } from "lucide-react";
+import { CheckIcon, ChevronRightIcon, CopyIcon, XIcon } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { passageAt, type Passage } from "@reflect/core/courses";
 import { clock } from "@reflect/core/media";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ export function UnitPlayer(p: UnitProps) {
   const list = useRef<HTMLOListElement>(null);
   const [now, setNow] = useState(p.place ?? 0);
   const [follow, setFollow] = useState(true);
+  const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [text, setText] = useState("");
   const [copied, setCopied] = useState<number | null>(null);
@@ -70,10 +72,10 @@ export function UnitPlayer(p: UnitProps) {
 
   const current = useMemo(() => passageAt(p.transcript, now), [p.transcript, now]);
   useEffect(() => {
-    if (!follow || current < 0 || q) return;
+    if (!open || !follow || current < 0 || q) return;
     const li = list.current?.querySelector<HTMLElement>(`[data-i="${current}"]`);
     if (li && list.current) list.current.scrollTo({ top: li.offsetTop - list.current.offsetTop - 8, behavior: "smooth" });
-  }, [current, follow, q]);
+  }, [current, follow, q, open]);
 
   const seek = (s: number) => {
     if (yt.current) { yt.current.seekTo(s, true); yt.current.playVideo(); }
@@ -91,8 +93,49 @@ export function UnitPlayer(p: UnitProps) {
   const finish = (done: boolean) => run(async () => { if (!p.item) return; keep(); await setUnitDoneAction(p.item, p.unit, done, p.of, localDay()); if (done && p.next) router.push(p.next); else router.refresh(); });
   const shown = hits ?? p.transcript.map((x, i) => ({ x, i }));
 
+  const transcriptPanel = p.transcript.length ? (
+        <Collapsible open={open} onOpenChange={setOpen} className="rounded-lg border">
+          <div className="flex items-center justify-between gap-2 px-3 py-2">
+            <CollapsibleTrigger className="hover:bg-muted -m-1 flex flex-1 items-center gap-2 rounded-md p-1 text-left text-sm font-medium">
+              <ChevronRightIcon className={`text-muted-foreground size-4 transition ${open ? "rotate-90" : ""}`} /> Transcript
+            </CollapsibleTrigger>
+            {open ? <label className="text-muted-foreground flex items-center gap-1.5 text-xs"><input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} /> Follow along</label> : null}
+          </div>
+          <CollapsibleContent className="space-y-2 border-t p-3">
+            <Input aria-label="Search the transcript" placeholder="Search the transcript" value={q} onChange={(e) => setQ(e.target.value)} className="h-9" />
+            {hits && !hits.length ? <p className="text-muted-foreground text-sm">Not found.</p> : null}
+            <ol ref={list} className="max-h-[60vh] space-y-2 overflow-y-auto rounded-md border p-3 text-sm leading-relaxed">
+                {shown.map(({ x, i }) => {
+                  const t = timeOf(i);
+                  return (
+                    <li key={i} data-i={i} className={`group rounded-md px-2 py-1 ${i === current ? "bg-muted" : ""}`}>
+                      {x.heading ? (
+                        <button type="button" disabled={x.at === null} onClick={() => x.at !== null && seek(x.at)} className="text-left font-medium underline-offset-4 hover:underline">
+                            {x.text}{x.at !== null ? <span className="text-muted-foreground ml-2 font-normal tabular-nums">{clock(x.at)}</span> : null}
+                        </button>
+                      ) : (
+                        <p>
+                            {x.at !== null ? <button type="button" onClick={() => seek(x.at!)} className="text-muted-foreground mr-2 tabular-nums underline-offset-4 hover:underline">{clock(x.at)}</button> : null}
+                            {x.who ? <span className="font-medium">{x.who}: </span> : null}{x.text}
+                        </p>
+                      )}
+                      {!x.heading && p.item ? (
+                        <span className="mt-1 hidden gap-1 group-hover:flex group-focus-within:flex">
+                            <Button type="button" size="sm" variant="outline" className="h-7" disabled={pending} onClick={() => note({ at: t, quote: x.text })}>Quote in a note</Button>
+                            <Button type="button" size="icon" variant="ghost" className="size-7" aria-label="Copy as a cited quote" onClick={() => { navigator.clipboard?.writeText(quoteOf(x, i)).catch(() => {}); setCopied(i); }}><CopyIcon /></Button>
+                            {copied === i ? <span role="status" className="text-muted-foreground self-center text-xs">Copied</span> : null}
+                        </span>
+                      ) : null}
+                    </li>
+                  );
+                })}
+            </ol>
+          </CollapsibleContent>
+        </Collapsible>
+      ) : <p className="text-muted-foreground text-sm">The publisher gives no transcript for this one.</p>;
+
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+    <div className="min-w-0 space-y-5">
       <div className="min-w-0 space-y-4">
         {p.youtube ? (
           <div className="aspect-video w-full overflow-hidden rounded-lg border bg-black"><div ref={holder} className="size-full" /></div>
@@ -113,6 +156,8 @@ export function UnitPlayer(p: UnitProps) {
           ) : <Button size="sm" disabled={pending} onClick={() => finish(true)}>{p.next ? "Finished, next" : "Finished"}</Button>}
         </div>
 
+        {transcriptPanel}
+
         <div className="space-y-2">
           <p className="text-sm font-medium">Notes</p>
           {p.notes.length ? (
@@ -131,47 +176,9 @@ export function UnitPlayer(p: UnitProps) {
           ) : null}
           <Textarea aria-label="Note" rows={2} maxLength={4000} value={text} onChange={(e) => setText(e.target.value)} placeholder="A note" />
           <Button type="button" size="sm" disabled={pending || !text.trim()} onClick={() => note({ at: Math.floor(time()), note: text })}>Note at {clock(Math.floor(now))}</Button>
-        </div></> : p.next ? <Button size="sm" variant="outline" asChild><Link href={p.next}>Next lecture</Link></Button> : null}
+        </div></> : <>{transcriptPanel}{p.next ? <Button size="sm" variant="outline" asChild><Link href={p.next}>Next lecture</Link></Button> : null}</>}
       </div>
 
-      <div className="min-w-0 space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-medium">Transcript</p>
-          {p.transcript.length ? <label className="text-muted-foreground flex items-center gap-1.5 text-xs"><input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} /> Follow along</label> : null}
-        </div>
-        {p.transcript.length ? (
-          <>
-            <Input aria-label="Search the transcript" placeholder="Search the transcript" value={q} onChange={(e) => setQ(e.target.value)} className="h-9" />
-            {hits && !hits.length ? <p className="text-muted-foreground text-sm">Not found.</p> : null}
-            <ol ref={list} className="max-h-[70vh] space-y-2 overflow-y-auto rounded-lg border p-3 text-sm leading-relaxed">
-              {shown.map(({ x, i }) => {
-                const t = timeOf(i);
-                return (
-                  <li key={i} data-i={i} className={`group rounded-md px-2 py-1 ${i === current ? "bg-muted" : ""}`}>
-                    {x.heading ? (
-                      <button type="button" disabled={x.at === null} onClick={() => x.at !== null && seek(x.at)} className="text-left font-medium underline-offset-4 hover:underline">
-                        {x.text}{x.at !== null ? <span className="text-muted-foreground ml-2 font-normal tabular-nums">{clock(x.at)}</span> : null}
-                      </button>
-                    ) : (
-                      <p>
-                        {x.at !== null ? <button type="button" onClick={() => seek(x.at!)} className="text-muted-foreground mr-2 tabular-nums underline-offset-4 hover:underline">{clock(x.at)}</button> : null}
-                        {x.who ? <span className="font-medium">{x.who}: </span> : null}{x.text}
-                      </p>
-                    )}
-                    {!x.heading && p.item ? (
-                      <span className="mt-1 hidden gap-1 group-hover:flex group-focus-within:flex">
-                        <Button type="button" size="sm" variant="outline" className="h-7" disabled={pending} onClick={() => note({ at: t, quote: x.text })}>Quote in a note</Button>
-                        <Button type="button" size="icon" variant="ghost" className="size-7" aria-label="Copy as a cited quote" onClick={() => { navigator.clipboard?.writeText(quoteOf(x, i)).catch(() => {}); setCopied(i); }}><CopyIcon /></Button>
-                        {copied === i ? <span role="status" className="text-muted-foreground self-center text-xs">Copied</span> : null}
-                      </span>
-                    ) : null}
-                  </li>
-                );
-              })}
-            </ol>
-          </>
-        ) : <p className="text-muted-foreground text-sm">The publisher gives no transcript for this one.</p>}
-      </div>
     </div>
   );
 }

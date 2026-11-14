@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { courseInfo, courseLecture, courseLectures, courseSite, linesOf, ocwCourse, ocwLectures, ocwSyllabus, oycCourse, oycLecture, oycLectures, passageAt, passagesFromCaptions, plain } from "./courses";
+import { courseInfo, isTextsHeading, textCitation, courseLecture, courseLectures, courseSite, linesOf, ocwCourse, ocwLectures, ocwSyllabus, oycCourse, oycLecture, oycLectures, passageAt, passagesFromCaptions, plain } from "./courses";
 
 const OYC_COURSE = `<td class="views-field views-field-field-session-display-title"><a href="/philosophy/phil-176/lecture-2" hreflang="en">The Nature of Persons: Dualism vs. Physicalism</a></td>
 <td class="views-field views-field-field-session-display-title"><a href="/philosophy/phil-176/lecture-1" hreflang="en">Course Introduction</a></td>`;
@@ -80,5 +80,17 @@ describe("courses taken in Reflect", () => {
     expect(info).toMatchObject({ site: "ocw", title: "Linear Algebra", syllabus: [{ heading: "Course Meeting Times" }, { heading: "Textbook" }] });
     expect(info?.lectures).toHaveLength(2);
     expect(await courseInfo("https://example.com/x", async () => null)).toBeNull();
+  });
+
+  it("reads a syllabus's texts as books to find", () => {
+    expect(["Texts", "Required Texts:", "Text", "Readings", "Textbook"].every(isTextsHeading)).toBe(true);
+    expect(isTextsHeading("Grading")).toBe(false);
+    expect(textCitation("Plato, Phaedo")).toEqual({ title: "Phaedo", author: "Plato", isbn: null });
+    expect(textCitation("Browning, Christopher. Ordinary Men. New York: Harper Perennial, 1998.")).toEqual({ title: "Ordinary Men", author: "Christopher Browning", isbn: null });
+    expect(textCitation('Barnes, Julian. "The Dream." In History of the World in 10 ½ Chapters.')).toEqual({ title: "History of the World in 10 ½ Chapters", author: "Julian Barnes", isbn: null });
+    expect(textCitation('Brandt, Richard. "Suicide." In Moral Problems. Edited by James Rachels. New York: Harper, 1979.')).toEqual({ title: "Moral Problems", author: null, isbn: null });
+    expect(textCitation("The readings are assigned in: Strang, Gilbert. Introduction to Linear Algebra. 4th ed. Wellesley-Cambridge Press, 2009. ISBN: 9780980232714.")).toEqual({ title: "Introduction to Linear Algebra", author: "Gilbert Strang", isbn: "9780980232714" });
+    expect(textCitation("Course Packet:")).toBeNull();
+    expect(textCitation("NOTE: More material is in Professor Strang’s 2014 textbook.")).toBeNull();
   });
 });
