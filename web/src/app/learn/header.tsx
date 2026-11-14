@@ -6,7 +6,7 @@ import { Segmented } from "@/components/segmented";
 
 /**
  * Learn's one header on every Learn page: your own catalog (shelves, reading, highlights, claims) as tabs, and Browse apart from
- * them, since browsing is for books that are not yours yet.
+ * them, since browsing is for books, courses, podcasts, films, art and the rest that are not yours yet.
  */
 export function LearnHeader({ on }: { on: "shelves" | "reading" | "claims" | "highlights" | "browse" }) {
   return (
@@ -21,7 +21,7 @@ export function LearnHeader({ on }: { on: "shelves" | "reading" | "claims" | "hi
         ]}
       />
       <Button asChild variant={on === "browse" ? "default" : "outline"} aria-current={on === "browse" ? "page" : undefined}>
-        <Link href="/learn/browse"><SearchIcon />Browse books</Link>
+        <Link href="/learn/browse"><SearchIcon />Browse</Link>
       </Button>
     </PageHeader>
   );

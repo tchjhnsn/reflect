@@ -18,8 +18,11 @@ import { rowsAt } from "@/server/rows";
 import { allExcerpts } from "@/server/excerpt-store";
 import { FilterMenu, SortMenu, type ListState } from "./list-menus";
 import { isFilter, listBooks, newQuery, openLibrary, PER, type BookSource, type Filter } from "@/server/browse";
+import { isBrowseMedium } from "@reflect/core/browse-media";
+import type { Medium } from "@reflect/core/ways";
+import { BrowseNav, isWayPick, MediaBrowse } from "./media-page";
 
-export const metadata: Metadata = { title: "Browse books" };
+export const metadata: Metadata = { title: "Browse" };
 export const dynamic = "force-dynamic";
 
 const ROW = 6;
@@ -33,6 +36,11 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
   const user = await requireUser();
   const sp = await searchParams;
   const q = one(sp.q).trim().slice(0, 200);
+  const way = isWayPick(one(sp.way)) ? (one(sp.way) as Parameters<typeof BrowseNav>[0]["way"]) : null;
+  const m = one(sp.m);
+  // Books are browsed as before; with no medium and nothing about books asked for, Browse shows every medium.
+  const books = m === "books" || (!m && Boolean(q || one(sp.cat) || one(sp.view)));
+  if (!books) return <MediaBrowse userId={user.id} m={isBrowseMedium(m) && m !== "books" ? (m as Medium) : "all"} way={way} q={q} />;
   const code = one(sp.cat).toUpperCase().slice(0, 2);
   const section = code ? themaSection(code) : undefined;
   const category = code.length === 2 ? themaCategory(code) : undefined;
@@ -40,7 +48,8 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
   const fresh = !q && !section && one(sp.view) === "new";
   const free = !q && !section && one(sp.view) === "free";
   const sort: Sort | undefined = isSort(one(sp.sort)) ? (one(sp.sort) as Sort) : undefined;
-  const state: ListState = { ...(sort ? { sort } : {}), ...(isFilter(one(sp.filter)) ? { filter: one(sp.filter) as Filter } : {}), hide: one(sp.hide) === "1" };
+  const byWay = way === "teaching" || way === "imitation" || way === "dialectic" ? way : undefined;
+  const state: ListState = { ...(sort ? { sort } : {}), ...(isFilter(one(sp.filter)) ? { filter: one(sp.filter) as Filter } : byWay ? { filter: byWay } : {}), hide: one(sp.hide) === "1" };
   const view = await learnView(user.id);
   const mine = new Map(view.books.filter((b) => b.catalog?.work).map((b) => [b.catalog!.work, b.status]));
 
@@ -83,8 +92,10 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
     <main className={PAGE}>
       <LearnHeader on="browse" />
       <div className="mt-6 space-y-5">
+        <BrowseNav m="books" way={way} />
         <div className="flex flex-wrap items-center gap-2">
           <form action="/learn/browse" className="flex min-w-0 flex-1 basis-72 gap-2">
+            <input type="hidden" name="m" value="books" />
             <label htmlFor="q" className="sr-only">Search books by title, author or ISBN</label>
             <Input id="q" name="q" defaultValue={q} placeholder="Search books by title, author or ISBN" className="h-10" />
             <Button type="submit" className="h-10">Search</Button>
@@ -93,7 +104,7 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
             label="Browse"
             lead={5}
             items={[
-              { href: "/learn/browse", label: "For you", on: !q && !section && !week && !fresh && !free },
+              { href: "/learn/browse?m=books", label: "For you", on: !q && !section && !week && !fresh && !free },
               { href: "/learn/browse?view=week", label: "This week", on: week },
               { href: "/learn/browse?view=new", label: "New this year", on: fresh },
               { href: "/learn/browse?view=free", label: "Free in the public domain", on: free },

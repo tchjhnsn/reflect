@@ -22,7 +22,8 @@ export type LearnItem = {
 };
 export type ItemLesson = { id: string; text: string; at: string };
 export type ItemSession = { id: string; day: string; minutes: number | null; note: string | null };
-export type ItemNote = { id: string; at: number | null; quote: string | null; note: string | null; created: string };
+export type ItemNote = { id: string; at: number | null; quote: string | null; note: string | null; created: string; unit: string | null };
+export type ItemUnit = { unit: string; place: number | null; doneOn: string | null };
 export type ItemFull = LearnItem & { lessons: ItemLesson[]; sessions: ItemSession[]; notes: ItemNote[]; claimIds: string[]; transcriptText: string | null };
 export type ItemInput = { medium: string; way?: string | null; status?: string; title: string; by?: string; url?: string; image?: string; work?: string; lesson?: string; startedOn?: string; finishedOn?: string; tookPart?: boolean; parts?: number; day?: string };
 
@@ -186,14 +187,14 @@ export async function removeSession(userId: string, sessionId: string): Promise<
 }
 
 /** A note at a moment in a video or recording (seconds), with the words quoted from its transcript if any. */
-export async function addItemNote(userId: string, id: string, n: { at?: number | null; quote?: string; note?: string }): Promise<string> {
+export async function addItemNote(userId: string, id: string, n: { at?: number | null; quote?: string; note?: string; unit?: string | null }): Promise<string> {
   const quote = clean(n.quote, 4000);
   const note = clean(n.note, 4000);
   if (!quote && !note) throw new Error("a note needs words");
   const at = n.at === null || n.at === undefined || !Number.isFinite(n.at) ? null : Math.max(0, Math.floor(n.at));
   const nid = randomUUID();
   await own(db(), userId, id);
-  await db().query("INSERT INTO learn_item_note (id, item_id, user_id, at_seconds, quote_ct, note_ct) VALUES ($1, $2, $3, $4, $5, $6)", [nid, id, userId, at, quote ? seal(userId, quote) : null, note ? seal(userId, note) : null]);
+  await db().query("INSERT INTO learn_item_note (id, item_id, user_id, at_seconds, quote_ct, note_ct, unit) VALUES ($1, $2, $3, $4, $5, $6, $7)", [nid, id, userId, at, quote ? seal(userId, quote) : null, note ? seal(userId, note) : null, unitOf(n.unit)]);
   return nid;
 }
 
@@ -224,6 +225,63 @@ export async function linkItemClaim(userId: string, id: string, claimId: string)
   const ok = await db().query("SELECT 1 FROM learn_claim WHERE id = $1 AND user_id = $2", [claimId, userId]);
   if (!ok.rowCount) throw new Error("no such claim");
   await db().query("INSERT INTO learn_item_claim (item_id, claim_id) VALUES ($1, $2) ON CONFLICT DO NOTHING", [id, claimId]);
+}
+
+const unitOf = (u: string | null | undefined) => (u && u.trim() ? u.trim().slice(0, 300) : null);
+
+/** Where the person is in one unit of an item (a lecture, an episode), and the day they watched or heard it. */
+export async function keepUnitPlace(userId: string, id: string, unit: string, seconds: number, day?: string, now = new Date()): Promise<void> {
+  const u = unitOf(unit);
+  const s = Math.max(0, Math.floor(seconds));
+  if (!u || !Number.isFinite(s)) return;
+  await tx(async (c) => {
+    const row = await own(c, userId, id);
+    await c.query(
+      `INSERT INTO learn_item_unit (item_id, user_id, unit, place_seconds) VALUES ($1, $2, $3, $4)
+       ON CONFLICT (item_id, unit) DO UPDATE SET place_seconds = $4, updated_at = now()`,
+      [id, userId, u, s],
+    );
+    const d = today(day, now);
+    if (row.status === "want") await c.query("UPDATE learn_item SET status = 'doing', started_on = COALESCE(started_on, $3::date), updated_at = now() WHERE id = $1 AND user_id = $2", [id, userId, d]);
+    await keepDay(c, userId, d);
+  });
+}
+
+/**
+ * Marks a unit finished (or not). How many are finished is how far through the item is; finishing the last of the
+ * units it has finishes the item, and finishing one starts an item not yet started.
+ */
+export async function setUnitDone(userId: string, id: string, unit: string, done: boolean, of: number | null, day?: string, now = new Date()): Promise<void> {
+  const u = unitOf(unit);
+  if (!u) return;
+  await tx(async (c) => {
+    const row = await own(c, userId, id);
+    const d = today(day, now);
+    await c.query(
+      `INSERT INTO learn_item_unit (item_id, user_id, unit, done_on) VALUES ($1, $2, $3, $4)
+       ON CONFLICT (item_id, unit) DO UPDATE SET done_on = $4, updated_at = now()`,
+      [id, userId, u, done ? d : null],
+    );
+    const n = Number((await c.query("SELECT count(*) AS n FROM learn_item_unit WHERE item_id = $1 AND done_on IS NOT NULL", [id])).rows[0]!.n);
+    const parts = of && of >= 1 && of <= 10000 ? Math.floor(of) : null;
+    // Taking back a lecture of a finished course reopens it; a course with a lecture finished is under way.
+    const status = parts && n >= parts ? "done" : !done && parts && row.status === "done" ? "doing" : n > 0 && row.status === "want" ? "doing" : row.status;
+    await c.query(
+      `UPDATE learn_item SET part = LEAST($3, COALESCE($4, parts, 10000)), parts = COALESCE($4, parts), status = $5,
+       started_on = CASE WHEN $5 <> 'want' THEN COALESCE(started_on, $6::date) ELSE started_on END,
+       finished_on = CASE WHEN $5 = 'done' THEN COALESCE(finished_on, $6::date) ELSE NULL END, updated_at = now()
+       WHERE id = $1 AND user_id = $2`,
+      [id, userId, n, parts, status, d],
+    );
+    if (done) await keepDay(c, userId, d);
+  });
+}
+
+/** Each unit of an item the person has begun or finished. */
+export async function listUnits(userId: string, id: string): Promise<ItemUnit[]> {
+  if (!UUID.test(id)) return [];
+  const r = await db().query("SELECT unit, place_seconds, done_on FROM learn_item_unit WHERE item_id = $1 AND user_id = $2", [id, userId]);
+  return r.rows.map((x) => ({ unit: x.unit as string, place: x.place_seconds === null ? null : Number(x.place_seconds), doneOn: dayOf(x.done_on) }));
 }
 
 /** Removes an item, kept so it can be restored. */
@@ -272,7 +330,7 @@ export async function getItem(userId: string, id: string): Promise<ItemFull | nu
   const [lessons, sessions, notes, claims, subs] = await Promise.all([
     db().query("SELECT id, text_ct, created_at FROM learn_item_lesson WHERE item_id = $1 ORDER BY created_at", [id]),
     db().query("SELECT id, day, minutes, note_ct FROM learn_item_session WHERE item_id = $1 ORDER BY day DESC, created_at DESC", [id]),
-    db().query("SELECT id, at_seconds, quote_ct, note_ct, created_at FROM learn_item_note WHERE item_id = $1 AND removed_at IS NULL ORDER BY at_seconds NULLS LAST, created_at", [id]),
+    db().query("SELECT id, at_seconds, quote_ct, note_ct, created_at, unit FROM learn_item_note WHERE item_id = $1 AND removed_at IS NULL ORDER BY at_seconds NULLS LAST, created_at", [id]),
     db().query("SELECT claim_id FROM learn_item_claim WHERE item_id = $1", [id]),
     db().query("SELECT s.subject_id, sub.name_ct FROM learn_item_subject s JOIN learn_subject sub ON sub.id = s.subject_id WHERE s.item_id = $1", [id]),
   ]);
@@ -281,7 +339,7 @@ export async function getItem(userId: string, id: string): Promise<ItemFull | nu
     ...itemOf(userId, x, subs.rows.map((s) => ({ id: s.subject_id as string, name: open(userId, s.name_ct as string) })).sort((a, b) => a.name.localeCompare(b.name)), ls.at(-1)?.text ?? null),
     lessons: ls,
     sessions: sessions.rows.map((s) => ({ id: s.id as string, day: dayOf(s.day)!, minutes: s.minutes === null ? null : Number(s.minutes), note: s.note_ct ? open(userId, s.note_ct as string) : null })),
-    notes: notes.rows.map((n) => ({ id: n.id as string, at: n.at_seconds === null ? null : Number(n.at_seconds), quote: n.quote_ct ? open(userId, n.quote_ct as string) : null, note: n.note_ct ? open(userId, n.note_ct as string) : null, created: new Date(n.created_at as string).toISOString() })),
+    notes: notes.rows.map((n) => ({ id: n.id as string, at: n.at_seconds === null ? null : Number(n.at_seconds), quote: n.quote_ct ? open(userId, n.quote_ct as string) : null, note: n.note_ct ? open(userId, n.note_ct as string) : null, created: new Date(n.created_at as string).toISOString(), unit: (n.unit as string | null) ?? null })),
     claimIds: claims.rows.map((c) => c.claim_id as string),
     transcriptText: x.transcript_ct ? open(userId, x.transcript_ct as string) : null,
   };

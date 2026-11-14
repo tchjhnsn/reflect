@@ -32,7 +32,7 @@ export const ITEM_LISTS: readonly ItemList[] = [
     source: "Massachusetts Institute of Technology, MIT OpenCourseWare (ocw.mit.edu)",
     items: [
       { title: "Linear Algebra (18.06)", by: "Gilbert Strang", medium: "course", url: "https://ocw.mit.edu/courses/18-06-linear-algebra-spring-2010/", about: ["linear algebra", "mathematics", "matrices"] },
-      { title: "Classical Mechanics (8.01SC)", by: "MIT Department of Physics", medium: "course", url: "https://ocw.mit.edu/courses/8-01sc-classical-mechanics-fall-2016/", about: ["physics", "mechanics", "science"] },
+      { title: "Introduction to Computer Science and Programming in Python (6.0001)", by: "Ana Bell, Eric Grimson and John Guttag", medium: "course", url: "https://ocw.mit.edu/courses/6-0001-introduction-to-computer-science-and-programming-in-python-fall-2016/", about: ["computer science", "programming", "python"] },
     ],
   },
   {

@@ -12,7 +12,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PAGE } from "@/components/page-header";
 import { requireUser } from "@/server/session";
-import { getItem } from "@/server/ways-store";
+import { getItem, listUnits } from "@/server/ways-store";
+import { lecturesOf } from "@/server/courses";
+import { showFor } from "@/server/podcasts";
+import { openLibrary } from "@/server/browse";
+import "@/server/free";
+import { searchBooks, type CatalogEntry } from "@reflect/core/openlibrary";
+import { clock } from "@reflect/core/media";
+import { COURSE_SITES } from "@reflect/core/courses";
 import { listIdeas, type IdeaOut } from "@/server/ideas-store";
 import { ideasNaming } from "@reflect/core/ideas";
 import { learnView } from "@/server/learn-store";
@@ -26,6 +33,7 @@ import {
 import { LocalDay } from "../local-day";
 import { ItemMedia } from "./media";
 import { PublishLesson } from "./publish-lesson";
+import { Artwork } from "./artwork";
 
 export const metadata: Metadata = { title: "Learn" };
 export const dynamic = "force-dynamic";
@@ -54,6 +62,19 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
   const [view, claims, published, ideas] = await Promise.all([learnView(user.id), listClaims(user.id).catch(() => []), publishedBy(user.id).catch(() => []), listIdeas(user.id).catch((): IdeaOut[] => [])]);
   // An item merged from an older input keeps its id, so an idea may name it either way.
   const bearing = [...new Map([...ideasNaming(ideas, `item:${item.id}`, item.title), ...ideasNaming(ideas, `input:${item.id}`, item.title)].map((b) => [b.idea.id, b])).values()];
+  const [course, show, units] = await Promise.all([
+    item.medium === "course" ? lecturesOf(item.url) : null,
+    item.medium === "podcast" ? showFor(item.url) : null,
+    item.medium === "course" || item.medium === "podcast" ? listUnits(user.id, item.id) : [],
+  ]);
+  // A play or a debate kept in writing is read (and often heard) in Reflect, as a book.
+  const text = (item.medium === "theatre" || (item.medium === "debate" && !embedOf(item.url)))
+    ? (await searchBooks([item.title.replace(/\s*\(.*\)\s*$/, ""), item.by].filter(Boolean).join(" "), openLibrary, 5).catch((): CatalogEntry[] => [])).find((b) => b.free)
+    : undefined;
+  const lectures = course?.lectures ?? [];
+  const finished = new Set(units.filter((u) => u.doneOn).map((u) => u.unit));
+  const begun = new Map(units.map((u) => [u.unit, u]));
+  const nextLecture = lectures.find((l) => !finished.has(String(l.n)));
   const m = mediumOf(item.medium);
   const place = placeOf(item);
   const way = item.way ?? m.way;
@@ -83,7 +104,7 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
             <div className="flex flex-wrap items-center gap-2"><Badge variant="secondary">{m.label}</Badge>{item.tookPart ? <Badge variant="outline">Took part</Badge> : null}</div>
             <h1 className="text-2xl font-semibold tracking-tight">{item.title}</h1>
             {item.by ? <p className="text-muted-foreground">{item.by}</p> : null}
-            {item.url ? <a href={item.url} target="_blank" rel="noreferrer" className="text-muted-foreground block truncate text-sm underline underline-offset-4">{new URL(item.url).hostname.replace(/^www\./, "")}</a> : null}
+            {course ? <p className="text-muted-foreground text-sm">From {COURSE_SITES[course.site].name} · {lectures.length} lectures · {finished.size} finished</p> : null}
             {adapts ? <p className="text-sm">Adapts <Link href={`/learn/works/${item.work}`} className="underline underline-offset-4">{adapts.title}</Link></p> : null}
           </div>
         </header>
@@ -102,7 +123,53 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
           <Button size="sm" variant="outline">Save dates</Button>
         </form>
 
-        {embed || item.notes.length || item.transcript ? section(embed ? `${m.done === "Heard" ? "Listen" : "Watch"} here` : "Notes", <ItemMedia id={item.id} title={item.title} by={item.by} embed={embed} place={item.place} notes={item.notes} transcript={item.transcriptText} />) : null}
+        {item.medium === "art" && item.image ? section("Look at it here", <Artwork src={item.image} title={item.title} />, "artwork") : null}
+
+        {text ? section(text.free?.read ? "Read it here" : "Listen here", (
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            {text.free?.read ? <Button size="sm" asChild><Link href={`/learn/works/${text.work}/read`}>Read {text.title}</Link></Button> : null}
+            {text.free?.listen ? <Button size="sm" variant="outline" asChild><Link href={`/learn/works/${text.work}#listen`}>Listen to it</Link></Button> : null}
+            <span className="text-muted-foreground">{text.authors.join(", ")}{text.year ? `, ${text.year}` : ""}, in Reflect&apos;s reader with highlights and excerpts.</span>
+          </div>
+        ), "text") : null}
+
+        {lectures.length ? section("Lectures", (
+          <>
+            {nextLecture ? <Button size="sm" asChild><Link href={`/learn/items/${item.id}/lectures/${nextLecture.n}`}>{finished.size || begun.size ? "Continue" : "Start"}: {nextLecture.title}</Link></Button> : <Note>You have finished every lecture.</Note>}
+            <ol className="divide-y text-sm">
+              {lectures.map((l) => {
+                const u = begun.get(String(l.n));
+                return (
+                  <li key={l.n} className="flex items-center gap-3 py-2">
+                    <span className="text-muted-foreground w-6 shrink-0 text-right tabular-nums">{l.n}</span>
+                    <Link href={`/learn/items/${item.id}/lectures/${l.n}`} className="min-w-0 flex-1 underline-offset-4 hover:underline">{l.title}</Link>
+                    <span className="text-muted-foreground shrink-0 text-xs">{u?.doneOn ? "Finished" : u?.place ? "Under way" : ""}</span>
+                  </li>
+                );
+              })}
+            </ol>
+            <p className="text-muted-foreground text-xs">Each lecture plays here from {COURSE_SITES[course!.site].name}, under the {COURSE_SITES[course!.site].license} license, with its transcript beside it.</p>
+          </>
+        ), "lectures") : null}
+
+        {show?.episodes.length ? section("Episodes", (
+          <>
+            <ol className="divide-y text-sm">
+              {show.episodes.slice(0, 50).map((e) => {
+                const u = begun.get(e.key);
+                return (
+                  <li key={e.key} className="flex items-center gap-3 py-2">
+                    <Link href={`/learn/items/${item.id}/episodes/${e.key}`} className="min-w-0 flex-1 underline-offset-4 hover:underline">{e.title}</Link>
+                    <span className="text-muted-foreground shrink-0 text-xs tabular-nums">{u?.doneOn ? "Heard" : u?.place ? "Under way" : [e.date, e.seconds ? clock(e.seconds) : null].filter(Boolean).join(" · ")}</span>
+                  </li>
+                );
+              })}
+            </ol>
+            <p className="text-muted-foreground text-xs">Each episode plays here from the show&apos;s own feed{show.episodes.length > 50 ? `; the latest 50 of ${show.episodes.length}` : ""}.</p>
+          </>
+        ), "episodes") : item.medium === "podcast" && item.url ? section("Episodes", <Note>The show&apos;s feed could not be read just now.</Note>) : null}
+
+        {embed || item.notes.some((n) => !n.unit) || item.transcript ? section(embed ? `${m.done === "Heard" ? "Listen" : "Watch"} here` : "Notes", <ItemMedia id={item.id} title={item.title} by={item.by} embed={embed} place={item.place} notes={item.notes.filter((n) => !n.unit)} transcript={item.transcriptText} />) : null}
 
         {section("What it taught you", (
           <>
@@ -139,7 +206,7 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
           </div>
         )) : null}
 
-        {item.medium === "course" || item.parts ? section("Parts", (
+        {!lectures.length && (item.medium === "course" || item.parts) ? section("Parts", (
           <form action={setItemFactsAction} className="flex flex-wrap items-center gap-2 text-sm">
             {hidden}
             <Button size="sm" variant="outline" name="step" value="-1" aria-label="One part back">−</Button>
