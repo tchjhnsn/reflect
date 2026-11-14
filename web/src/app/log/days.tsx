@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { BookOpenIcon, BookmarkIcon, CheckIcon, CircleSlashIcon, MessageSquareQuoteIcon, PlusIcon, RefreshCwIcon, SparklesIcon } from "lucide-react";
+import { BookOpenIcon, BookmarkIcon, CheckIcon, CircleSlashIcon, MessageSquareQuoteIcon, PencilIcon, PlayIcon, PlusIcon, RefreshCwIcon, RepeatIcon, SparklesIcon } from "lucide-react";
 import { actText, logByDay, type Act, type ActKind } from "@reflect/core/log";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-const ICON: Record<ActKind, typeof PlusIcon> = { intended: PlusIcon, started: BookOpenIcon, finished: CheckIcon, put_down: CircleSlashIcon, cited: BookmarkIcon, kept_claim: MessageSquareQuoteIcon, changed_stance: RefreshCwIcon, rated: SparklesIcon };
+const ICON: Record<ActKind, typeof PlusIcon> = { intended: PlusIcon, started: BookOpenIcon, finished: CheckIcon, put_down: CircleSlashIcon, cited: BookmarkIcon, kept_claim: MessageSquareQuoteIcon, changed_stance: RefreshCwIcon, rated: SparklesIcon, item_added: PlusIcon, item_started: PlayIcon, item_finished: CheckIcon, practised: RepeatIcon, learned: PencilIcon };
 const dayName = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 const time = (a: Act) => (a.at.length === 10 ? "" : new Date(a.at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }));
 
@@ -28,7 +28,7 @@ export function LogDays({ acts }: { acts: Act[] }) {
               {d.acts.map((a, i) => {
                 const Icon = ICON[a.kind];
                 return (
-                  <li key={i} className={cn("flex items-start gap-3 text-sm", a.kind === "intended" && "text-muted-foreground")}>
+                  <li key={i} className={cn("flex items-start gap-3 text-sm", (a.kind === "intended" || a.kind === "item_added") && "text-muted-foreground")}>
                     <Icon className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                     <span className="flex-1">{actText(a)}</span>
                     <span className="text-muted-foreground shrink-0 text-xs">{time(a) || "Learn"}</span>

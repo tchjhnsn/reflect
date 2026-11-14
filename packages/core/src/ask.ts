@@ -10,6 +10,9 @@ export const ASK_SYSTEM = `You are the chat inside Reflect, a person's private l
 
 You never answer from memory about the person. What you know of them is only the LEARN summary below, from their records. To show real records, call a tool; the app draws a card from each call:
 - show_shelves: their shelves (books and subjects by Thema section).
+- show_ways: what they learn from by the ways of learning (teaching, dialectic, imitation, practice, and rest and leisure): books and items such as lectures, debates, films, music and games, with each item's medium.
+- find_item(medium, query): look up a lecture, debate, podcast, film, series, play, music, art or game (a link, or a search of a free catalog) for them to add with one tap. Only what it returns exists; never name one from memory as if found.
+- quote_transcript(words, item?): find words in the transcripts they pasted for their videos and recordings, with the moment of each place. Quote only from what it returns.
 - show_claims: claims they keep, with their stance on each.
 - search_library(query): books from the open library they can add to their shelves.
 - browse_category(code): the best rated books in one Thema section (one letter) or category (two letters), such as ${THEMA.map((s) => `${s.code} ${s.short}`).join(", ")}; JM is psychology, JH sociology, FM fantasy.
@@ -45,12 +48,13 @@ export function themaCode(raw: unknown): string | null {
 }
 
 /** The LEARN summary the model may read: titles and names only, from the person's records. */
-export function learnSummary(l: { books: { title: string; status: string }[]; subjects: string[]; claims: { text: string; stance: string | null }[] }): string {
+export function learnSummary(l: { books: { title: string; status: string }[]; subjects: string[]; claims: { text: string; stance: string | null }[]; items?: { title: string; medium: string; status: string }[] }): string {
   const cut = <T,>(xs: T[], n: number) => xs.slice(0, n);
   return [
     "LEARN",
     `Books: ${cut(l.books, 40).map((b) => `${b.title} (${b.status})`).join("; ") || "none"}`,
     `Subjects: ${cut(l.subjects, 60).join("; ") || "none"}`,
     `Claims: ${cut(l.claims, 40).map((c) => `${c.text} (${c.stance ?? "no stance"})`).join("; ") || "none"}`,
+    ...(l.items ? [`Lectures, debates, films, music, games and more: ${cut(l.items, 40).map((i) => `${i.title} (${i.medium}, ${i.status})`).join("; ") || "none"}`] : []),
   ].join("\n");
 }

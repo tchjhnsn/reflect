@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { BookIcon, BookOpenIcon, HeadphonesIcon, StarIcon } from "lucide-react";
 import type { CatalogEntry } from "@reflect/core/openlibrary";
+import { categoryOf } from "@reflect/core/thema";
+import { WAYS, bookWay } from "@reflect/core/ways";
 import { Badge } from "@/components/ui/badge";
 import { AddBook } from "./add-book";
 
@@ -33,6 +35,7 @@ export function BookCard({ b, have, className = "" }: { b: CatalogEntry; have: s
           {b.year ? ` · ${b.year}` : ""}
         </p>
         {b.rating ? <p className="text-muted-foreground flex items-center gap-1 text-xs"><StarIcon className="size-3 fill-current" />{b.rating.average.toFixed(1)} <span>({b.rating.count.toLocaleString("en-US")})</span></p> : null}
+        <p className="text-muted-foreground text-[11px]" title="Way of learning">{WAYS.find((w) => w.id === bookWay(categoryOf(b), b.subjects))!.label}</p>
       </div>
       {have ? <Badge variant="secondary" className="h-8 w-fit max-w-full truncate">On your shelf · {STATUS[have] ?? have}</Badge> : <AddBook entry={b} />}
     </li>

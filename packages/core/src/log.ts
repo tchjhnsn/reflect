@@ -6,7 +6,7 @@
 import type { BookStatus, Grasp } from "./learning";
 import type { Stance } from "./claims";
 
-export type ActKind = "intended" | "started" | "finished" | "put_down" | "cited" | "kept_claim" | "changed_stance" | "rated";
+export type ActKind = "intended" | "started" | "finished" | "put_down" | "cited" | "kept_claim" | "changed_stance" | "rated" | "item_added" | "item_started" | "item_finished" | "practised" | "learned";
 export type Act = {
   /** An ISO timestamp, or a date (YYYY-MM-DD) when the record keeps only the day. */
   at: string;
@@ -30,6 +30,8 @@ export type LearnFacts = {
   }[];
   claims: { text: string; stances: { stance: Stance; at: string }[] }[];
   grasps: { subject: string; grasp: Grasp; at: string }[];
+  /** Lectures, debates, films, music, games and the rest (migrations 0023, 0024), with the medium's word for done. */
+  items?: { title: string; done: string; addedAt: string; startedOn: string | null; finishedOn: string | null; sessions: string[]; lessons: string[] }[];
 };
 
 const STATUS_ACT: Record<BookStatus, ActKind> = { want: "intended", reading: "started", read: "finished", abandoned: "put_down", referenced: "cited" };
@@ -55,6 +57,13 @@ export function learnActs(f: LearnFacts): Act[] {
     [...c.stances].sort((a, b) => a.at.localeCompare(b.at)).forEach((s, i) => acts.push({ at: s.at, app: "learn", kind: i === 0 ? "kept_claim" : "changed_stance", object: c.text, detail: s.stance }));
   }
   for (const g of f.grasps) acts.push({ at: g.at, app: "learn", kind: "rated", object: g.subject, detail: g.grasp });
+  for (const i of f.items ?? []) {
+    acts.push({ at: i.addedAt, app: "learn", kind: "item_added", object: i.title });
+    if (i.startedOn) acts.push({ at: i.startedOn, app: "learn", kind: "item_started", object: i.title });
+    if (i.finishedOn) acts.push({ at: i.finishedOn, app: "learn", kind: "item_finished", object: i.title, detail: i.done });
+    for (const d of i.sessions) acts.push({ at: d, app: "learn", kind: "practised", object: i.title });
+    for (const at of i.lessons) acts.push({ at, app: "learn", kind: "learned", object: i.title });
+  }
   return acts;
 }
 
@@ -72,6 +81,11 @@ export function actText(a: Act): string {
     case "kept_claim": return `Kept a claim as ${STANCE[a.detail ?? ""] ?? a.detail}: ${a.object}`;
     case "changed_stance": return `Changed your stance to ${STANCE[a.detail ?? ""] ?? a.detail}: ${a.object}`;
     case "rated": return `Said you ${GRASP[a.detail ?? ""] ?? a.detail} ${a.object}`;
+    case "item_added": return `Added ${a.object} to your shelves`;
+    case "item_started": return `Started ${a.object}`;
+    case "item_finished": return `${a.detail ?? "Finished"} ${a.object}`;
+    case "practised": return `Practised ${a.object}`;
+    case "learned": return `Wrote what ${a.object} taught you`;
   }
 }
 

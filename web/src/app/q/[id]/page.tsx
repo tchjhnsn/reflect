@@ -10,17 +10,25 @@ type Props = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const q = await publishedQuote((await params).id).catch(() => null);
   if (!q) return { title: "Quote" };
-  const by = [q.author, q.title].filter(Boolean).join(", ");
+  const by = q.kind === "lesson" ? `What ${q.title} taught me` : [q.author, q.title].filter(Boolean).join(", ");
   return { title: by, description: q.quote.slice(0, 200), openGraph: { title: by, description: q.quote.slice(0, 200) } };
 }
 
 /**
- * A quote the person chose to publish, as a card with its citation. Public: anyone with the link sees it, and only
+ * A quote the person chose to publish, as a card with its citation, or a lesson, with what taught it. Public: anyone with the link sees it, and only
  * it. Taken down, the page is gone.
  */
 export default async function QuotePage({ params }: Props) {
   const q = await publishedQuote((await params).id).catch(() => null);
   if (!q) notFound();
+  if (q.kind === "lesson") return (
+    <main className="flex min-h-svh items-center justify-center px-4 py-16">
+      <figure className="bg-card w-full max-w-2xl rounded-xl border p-8 shadow-sm sm:p-12">
+        <figcaption className="text-muted-foreground mb-6 text-sm">What <span className="text-foreground italic">{q.title}</span>{q.author ? ` (${q.author}${q.place ? `, ${q.place.toLowerCase()}` : ""})` : q.place ? ` (${q.place.toLowerCase()})` : ""} taught me</figcaption>
+        <blockquote className="font-serif text-2xl leading-relaxed text-pretty sm:text-3xl">{q.quote}</blockquote>
+      </figure>
+    </main>
+  );
   return (
     <main className="flex min-h-svh items-center justify-center px-4 py-16">
       <figure className="bg-card w-full max-w-2xl rounded-xl border p-8 shadow-sm sm:p-12">

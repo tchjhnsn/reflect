@@ -15,6 +15,8 @@ import { siteUrl } from "./site";
 import { STANCES, type Stance, type Target } from "@reflect/core/ideas";
 import { FILM_KINDS, FILM_STATUS, RESOURCE_KINDS, type FilmStatus } from "@reflect/core/learning";
 import { addInput, keepIdea, listIdeas, listInputs, markSubject, resolveByTitle, inputTitle } from "./ideas-store";
+import { addItem, addItemSubjects, changeItem, listItems } from "./ways-store";
+import { MEDIA, WAYS, placeOf } from "@reflect/core/ways";
 
 export const GUIDE = [
   "Reflect keeps a person's journal, what they learn, their own ideas and the plan for what survives them. You help them write and keep things; you never decide for them.",
@@ -84,6 +86,7 @@ export async function toolLearning(userId: string) {
     courses: courses.map((c) => ({ ...c.row, your_grasp: c.subject.grasp?.grasp ?? null })),
     credentials: credentials.map((c) => ({ name: c.name, issuer: c.issuer, issued: c.issued ?? null, subjects: c.subjects, checked: c.checked ?? null })),
     books: v.books.map((b) => ({ id: b.id, title: b.title, authors: b.authors, status: b.status, finished: b.finishedOn, subjects: b.subjects.map((s) => s.name), not_yet_rated: b.unrated })),
+    items: (await listItems(userId).catch(() => [])).map((i) => ({ id: i.id, medium: i.medium, way: placeOf(i), title: i.title, by: i.by, url: i.url, status: i.status, finished: i.finishedOn, lesson: i.lesson, subjects: i.subjects.map((x) => x.name) })),
   };
 }
 
@@ -212,6 +215,32 @@ export function reflectServer(userId: string): McpServer {
       : { kind: "link" as const, title: title || a.url || "", link: a.link ?? "article", ...(a.url ? { url: a.url } : {}), ...(who.length ? { by: who.join(", ") } : {}) };
     return text({ input_id: await addInput(userId, body, a.subjects ?? []) });
   });
+
+  server.registerTool("add_item", {
+    title: "Keep a lecture, debate, film, music, game or the like",
+    description: `Something the person learned from, or keeps for rest, beside books, by its medium: ${MEDIA.map((m) => m.id).join(", ")}. Its way of learning follows the medium unless the person names one (${WAYS.map((w) => w.id).join(", ")}). A game, music or art counts as learning only with a lesson, in the person's own words. Keep only what the person confirms, as they state it.`,
+    inputSchema: z.object({
+      medium: z.enum(MEDIA.map((m) => m.id) as [string, ...string[]]),
+      title: z.string().min(1),
+      by: z.string().optional(),
+      url: z.string().url().optional(),
+      status: z.enum(["want", "doing", "done"]).default("done"),
+      way: z.enum(WAYS.map((w) => w.id) as [string, ...string[]]).optional(),
+      lesson: z.string().optional().describe("what it taught the person, in their words"),
+      took_part: z.boolean().optional().describe("for a debate or discussion: the person took part"),
+      subjects: z.array(z.string().min(1)).max(30).optional(),
+    }),
+  }, async (a) => {
+    const id = await addItem(userId, { medium: a.medium, title: a.title, ...(a.by ? { by: a.by } : {}), ...(a.url ? { url: a.url } : {}), status: a.status, ...(a.way ? { way: a.way } : {}), ...(a.lesson ? { lesson: a.lesson } : {}), ...(a.took_part ? { tookPart: true } : {}) });
+    if (a.subjects?.length) await addItemSubjects(userId, id, a.subjects);
+    return text({ item_id: id });
+  });
+
+  server.registerTool("add_lesson", {
+    title: "Keep what an item taught the person",
+    description: "A lesson in the person's own words, added to an item with the date; earlier lessons are kept. Never write it for them.",
+    inputSchema: z.object({ item_id: z.string().uuid(), lesson: z.string().min(1) }),
+  }, async ({ item_id, lesson }) => text(await changeItem(userId, item_id, { lesson }).then(() => ({ ok: true }))));
 
   server.registerTool("mark_subject", {
     title: "Note that the person showed knowledge of a subject, or suggest one",

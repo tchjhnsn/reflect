@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { foldIdea, isStance, STANCES, type Idea, type IdeaLine, type Stance, type Target } from "@reflect/core/ideas";
 import { FILM_KINDS, FILM_STATUS, RESOURCE_KINDS, sourceOf, type FilmStatus } from "@reflect/core/learning";
 import { db } from "@/db/pool";
+import { mergeInputs } from "./ways-store";
 import { open, seal, tag } from "./crypto";
 import { subjectId, subjects, tx } from "./learn-store";
 
@@ -64,6 +65,9 @@ export async function addInput(userId: string, input: InputBody, subjectNames: s
     const kept = (await c.query("SELECT id FROM learn_input WHERE user_id = $1 AND dedupe_tag = $2", [userId, t])).rows[0]!.id as string;
     for (const s of subjectNames) if (one(s)) await c.query("INSERT INTO learn_input_subject (input_id, subject_id) VALUES ($1, $2) ON CONFLICT DO NOTHING", [kept, await subjectId(c, userId, s)]);
     return kept;
+  }).then(async (kept) => {
+    await mergeInputs(userId).catch(() => 0);
+    return kept;
   });
 }
 
@@ -87,8 +91,8 @@ export async function markSubject(userId: string, name: string, kind: "shown" | 
 }
 
 /** What can be named as an input or a recommendation: a book, an input, a subject or another idea, by id. */
-export type RefKind = "book" | "input" | "subject" | "idea";
-const REF = /^(book|input|subject|idea):([0-9a-f-]{36})$/;
+export type RefKind = "book" | "input" | "item" | "subject" | "idea";
+const REF = /^(book|input|item|subject|idea):([0-9a-f-]{36})$/;
 
 export type IdeaChange = {
   statement?: string;
@@ -102,7 +106,7 @@ export type IdeaOut = Idea & { labels: Record<string, string> };
 async function ownsRef(userId: string, ref: string): Promise<boolean> {
   const m = REF.exec(ref);
   if (!m) return false;
-  const table = { book: "learn_book", input: "learn_input", subject: "learn_subject", idea: "idea" }[m[1] as RefKind];
+  const table = { book: "learn_book", input: "learn_input", item: "learn_item", subject: "learn_subject", idea: "idea" }[m[1] as RefKind];
   return (await db().query(`SELECT 1 FROM ${table} WHERE id = $1 AND user_id = $2`, [m[2], userId])).rowCount === 1;
 }
 
@@ -157,6 +161,9 @@ export async function labels(userId: string): Promise<Record<string, string>> {
   for (const x of (await db().query("SELECT id, title_ct FROM idea WHERE user_id = $1", [userId])).rows) out[`idea:${x.id}`] = open(userId, x.title_ct as string);
   for (const s of (await subjects(userId)).values()) out[`subject:${s.id}`] = s.name;
   for (const i of await listInputs(userId)) out[`input:${i.id}`] = inputTitle(i.body);
+  // Items (migration 0023); an input merged into items keeps its id, so it is named once, as an input.
+  const items = await db().query("SELECT id, body_ct FROM learn_item WHERE user_id = $1 AND removed_at IS NULL", [userId]).catch(() => ({ rows: [] as Record<string, unknown>[] }));
+  for (const x of items.rows) if (!out[`input:${x.id}`]) out[`item:${x.id}`] = (JSON.parse(open(userId, x.body_ct as string)) as { title: string }).title;
   return out;
 }
 
@@ -179,7 +186,7 @@ export async function resolveByTitle(userId: string, title: string): Promise<Tar
   const t = one(title).toLowerCase();
   if (/^https?:\/\/\S+$/.test(title.trim())) return { text: title.trim(), url: title.trim() };
   const names = await labels(userId);
-  for (const kind of ["book", "input", "idea", "subject"] as const) {
+  for (const kind of ["book", "input", "item", "idea", "subject"] as const) {
     const hit = Object.entries(names).find(([k, v]) => k.startsWith(`${kind}:`) && v.toLowerCase() === t);
     if (hit) return { ref: hit[0] };
   }

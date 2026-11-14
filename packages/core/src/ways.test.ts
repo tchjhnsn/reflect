@@ -32,3 +32,11 @@ describe("ways of learning", () => {
     expect(isWay("leisure")).toBe(false);
   });
 });
+
+describe("dialogues", () => {
+  it("puts written dialogues under dialectic", async () => {
+    const { bookWay } = await import("./ways");
+    expect(bookWay("FBC", ["Socrates", "Dialogues, Greek"])).toBe("dialectic");
+    expect(bookWay("FBC", ["Socrates"])).toBe("imitation");
+  });
+});

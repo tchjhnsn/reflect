@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { BOOK_STATUS, type BookStatus } from "@reflect/core/learning";
 import { cleanEntry, workEntry } from "@reflect/core/openlibrary";
 import { importGoodreads, type ImportReport } from "@/server/goodreads-import";
@@ -9,9 +10,13 @@ import { addBook, keepPlace, rankWant, setBookStatus, setFinishedOn, setGoal, ty
 import { keepClaim, setStance } from "@/server/claims-store";
 import { addExcerpt, allExcerpts, removeExcerpt, reviseExcerpt, type Anchor } from "@/server/excerpt-store";
 import { importKindle, type KindleReport } from "@/server/kindle-import";
-import { publishQuote, unpublishQuote } from "@/server/published-store";
+import { publishLesson, publishQuote, unpublishQuote } from "@/server/published-store";
 import { importWork } from "@/server/work-store";
-import { addItem, changeItem, removeItem, setBookWay } from "@/server/ways-store";
+import { addItem, addItemNote, addItems, addItemSubjects, addSession, changeItem, editItem, getItem, keepItemPlace, linkItemClaim, removeItem, removeItemNote, removeItemSubject, removeSession, restoreItem, setBookWay, setItemDates, setItemFacts, setTranscript } from "@/server/ways-store";
+import { mediumOf } from "@reflect/core/ways";
+import { lookLink, searchMedium, type Fetch, type Found, type Searched } from "@reflect/core/lookup";
+import type { Candidate } from "@reflect/core/item-imports";
+import { itemListById } from "@reflect/core/item-lists";
 import { excerptsMarkdown, isHighlightColor } from "@reflect/core/excerpts";
 import { bestListMatch, listBookQuery, listById } from "@reflect/core/lists";
 import { searchBooks } from "@reflect/core/openlibrary";
@@ -221,35 +226,217 @@ export async function followListAction(id: string): Promise<number> {
   return added.length;
 }
 
-/** Keep a lecture, debate, discussion, podcast, film, music, art or game, with what it taught the person. */
-export async function addItemAction(form: FormData): Promise<void> {
-  const user = await requireUser();
-  const s = (k: string) => String(form.get(k) ?? "");
-  await addItem(user.id, { medium: s("medium"), way: s("way") || null, status: s("status"), title: s("title"), by: s("by"), url: s("url"), lesson: s("lesson") });
-  revalidatePath("/learn");
+const catalog: Fetch = (url) => fetch(url, { headers: { "user-agent": "reflect-app (learn items)" }, next: { revalidate: 86400 }, signal: AbortSignal.timeout(8000) });
+const field = (form: FormData, k: string) => String(form.get(k) ?? "");
+const has = (form: FormData, k: string) => form.has(k);
+
+/** Reads a pasted link into an item to add (title, maker, picture), from the site's own endpoint. */
+export async function lookLinkAction(url: string): Promise<{ found: Found | null; error?: string }> {
+  await requireUser();
+  return lookLink(url, catalog);
 }
 
-/** Change an item's way (empty follows its kind), status, or what it taught the person. */
-export async function changeItemAction(form: FormData): Promise<void> {
+/** Searches the free catalog for a medium. */
+export async function searchItemsAction(medium: string, q: string): Promise<Searched> {
+  await requireUser();
+  return searchMedium(medium, q, catalog);
+}
+
+/** Keep a lecture, course, article, debate, discussion, podcast, film, music, art or game. */
+export async function addItemAction(form: FormData): Promise<void> {
   const user = await requireUser();
-  const id = String(form.get("item") ?? "");
-  await changeItem(user.id, id, {
-    ...(form.has("way") ? { way: String(form.get("way")) || null } : {}),
-    ...(form.has("status") ? { status: String(form.get("status")) } : {}),
-    ...(form.has("lesson") ? { lesson: String(form.get("lesson")) } : {}),
+  const parts = Number(field(form, "parts"));
+  await addItem(user.id, {
+    medium: field(form, "medium"), way: field(form, "way") || null, status: field(form, "status"), title: field(form, "title"), by: field(form, "by"), url: field(form, "url"),
+    image: field(form, "image"), work: field(form, "work"), lesson: field(form, "lesson"), tookPart: field(form, "took_part") === "on", day: field(form, "day"),
+    ...(parts ? { parts } : {}),
   });
   revalidatePath("/learn");
 }
 
+/** Keeps the candidates the person picked from an import; returns how many were new. */
+export async function importItemsAction(list: Candidate[]): Promise<number> {
+  const user = await requireUser();
+  const n = await addItems(user.id, list.slice(0, 500));
+  revalidatePath("/learn");
+  return n;
+}
+
+/** Change an item's way (empty follows its medium), status, or add what it taught the person. */
+export async function changeItemAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  const id = field(form, "item");
+  await changeItem(user.id, id, {
+    ...(has(form, "way") ? { way: field(form, "way") || null } : {}),
+    ...(has(form, "status") ? { status: field(form, "status") } : {}),
+    ...(has(form, "lesson") ? { lesson: field(form, "lesson") } : {}),
+    day: field(form, "day"),
+  });
+  revalidatePath("/learn");
+  revalidatePath(`/learn/items/${id}`);
+}
+
+/** Change an item's title, maker, link, picture or the book it adapts. */
+export async function editItemAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  await editItem(user.id, field(form, "item"), {
+    ...(has(form, "title") ? { title: field(form, "title") } : {}),
+    ...(has(form, "by") ? { by: field(form, "by") || null } : {}),
+    ...(has(form, "url") ? { url: field(form, "url") || null } : {}),
+    ...(has(form, "image") ? { image: field(form, "image") || null } : {}),
+    ...(has(form, "work") ? { work: field(form, "work") || null } : {}),
+  });
+  revalidatePath("/learn");
+  revalidatePath(`/learn/items/${field(form, "item")}`);
+}
+
+/** Remove an item; the page then offers to undo it. */
 export async function removeItemAction(form: FormData): Promise<void> {
   const user = await requireUser();
-  await removeItem(user.id, String(form.get("item") ?? ""));
+  const id = field(form, "item");
+  await removeItem(user.id, id);
+  revalidatePath("/learn");
+  redirect(`/learn?removed=${id}`);
+}
+
+export async function restoreItemAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  const id = field(form, "item");
+  await restoreItem(user.id, id);
+  revalidatePath("/learn");
+  redirect(`/learn?item=${id}`);
+}
+
+/** Move a book to another way of learning, or back to the way its catalog gives (empty). */
+export async function setBookWayAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  await setBookWay(user.id, field(form, "book"), field(form, "way") || null);
   revalidatePath("/learn");
 }
 
-/** Move a book to another way of learning, or back to the way its category gives (empty). */
-export async function setBookWayAction(form: FormData): Promise<void> {
+/** Add a list's items (or one, by title) to Want to, skipping what the person keeps. */
+export async function addFromItemListAction(form: FormData): Promise<void> {
   const user = await requireUser();
-  await setBookWay(user.id, String(form.get("book") ?? ""), String(form.get("way") ?? "") || null);
-  revalidatePath("/learn");
+  const list = itemListById(field(form, "list"));
+  if (!list) throw new Error("no such list");
+  const title = field(form, "title");
+  const pick = list.items.filter((i) => !title || i.title === title);
+  await addItems(user.id, pick.map((i) => ({ medium: i.medium, title: i.title, ...(i.by ? { by: i.by } : {}), ...(i.url ? { url: i.url } : {}), status: "want" as const })));
+  revalidatePath(`/learn/lists/items/${list.id}`);
+}
+
+const itemPath = (id: string) => `/learn/items/${id}`;
+const num = (v: string) => (v.trim() === "" ? null : Number(v));
+
+/** Where the person is in a video or recording, kept as they watch or listen. */
+export async function keepItemPlaceAction(id: string, seconds: number, day?: string): Promise<void> {
+  const user = await requireUser();
+  await keepItemPlace(user.id, id, seconds, day);
+}
+
+/** A note at a moment, with words quoted from the transcript if any. */
+export async function addItemNoteAction(id: string, n: { at?: number | null; quote?: string; note?: string }): Promise<string> {
+  const user = await requireUser();
+  const nid = await addItemNote(user.id, id, n);
+  revalidatePath(itemPath(id));
+  return nid;
+}
+
+export async function removeItemNoteAction(id: string, noteId: string): Promise<void> {
+  const user = await requireUser();
+  await removeItemNote(user.id, noteId);
+  revalidatePath(itemPath(id));
+}
+
+export async function setTranscriptAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  const id = field(form, "item");
+  await setTranscript(user.id, id, field(form, "transcript") || null);
+  revalidatePath(itemPath(id));
+}
+
+export async function setItemDatesAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  const id = field(form, "item");
+  await setItemDates(user.id, id, { startedOn: field(form, "started") || null, finishedOn: field(form, "finished") || null });
+  revalidatePath(itemPath(id));
+}
+
+/** Took part or only heard it; how far through a course and of how many parts. */
+export async function setItemFactsAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  const id = field(form, "item");
+  const step = field(form, "step");
+  const cur = await getItem(user.id, id);
+  if (!cur) throw new Error("no such item");
+  await setItemFacts(user.id, id, {
+    ...(has(form, "took_part") ? { tookPart: field(form, "took_part") === "yes" } : {}),
+    ...(has(form, "parts") ? { parts: num(field(form, "parts")) } : {}),
+    ...(has(form, "part") ? { part: num(field(form, "part")) } : {}),
+    ...(step ? { part: Math.max(0, (cur.part ?? 0) + Number(step)) } : {}),
+  });
+  revalidatePath(itemPath(id));
+}
+
+/** A practice session: the day, minutes if given, and a note. */
+export async function addSessionAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  const id = field(form, "item");
+  const minutes = num(field(form, "minutes"));
+  await addSession(user.id, id, { day: field(form, "on") || field(form, "day"), ...(minutes ? { minutes } : {}), note: field(form, "note") });
+  revalidatePath(itemPath(id));
+}
+
+export async function removeSessionAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  await removeSession(user.id, field(form, "session"));
+  revalidatePath(itemPath(field(form, "item")));
+}
+
+/** Subjects the item is about, comma separated. */
+export async function addItemSubjectsAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  const id = field(form, "item");
+  await addItemSubjects(user.id, id, field(form, "subjects").split(","));
+  revalidatePath(itemPath(id));
+}
+
+export async function removeItemSubjectAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  const id = field(form, "item");
+  await removeItemSubject(user.id, id, field(form, "subject"));
+  revalidatePath(itemPath(id));
+}
+
+/** A claim argued in a debate or discussion: its words, who argued it (the sides), and the person's stance. */
+export async function keepItemClaimAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  const id = field(form, "item");
+  const item = await getItem(user.id, id);
+  if (!item) throw new Error("no such item");
+  const holders = field(form, "holders").split("\n").map((l) => l.trim()).filter(Boolean).map((name) => ({ name: name.slice(0, 200), citation: item.title.slice(0, 300) }));
+  const claim = await keepClaim(user.id, { text: field(form, "claim"), holders, ...(field(form, "subject") ? { subject: field(form, "subject") } : {}), stance: field(form, "stance") });
+  await linkItemClaim(user.id, id, claim);
+  revalidatePath(itemPath(id));
+}
+
+export async function setItemStanceAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  await setStance(user.id, field(form, "claim"), field(form, "stance"));
+  revalidatePath(itemPath(field(form, "item")));
+}
+
+/** Publish the item's latest lesson at its own page, once the person confirms. */
+export async function publishLessonAction(id: string): Promise<string> {
+  const user = await requireUser();
+  const item = await getItem(user.id, id);
+  if (!item?.lesson) throw new Error("this item has no lesson to publish");
+  return publishLesson(user.id, { lesson: item.lesson, title: item.title, by: item.by, medium: mediumOf(item.medium).label });
+}
+
+/** Take a published quote or lesson down, from a form. */
+export async function unpublishQuoteFormAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  await unpublishQuote(user.id, field(form, "id"));
+  if (field(form, "item")) revalidatePath(`/learn/items/${field(form, "item")}`);
 }
