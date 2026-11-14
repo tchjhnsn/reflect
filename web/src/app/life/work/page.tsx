@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { PenLineIcon, PlusIcon, SearchIcon, SparklesIcon } from "lucide-react";
+import { PenLineIcon, PlusIcon, SparklesIcon } from "lucide-react";
 import { familyOf, ZONES, type Suggestion } from "@reflect/core/work-browse";
 import { PAGE } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -57,7 +57,7 @@ const GRID = "grid gap-3 sm:grid-cols-2 lg:grid-cols-4";
 
 /**
  * Work's workspace (Torian, 2026-11-14 17:44Z): the work this person wants, with what moves them toward each; what
- * their needs leave to earn now, after what family covers, and the time learning takes; and the jobs that fit now
+ * their needs leave to earn now, after what family covers, and the time learning and caring for kin take; and the jobs that fit now
  * and that what they are learning leads to. Browse, income and the rest are the tabs after it.
  */
 export default async function WorkPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -73,14 +73,11 @@ export default async function WorkPage({ searchParams }: { searchParams: Promise
       <WorkHeader on="space" />
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-10">
         <section className="grid gap-3">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold tracking-tight">Work you want</h2>
-              <p className="text-muted-foreground text-sm">Jobs, careers and ventures you like. Open one to write what moves you toward it.</p>
-            </div>
-            <Button asChild variant="outline" size="sm"><Link href="/life/work/browse"><SearchIcon />Find work</Link></Button>
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight">Work you want</h2>
+            <p className="text-muted-foreground text-sm">Jobs, careers and ventures you like. Open one to write what moves you toward it.</p>
           </div>
-          {s.wanted.length ? <ul className={GRID}>{s.wanted.map((w) => <WantedCard key={w.record.id} w={w} />)}</ul> : <p className="text-muted-foreground text-sm">Nothing yet. Browse work and press It inspires me on what you like, or add your own.</p>}
+          {s.wanted.length ? <ul className={GRID}>{s.wanted.map((w) => <WantedCard key={w.record.id} w={w} />)}</ul> : <p className="text-muted-foreground text-sm">Nothing yet. <Link href="/life/work/browse" className="underline underline-offset-2">Browse work</Link> and press It inspires me on what you like, or add your own.</p>}
           <form action={addOwnAction} className="flex flex-wrap items-center gap-2">
             <Input name="title" placeholder="Add your own: a job, a career or a venture" aria-label="Name of the work" className="h-9 max-w-sm" required />
             <select name="type" aria-label="Kind of work" className={SELECT} defaultValue="venture">
@@ -114,7 +111,7 @@ export default async function WorkPage({ searchParams }: { searchParams: Promise
             </div>
             <div className="rounded-xl border p-4">
               <dt className="text-muted-foreground text-xs">Time</dt>
-              <dd className="mt-1 text-sm">{s.learningHours ? <>Learning <span className="font-semibold">{s.learningHours} hours a week</span>, from your sessions in <Link href="/learn" className="underline underline-offset-2">Learn</Link> over four weeks.</> : <>No learning sessions kept in <Link href="/learn" className="underline underline-offset-2">Learn</Link> these four weeks.</>}</dd>
+              <dd className="mt-1 text-sm">{s.learningHours ? <>Learning <span className="font-semibold">{s.learningHours} hours a week</span>, from your sessions in <Link href="/learn" className="underline underline-offset-2">Learn</Link> over four weeks.</> : <>No learning sessions kept in <Link href="/learn" className="underline underline-offset-2">Learn</Link> these four weeks.</>}{s.careHours ? <> Caring for <Link href="/life/kin" className="underline underline-offset-2">kin</Link>, <span className="font-semibold">{s.careHours} hours a week</span>.</> : null}</dd>
               <dd className="mt-2">
                 <form action={hoursAction} className="flex flex-wrap items-center gap-2 text-sm">
                   <label className="flex items-center gap-2"><Input name="hours" type="number" min={0} max={100} defaultValue={s.hours ?? ""} className="h-8 w-16" aria-label="Hours a week you can give to work" />hours a week for work</label>
@@ -123,6 +120,7 @@ export default async function WorkPage({ searchParams }: { searchParams: Promise
               </dd>
             </div>
           </dl>
+          <p className="text-muted-foreground text-sm">Also kept: <Link href="/life/work?k=work" className="hover:text-foreground underline underline-offset-2">the work you do</Link> and <Link href="/life/work?k=credential" className="hover:text-foreground underline underline-offset-2">your credentials</Link>.</p>
         </section>
 
         <section className="grid gap-3">

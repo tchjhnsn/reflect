@@ -1,10 +1,9 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { BuildingIcon, ChevronRightIcon, SparklesIcon } from "lucide-react";
+import { BuildingIcon, CalendarIcon, ChevronRightIcon, CompassIcon, NotebookPenIcon, SparklesIcon } from "lucide-react";
 import { ORIGINS } from "@reflect/core/origins";
 import { familyOf, parseRef, refHref, type Company, type Filing, type Job, type WikiWork } from "@reflect/core/work-browse";
 import { SectionHeader, ThingHeader } from "@/components/headers";
-import { Segmented } from "@/components/segmented";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -13,19 +12,22 @@ import { inspireAction } from "./inspire-action";
 
 export type WorkTab = "space" | "browse" | "work" | "income" | "household" | "credential";
 
-/** Work's header: the person's own workspace first, then browsing work, then the work they do, income and credentials. */
+/**
+ * Work's header (Torian, 2026-11-14 18:21Z: "The only thing needed is the workspace and the icons"): the title, which
+ * leads back to the workspace, and icons for browsing work, the journal and Work's calendar. No search and no tabs;
+ * income, the intended household, the work you do and credentials are reached from the workspace.
+ */
 export function WorkHeader({ on }: { on: WorkTab | null }) {
+  const icon = (label: string, href: string, here: boolean, children: ReactNode) => (
+    <Button asChild variant={here ? "secondary" : "ghost"} size="icon" aria-label={label} title={label}><Link href={href} aria-current={here ? "page" : undefined}>{children}</Link></Button>
+  );
   return (
-    <SectionHeader back="/" backLabel="Home" title="Work" tabs={
-      <Segmented label="Work parts" items={[
-        { label: "Workspace", href: "/life/work", on: on === "space" },
-        { label: "Browse", href: "/life/work/browse", on: on === "browse" },
-        { label: "Work you do", href: "/life/work?k=work", on: on === "work" },
-        { label: "Income", href: "/life/work?k=income", on: on === "income" },
-        { label: "Intended household", href: "/life/work?k=household", on: on === "household" },
-        { label: "Credentials", href: "/life/work?k=credential", on: on === "credential" },
-        { label: "Calendar", href: "/calendar?tile=work", on: false },
-      ]} />
+    <SectionHeader back={on === "space" ? "/" : "/life/work"} backLabel={on === "space" ? "Home" : "Workspace"} title="Work" icons={
+      <div className="flex items-center gap-1">
+        {icon("Browse work", "/life/work/browse", on === "browse", <CompassIcon />)}
+        {icon("Journal", "/journal", false, <NotebookPenIcon />)}
+        {icon("Work's calendar", "/calendar?tile=work", false, <CalendarIcon />)}
+      </div>
     } />
   );
 }

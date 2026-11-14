@@ -11,7 +11,7 @@ import { SearchButton } from "./search-button";
 // Three kinds of header, each matched to its page (Torian, 2026-11-14): a section's pages keep the section's tabs;
 // one thing's page (a book, a course, an author) says where it sits and, once its title scrolls away, carries its
 // name and main action; a page where you are doing something (a lecture, the reader) is quiet, with back to the thing.
-// All stay at the top of the screen and all have search.
+// All stay at the top of the screen and have search, except a section with its own icons (Work, 2026-11-14 18:21Z).
 
 export type Crumb = { label: string; href?: string };
 
@@ -25,8 +25,11 @@ function Back({ fallback, label }: { fallback: string; label: string }) {
   );
 }
 
-/** A section's header: its title, its tabs (in a row of their own on a phone, which scrolls), and search. */
-export function SectionHeader({ back, backLabel, title, tabs }: { back: string; backLabel: string; title: string; tabs?: ReactNode }) {
+/**
+ * A section's header: its title, its tabs (in a row of their own on a phone, which scrolls), and search. A section
+ * that gives its own icons (Work: browse, journal, calendar) shows them instead of search.
+ */
+export function SectionHeader({ back, backLabel, title, tabs, icons }: { back: string; backLabel: string; title: string; tabs?: ReactNode; icons?: ReactNode }) {
   return (
     <header className={cn(BAR, "py-2")}>
       <div className="flex min-h-10 items-center gap-3">
@@ -34,7 +37,7 @@ export function SectionHeader({ back, backLabel, title, tabs }: { back: string; 
         <h1 className="truncate text-2xl font-semibold tracking-tight">{title}</h1>
         <div className="ml-auto flex items-center gap-2">
           {tabs ? <div className="hidden items-center gap-2 md:flex">{tabs}</div> : null}
-          <SearchButton />
+          {icons ?? <SearchButton />}
         </div>
       </div>
       {tabs ? <div className="-mx-1 mt-2 flex items-center gap-2 overflow-x-auto px-1 pb-1 md:hidden">{tabs}</div> : null}

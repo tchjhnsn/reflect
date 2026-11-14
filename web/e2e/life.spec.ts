@@ -21,6 +21,20 @@ test("a friend kept from the Friends tile, with a state and a visit, shows in th
   await page.goto("/journal/log");
   await expect(page.getByText(`Spent time with ${name}`)).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText(`${name}: Close friend`)).toBeVisible();
+  await page.goto("/life/friends");
+  await expect(page.getByRole("link", { name: new RegExp(name) })).toContainText("Last today", { timeout: 60_000 });
+});
+
+test("each tile opens to its own workspace", async ({ page }) => {
+  await page.goto("/life/home");
+  await expect(page.getByRole("heading", { name: "Your needs" })).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByRole("heading", { name: "What Home asks of Work" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^Water.*of the standard/ })).toBeVisible();
+  for (const [app, heading] of [["body", "This week"], ["mate", "What you are looking for"], ["kin", "Kin who need care"], ["polis", "Where you are a citizen"]]) {
+    await page.goto(`/life/${app}`);
+    await expect(page.getByRole("heading", { name: heading })).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByRole("heading", { name: "Coming up" })).toBeVisible();
+  }
 });
 
 test("income against the intended household on Work's income tab", async ({ page }) => {

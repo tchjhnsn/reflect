@@ -9,6 +9,9 @@ import { requireUser } from "@/server/session";
 import { lifeActs, lifeRecords, type LifeAct, type LifeRecord } from "@/server/life-store";
 import { Acts, RecordCard, RecordForm, States } from "../record";
 import { Summary } from "../summary";
+import { HomeSpace } from "../home-space";
+import { BodySpace } from "../body-space";
+import { FriendsSpace, KinSpace, MateSpace, PolisSpace } from "../tile-spaces";
 import { restoreLifeAction } from "../actions";
 import { WorkHeader, type WorkTab } from "../work/parts";
 
@@ -53,6 +56,19 @@ function KindView({ app, kind, records, acts, back }: { app: LifeAppId; kind: Ki
   );
 }
 
+/** A tile's first view: the person's own workspace for it, or where they stand where a tile has none yet (Legacy). */
+function Overview({ app, userId, records, acts, today }: { app: LifeAppId; userId: string; records: LifeRecord[]; acts: LifeAct[]; today: string }) {
+  switch (app) {
+    case "home": return <HomeSpace userId={userId} records={records} today={today} />;
+    case "body": return <BodySpace userId={userId} records={records} acts={acts} today={today} />;
+    case "friends": return <FriendsSpace userId={userId} records={records} acts={acts} today={today} />;
+    case "mate": return <MateSpace userId={userId} records={records} today={today} />;
+    case "kin": return <KinSpace userId={userId} records={records} acts={acts} today={today} />;
+    case "polis": return <PolisSpace userId={userId} records={records} today={today} />;
+    default: return <Summary app={app} records={records} acts={acts} today={today} />;
+  }
+}
+
 /**
  * An app behind the home screen's tiles (`@reflect/core/life`): its overview, where the person stands from their
  * own records, and a tab for each kind of record it keeps. A tile that names one part (Income, Food) opens its tab.
@@ -82,7 +98,7 @@ export default async function LifeAppPage({ params, searchParams }: { params: Pr
       ) : null}
       <div className="mt-4 grid max-w-4xl gap-6">
         <p className="text-muted-foreground text-sm">{kind ? kind.intro : a.intro}</p>
-        {kind ? <>{app === "work" && kind.id === "income" ? <Summary app={app} records={records} acts={mine} today={today} /> : null}<Standard kind={kind} /><KindView app={app} kind={kind} records={records} acts={mine} back={back} /></> : <Summary app={app} records={records} acts={mine} today={today} />}
+        {kind ? <>{app === "work" && kind.id === "income" ? <Summary app={app} records={records} acts={mine} today={today} /> : null}<Standard kind={kind} /><KindView app={app} kind={kind} records={records} acts={mine} back={back} /></> : <Overview app={app} userId={user.id} records={records} acts={mine} today={today} />}
         {!kind ? <p className="text-muted-foreground text-xs">Everything here is what you state. What you do is kept in your log; reflect on it in your journal.</p> : null}
       </div>
     </main>

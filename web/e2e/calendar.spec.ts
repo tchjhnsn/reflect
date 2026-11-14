@@ -6,7 +6,7 @@ test("a weekly shift tagged Work shows in the master calendar and Work's, not Le
   const title = `Shift ${info.project.name} ${Date.now()}`;
   const day = new Date().toISOString().slice(0, 10);
   await page.goto("/life/work");
-  await page.getByRole("navigation", { name: "Work parts" }).getByRole("link", { name: "Calendar" }).click();
+  await page.getByRole("link", { name: "Work's calendar" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Work calendar" })).toBeVisible({ timeout: 60_000 });
   const add = page.locator("details", { hasText: "Add an event" }).last();
   if ((await add.getAttribute("open")) === null) await add.locator("summary").click();
