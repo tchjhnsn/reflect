@@ -157,10 +157,14 @@ Outcomes, on two axes that change independently:
 |---|---|
 | chance | habit |
 | nature | reasoning |
-| compulsion | anger |
+| compulsion | spirit |
 | | appetite |
 
 Beliefs, telos and plans fall under reasoning.
+
+**Decided (Torian, 2026-11-14).** The fourth origin from the person is spirit (*thumos*), not anger. Anger is one passion of spirit, which Plato sets apart from appetite and reason (*Republic* IV 439e-441a) and Aristotle names as one of the three kinds of desire (*De Anima* III.10). It covers honour, ambition, indignation and wanting to prove oneself. Origins kept as "anger" read as spirit. "Nature" keeps Aristotle's sense: what happens regularly and not from the person's desire (1369a35-b2); the desire to know, acted on, is wish and falls under reasoning.
+
+**Decided (Torian, 2026-11-14).** Origins are the moving cause: what is causing something. What it is for, the end, is asked apart (*Physics* II.3). Before a course, the person writes what is causing them to learn it, marks its origins, and writes for the sake of what, for its own sake or for a use (*Metaphysics* 982b24; *Politics* VIII.2 1337b).
 
 **Decided.** Each subdomain enumerates its own origins under each of the seven categories. Appetite, for example, is several appetites: in seeking a mate, "I desire sex", "I desire children", "I desire companionship".
 

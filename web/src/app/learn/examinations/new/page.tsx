@@ -10,6 +10,7 @@ import { PAGE } from "@/components/page-header";
 import { requireUser } from "@/server/session";
 import { LearnHeader } from "../../header";
 import { createExaminationAction } from "../actions";
+import { reasonFor } from "@/server/learn-reason-store";
 
 export const metadata: Metadata = { title: "Put yourself under examination" };
 export const dynamic = "force-dynamic";
@@ -18,10 +19,11 @@ const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) 
 
 /** Putting yourself under examination on a course: what you will answer for, and the name your examiners will see. */
 export default async function NewExaminationPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  await requireUser();
+  const user = await requireUser();
   const sp = await searchParams;
   const site = courseSite(one(sp.u));
   if (!site) notFound();
+  const reason = await reasonFor(user.id, site.url);
   const title = one(sp.t) || "This course";
   return (
     <main className={PAGE}>
@@ -30,8 +32,16 @@ export default async function NewExaminationPage({ searchParams }: { searchParam
         <header className="space-y-2">
           <p className="text-muted-foreground text-sm"><Link href={`/learn/courses?u=${encodeURIComponent(site.url)}&t=${encodeURIComponent(title)}`} className="hover:underline">{title}</Link></p>
           <h1 className="text-3xl font-semibold tracking-tight">Put yourself under examination</h1>
-          <p className="text-muted-foreground leading-relaxed">Say what you know from this course and will answer for. You then invite people to examine you, on a call in Reflect or in person. There is no grade: each examiner writes in their own words whether they attest that you know it, and that is kept with your record.</p>
+          <p className="text-muted-foreground leading-relaxed">Say what you know from this course and will answer for. You then invite people to examine you, and you meet them in person. There is no grade: each examiner writes in their own words whether they attest that you know it, and that is kept with your record.</p>
         </header>
+        {reason ? (
+          <section className="bg-muted/40 space-y-2 rounded-lg border p-4">
+            <h2 className="font-semibold">Read again why you began</h2>
+            <p className="leading-relaxed whitespace-pre-line">{reason.cause}</p>
+            {reason.end ? <p className="text-sm leading-relaxed"><span className="font-medium">For the sake of what: </span>{reason.end}</p> : null}
+            <Link href={`/journal/w/${reason.workId}`} className="text-muted-foreground text-sm underline underline-offset-4">In your journal</Link>
+          </section>
+        ) : null}
         <form action={createExaminationAction} className="space-y-4">
           <input type="hidden" name="url" value={site.url} /><input type="hidden" name="title" value={title} />
           <div className="space-y-1.5">

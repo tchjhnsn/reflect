@@ -24,6 +24,8 @@ import { learnView } from "@/server/learn-store";
 import { highlightBooks } from "@/server/highlights";
 import { definitionsOf, lookupWord, type Definition } from "@reflect/core/wiktionary";
 import { lectureOf, lecturesOf } from "@/server/courses";
+import { keepReason } from "@/server/learn-reason-store";
+import { courseHref } from "./courses/shell";
 
 const openLibrary = (url: string) => fetch(url, { headers: { "user-agent": "reflect-app" }, cache: "no-store" });
 const status = (v: FormDataEntryValue | null): BookStatus => ((BOOK_STATUS as readonly string[]).includes(String(v)) ? (String(v) as BookStatus) : "want");
@@ -261,6 +263,26 @@ export async function addItemAction(form: FormData): Promise<void> {
  */
 export async function browseAddAction(form: FormData): Promise<void> {
   const user = await requireUser();
+  await addFromForm(user.id, form);
+}
+
+/**
+ * Keeps what is causing the person to learn a course and for the sake of what, as a work of their journal.
+ * With go=start it then starts the course; otherwise it returns to the course.
+ */
+export async function keepReasonAction(form: FormData): Promise<void> {
+  const user = await requireUser();
+  const url = field(form, "url");
+  const title = field(form, "title");
+  await keepReason(user.id, { courseUrl: url, courseTitle: title, cause: field(form, "cause"), end: field(form, "end"), origins: form.getAll("origin"), endKind: field(form, "endKind") });
+  revalidatePath("/learn/courses");
+  revalidatePath("/journal");
+  if (field(form, "go") === "start") await addFromForm(user.id, form);
+  redirect(courseHref(url, title));
+}
+
+async function addFromForm(userId: string, form: FormData): Promise<void> {
+  const user = { id: userId };
   const medium = field(form, "medium");
   const title = field(form, "title");
   const go = field(form, "go") === "start";
