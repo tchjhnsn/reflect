@@ -1,6 +1,7 @@
 import "./free";
 import { AUTHOR_ID, authorWorks, browseQuery, searchBooks, type CatalogEntry, type Sort } from "@reflect/core/openlibrary";
-import { themaCategory, themaQuery, themaSection } from "@reflect/core/thema";
+import { categoryOf, themaCategory, themaQuery, themaSection } from "@reflect/core/thema";
+import { bookWay, isWay } from "@reflect/core/ways";
 
 /** What a list of books on Browse or an author page is drawn from: a search, a Thema section or category, or an author. */
 export type BookSource = { kind: "q"; q: string } | { kind: "cat"; code: string } | { kind: "author"; id: string } | { kind: "new" } | { kind: "free" };
@@ -10,8 +11,13 @@ export const newQuery = () => `first_publish_year:[${new Date().getUTCFullYear()
 
 export const PER = 24;
 
-/** Narrowing a list: books free to read, books from the last two years, books from before 1924 (in the public domain in the United States). */
-export const FILTERS = { free: "Free to read", recent: "Published in the last two years", old: "Published before 1924" } as const;
+/**
+ * Narrowing a list: books free to read, books from the last two years, books from before 1924 (in the public domain
+ * in the United States), or books by the way of learning their catalog gives (`bookWay`): those that teach, stories
+ * (imitation) and written dialogues (dialectic). A way is applied to each page after it is fetched, so a page can
+ * hold fewer books.
+ */
+export const FILTERS = { free: "Free to read", recent: "Published in the last two years", old: "Published before 1924", teaching: "Books that teach", imitation: "Stories (imitation)", dialectic: "Dialogues (dialectic)" } as const;
 export type Filter = keyof typeof FILTERS;
 export const isFilter = (f: unknown): f is Filter => typeof f === "string" && Object.hasOwn(FILTERS, f);
 function clause(f: Filter | undefined): string {
@@ -35,6 +41,11 @@ export function cleanSource(raw: unknown): BookSource | null {
 
 /** One page of a source's books, `PER` to a page. A category is best rated first unless another sort is given. */
 export async function listBooks(source: BookSource, page: number, sort?: Sort, filter?: Filter): Promise<CatalogEntry[]> {
+  const books = await fetchBooks(source, page, sort, filter);
+  return isWay(filter) ? books.filter((b) => bookWay(categoryOf(b), b.subjects) === filter) : books;
+}
+
+async function fetchBooks(source: BookSource, page: number, sort?: Sort, filter?: Filter): Promise<CatalogEntry[]> {
   const f = clause(filter);
   if (source.kind === "q") return /^isbn:/i.test(source.q) ? searchBooks(source.q, openLibrary, PER, page, sort) : searchBooks(`${source.q}${f}`, openLibrary, PER, page, sort);
   if (source.kind === "author") return f ? browseQuery(`author_key:${source.id}${f}`, openLibrary, { limit: PER, page, ...(sort ? { sort } : {}) }) : authorWorks(source.id, openLibrary, { limit: PER, page, ...(sort ? { sort } : {}) });

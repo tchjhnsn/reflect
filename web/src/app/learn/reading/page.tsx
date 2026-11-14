@@ -5,6 +5,8 @@ import { coverUrl } from "@reflect/core/openlibrary";
 import { cn } from "@/lib/utils";
 import { requireUser } from "@/server/session";
 import { goalFor, learnView, readingDays } from "@/server/learn-store";
+import { listItems } from "@/server/ways-store";
+import { mediumOf } from "@reflect/core/ways";
 import { LearnHeader } from "../header";
 import { FinishedDay, Goal, WantList } from "./parts";
 
@@ -37,6 +39,7 @@ export default async function ReadingPage({ searchParams }: { searchParams: Prom
   const weeks = calendar(days, today, 26);
   const thisYearDays = days.filter((d) => d.startsWith(`${thisYear}-`)).length;
   const cover = (b: (typeof view.books)[number]) => (b.catalog ? coverUrl(b.catalog, "S") : null);
+  const items = (await listItems(user.id).catch(() => [])).filter((i) => i.status === "done" && i.finishedOn?.startsWith(`${year}-`)).sort((a, b) => a.finishedOn!.localeCompare(b.finishedOn!));
 
   return (
     <>
@@ -67,8 +70,8 @@ export default async function ReadingPage({ searchParams }: { searchParams: Prom
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold">Days you read</h2>
-          <p className="text-muted-foreground text-sm">{thisYearDays} {thisYearDays === 1 ? "day" : "days"} in {thisYear}{run > 1 ? `, the last ${run} in a row` : ""}. A day counts when you read a book on your shelves in Reflect.</p>
+          <h2 className="text-lg font-semibold">Days of learning</h2>
+          <p className="text-muted-foreground text-sm">{thisYearDays} {thisYearDays === 1 ? "day" : "days"} in {thisYear}{run > 1 ? `, the last ${run} in a row` : ""}. A day counts when you read a book on your shelves in Reflect, or start, finish, watch or practise something on your shelves.</p>
           <div className="overflow-x-auto">
             <div className="flex gap-1" role="img" aria-label={`Days read over the last 26 weeks: ${days.filter((d) => d >= weeks[0]![0]!.day).length}`}>
               {weeks.map((w, i) => (
@@ -119,6 +122,21 @@ export default async function ReadingPage({ searchParams }: { searchParams: Prom
               </div>
             </>
           ) : <p className="text-muted-foreground text-sm">No books finished in {year} yet. When you mark a book Read, the day is kept here, and you can change it.</p>}
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">Beyond books, {year}</h2>
+          {items.length ? (
+            <ul className="space-y-2">
+              {items.map((i) => (
+                <li key={i.id} className="flex items-center gap-3 text-sm">
+                  <span className="text-muted-foreground w-16 shrink-0 text-xs">{MONTHS[Number(i.finishedOn!.slice(5, 7)) - 1]?.slice(0, 3)} {Number(i.finishedOn!.slice(8, 10))}</span>
+                  <Link href={`/learn/items/${i.id}`} className="min-w-0 flex-1 truncate font-medium hover:underline">{i.title}</Link>
+                  <span className="text-muted-foreground shrink-0 text-xs">{mediumOf(i.medium).done}</span>
+                </li>
+              ))}
+            </ul>
+          ) : <p className="text-muted-foreground text-sm">No lectures, films, music or games finished in {year} yet.</p>}
         </section>
       </main>
     </>

@@ -20,10 +20,16 @@ import { listClaims, type ClaimOut } from "@/server/claims-store";
 import { shelvesOf } from "@/server/learn-shelves";
 import { quoteFromShelves } from "@/server/passages";
 import { buildSpec, type Piece } from "../../chat/spec";
+import { getItem, listItems, type LearnItem } from "@/server/ways-store";
+import { LEISURE, MEDIA, WAYS, bookWay, mediumOf, placeOf } from "@reflect/core/ways";
+import { categoryOf } from "@reflect/core/thema";
+import { lookLink, searchMedium, type Fetch } from "@reflect/core/lookup";
+import { clock, readTranscript, searchTranscript } from "@reflect/core/media";
 
 export const maxDuration = 60;
 const openLibrary = (url: string) => fetch(url, { headers: { "user-agent": "reflect-app" }, cache: "no-store" });
 const MAX_MESSAGES = 30;
+const catalogFetch: Fetch = (url) => fetch(url, { headers: { "user-agent": "reflect-app (learn items)" }, next: { revalidate: 86400 }, signal: AbortSignal.timeout(8000) });
 
 export async function POST(req: Request) {
   const user = await currentUser();
@@ -34,11 +40,12 @@ export async function POST(req: Request) {
   const model = chatModel();
   if (!model) return Response.json({ error: "no model is set up" }, { status: 503 });
 
-  const [view, claims] = await Promise.all([learnView(user.id), listClaims(user.id).catch((): ClaimOut[] | null => null)]);
+  const [view, claims, items] = await Promise.all([learnView(user.id), listClaims(user.id).catch((): ClaimOut[] | null => null), listItems(user.id).catch((): LearnItem[] => [])]);
   const summary = learnSummary({
     books: view.books.map((b) => ({ title: b.title, status: b.status })),
     subjects: [...new Set(view.books.flatMap((b) => b.subjects.map((s) => s.name)).concat(view.known.map((s) => s.name)))],
     claims: (claims ?? []).map((c) => ({ text: c.text, stance: c.stance?.stance ?? null })),
+    items: items.map((i) => ({ title: i.title, medium: mediumOf(i.medium).label.toLowerCase(), status: i.status })),
   });
   // The chat is kept in the journal as one entry (its id is the chat's id), one part per message.
   const day = typeof body?.localDate === "string" ? isoDate(body.localDate) : null;
@@ -85,6 +92,58 @@ export async function POST(req: Request) {
               const sh = shelvesOf(view).shelves.map((x) => ({ id: x.id, name: x.name, books: x.books.map((b) => b.title), subjects: x.subjects.map((y) => names.get(y.id) ?? y.name) }));
               show({ kind: "shelves", shelves: sh });
               return sh.length ? `Shown: ${sh.map((s) => `${s.id} ${s.name}: ${[...s.books, ...s.subjects].join(", ")}`).join("; ")}` : "No shelves yet.";
+            },
+          }),
+          show_ways: tool({
+            description: "Show what the person learns from by the ways of learning: books and items (lectures, debates, films, music, games) under teaching, dialectic, imitation, practice, and rest and leisure.",
+            inputSchema: z.object({}),
+            execute: async () => {
+              const wayOf = (b: (typeof view.books)[number]) => b.way ?? bookWay(b.catalog ? categoryOf(b.catalog) : null, b.catalog?.subjects ?? []);
+              const ways = [...WAYS, LEISURE].map((w) => ({
+                id: w.label.slice(0, 1), name: w.label,
+                books: [...view.books.filter((b) => w.id !== "leisure" && wayOf(b) === w.id).map((b) => b.title), ...items.filter((i) => placeOf(i) === w.id).map((i) => `${i.title} (${mediumOf(i.medium).label.toLowerCase()})`)],
+                subjects: [] as string[],
+              })).filter((w) => w.books.length);
+              show({ kind: "shelves", shelves: ways });
+              return ways.length ? `Shown: ${ways.map((w) => `${w.name}: ${w.books.join(", ")}`).join("; ")}` : "Nothing on their shelves yet.";
+            },
+          }),
+          find_item: tool({
+            description: "Look up a lecture, debate, podcast, film, series, play, music, art or game for the person to add: a link, or a search of the free catalog for its medium.",
+            inputSchema: z.object({ medium: z.enum(MEDIA.map((m) => m.id) as [string, ...string[]]), query: z.string().min(1).max(300).describe("A link, or words of its title") }),
+            execute: async ({ medium, query }) => {
+              const r = /^https?:\/\//i.test(query.trim()) ? await lookLink(query.trim(), catalogFetch).then((x) => ({ found: x.found ? [x.found] : [], error: x.error })) : await searchMedium(medium, query, catalogFetch);
+              if (!r.found.length) {
+                show({ kind: "note", text: r.error ?? `Nothing found for “${query}”.` });
+                return `Nothing found${r.error ? `: ${r.error}` : ""}. Do not name one from memory.`;
+              }
+              const have = new Set(items.map((i) => `${i.medium}|${i.title.toLowerCase()}`));
+              for (const f of r.found.slice(0, 5)) show({ kind: "found_item", medium: f.medium, label: mediumOf(f.medium).label, title: f.title, ...(f.by ? { by: f.by } : {}), ...(f.image ? { image: f.image } : {}), source: f.source, kept: have.has(`${f.medium}|${f.title.toLowerCase()}`), item: JSON.stringify(f) });
+              return `Shown: ${r.found.slice(0, 5).map((f) => `${f.title}${f.by ? ` (${f.by})` : ""} from ${f.source}`).join("; ")}. Not kept unless the person taps Add.`;
+            },
+          }),
+          quote_transcript: tool({
+            description: "Find words in the transcripts the person pasted for their videos and recordings, and show each place with its moment.",
+            inputSchema: z.object({ words: z.string().min(2).max(100), item: z.string().max(200).optional().describe("Words of the item's title, when the person names one") }),
+            execute: async ({ words, item }) => {
+              const withText = items.filter((i) => i.transcript && (!item || i.title.toLowerCase().includes(item.toLowerCase())));
+              const out: string[] = [];
+              for (const i of withText.slice(0, 10)) {
+                const full = await getItem(user.id, i.id).catch(() => null);
+                if (!full?.transcriptText) continue;
+                for (const part of searchTranscript(readTranscript(full.transcriptText), words, 3)) {
+                  const cite = `${[i.by, i.title].filter(Boolean).join(", ")}, at ${clock(part.at)}`;
+                  show({ kind: "quote", text: part.text, cite, href: `/learn/items/${i.id}` });
+                  out.push(`"${part.text}" (${cite})`);
+                  if (out.length >= 5) break;
+                }
+                if (out.length >= 5) break;
+              }
+              if (!out.length) {
+                show({ kind: "note", text: `“${words}” was not found in your transcripts.` });
+                return "Not found. Do not quote from memory; say it was not found.";
+              }
+              return `Shown: ${out.join("; ")}`;
             },
           }),
           show_claims: tool({

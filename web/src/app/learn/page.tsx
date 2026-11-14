@@ -6,7 +6,8 @@ import { XIcon } from "lucide-react";
 import { STANCES } from "@reflect/core/claims";
 import { coverUrl } from "@reflect/core/openlibrary";
 import { categoryOf, showCall, themaCategory } from "@reflect/core/thema";
-import { LEISURE, MEDIA, WAYS, bookWay, mediumOf, placeOf, type Way } from "@reflect/core/ways";
+import { LEISURE, WAYS, bookWay, mediumOf, placeOf, type Medium, type Way } from "@reflect/core/ways";
+import { starters } from "@reflect/core/item-lists";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,8 +21,10 @@ import { learnView, type LearnView } from "@/server/learn-store";
 import { listClaims, type ClaimOut } from "@/server/claims-store";
 import { claimWorks } from "@/server/book-store";
 import { shelvesOf } from "@/server/learn-shelves";
-import { listItems, type LearnItem } from "@/server/ways-store";
-import { addItemAction, changeItemAction, keepClaimAction, removeItemAction, setBookStatusAction, setBookWayAction, setStanceAction } from "./actions";
+import { listItems, mergeInputs, type LearnItem } from "@/server/ways-store";
+import { keepClaimAction, restoreItemAction, setBookStatusAction, setBookWayAction, setStanceAction } from "./actions";
+import { AddItem } from "./items/add-item";
+import { ImportItems } from "./items/import-items";
 import { bookTone, subjectTone, type ShelfTone } from "./tones";
 
 export const metadata: Metadata = { title: "Learn" };
@@ -42,13 +45,14 @@ export default async function LearnPage({ searchParams }: { searchParams: Promis
   const sp = await searchParams;
   // Browsing moved to its own page (/learn/browse); old links still land there.
   if (one(sp.tab) === "library") redirect(`/learn/browse${one(sp.q) ? `?q=${encodeURIComponent(one(sp.q))}` : ""}`);
+  if (/^[0-9a-f-]{36}$/.test(one(sp.item))) redirect(`/learn/items/${one(sp.item)}`);
   const tab: Tab = one(sp.tab) === "claims" ? "claims" : "shelves";
   const view = await learnView(user.id);
   return (
     <main className={PAGE}>
       <LearnHeader on={tab} />
       <div className="mt-6">
-        {tab === "shelves" ? <Shelves view={view} items={await listItems(user.id).catch((): LearnItem[] | null => null)} all={one(sp.filled) !== "1"} open={one(sp.book)} openItem={one(sp.item)} /> : null}
+        {tab === "shelves" ? <ShelvesTab userId={user.id} view={view} sp={sp} /> : null}
         {tab === "claims" ? <Claims claims={await listClaims(user.id).catch((): ClaimOut[] | null => null)} works={await claimWorks(user.id).catch(() => new Map<string, { workId: string; title: string }>())} /> : null}
       </div>
       {tab === "shelves" ? (
@@ -61,6 +65,17 @@ export default async function LearnPage({ searchParams }: { searchParams: Promis
       ) : null}
     </main>
   );
+}
+
+async function ShelvesTab({ userId, view, sp }: { userId: string; view: LearnView; sp: Record<string, string | string[] | undefined> }) {
+  await mergeInputs(userId).catch(() => 0);
+  const items = await listItems(userId).catch((): LearnItem[] | null => null);
+  const removedId = one(sp.removed);
+  const removed = removedId ? (await listItems(userId, { removed: true }).catch(() => [])).find((i) => i.id === removedId) ?? null : null;
+  const kept = view.books.filter((b) => b.catalog?.work).map((b) => ({ work: b.catalog!.work, title: b.title }));
+  const subjects = [...new Set(view.books.flatMap((b) => b.subjects.map((s) => s.name)).concat(view.known.map((s) => s.name)))];
+  const have = new Set((items ?? []).map((i) => i.title.toLowerCase()));
+  return <Shelves view={view} items={items} all={one(sp.filled) !== "1"} open={one(sp.book)} removed={removed} show={["want", "doing", "done"].includes(one(sp.show)) ? one(sp.show) : ""} sort={["oldest", "title"].includes(one(sp.sort)) ? one(sp.sort) : ""} starters={starters(subjects, have)} kept={kept} />;
 }
 
 /** How far through a book the person is, by chapter and how far down it, read in Reflect. */
@@ -77,31 +92,40 @@ function Glyph({ d, tone, className }: { d: string; tone: ShelfTone; className: 
   return <svg className={className} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d={d} className={TONE[tone]} /></svg>;
 }
 
-const SELECT = "border-input bg-background h-9 w-full rounded-md border px-3 text-sm";
+const SHOW = [["", "All"], ["want", "Want to"], ["doing", "Under way"], ["done", "Done"]] as const;
+const BOOK_SHOW: Record<string, string> = { want: "want", doing: "reading", done: "read" };
 const statusLabel = (i: LearnItem) => (i.status === "want" ? "Want to" : i.status === "doing" ? mediumOf(i.medium).doing : mediumOf(i.medium).done);
+type Starter = { title: string; by?: string; medium: Medium; list: string };
 
 /**
  * The shelves, arranged by Aristotle's ways of learning: teaching, dialectic, imitation and practice. A book goes
- * by the way the person chose, else by its Thema category (stories under imitation); teaching keeps the Thema
- * shelves and the subjects. Lectures, debates, films, music, games and the rest are items with their medium shown;
- * a game, music or art without a lesson is kept under Rest and leisure.
+ * by the way the person chose, else by its catalog (written dialogues under dialectic, stories under imitation);
+ * teaching keeps the Thema shelves and the subjects. Lectures, debates, films, music, games and the rest are items
+ * with their medium shown, each opening its own page; a game, music or art without a lesson is kept under Rest
+ * and leisure. Shelves can be narrowed by status and sorted, and each way folds away.
  */
-function Shelves({ view, items, all, open, openItem }: { view: LearnView; items: LearnItem[] | null; all: boolean; open: string; openItem: string }) {
+function Shelves({ view, items, all, open, removed, show, sort, starters, kept }: { view: LearnView; items: LearnItem[] | null; all: boolean; open: string; removed: LearnItem | null; show: string; sort: string; starters: Record<string, Starter[]>; kept: { work: string; title: string }[] }) {
   const byId = new Map(view.books.map((b) => [b.id, b]));
   const subjectBooks = new Map<string, LearnView["books"]>();
   for (const b of view.books) for (const s of b.subjects) subjectBooks.set(s.id, [...(subjectBooks.get(s.id) ?? []), b]);
   const grasp = new Map(view.books.flatMap((b) => b.subjects).concat(view.known).map((s) => [s.id, s.grasp?.grasp ?? null]));
   const book = open ? byId.get(open) : undefined;
-  const item = openItem ? items?.find((i) => i.id === openItem) : undefined;
-  const keep = all ? "" : "&filled=1";
-  const close = `/learn${all ? "" : "?filled=1"}`;
-  const wayOf = (b: LearnView["books"][number]): Way => b.way ?? bookWay(b.catalog ? categoryOf(b.catalog) : null);
+  const q = (extra: Record<string, string>) => {
+    const p = new URLSearchParams({ ...(all ? {} : { filled: "1" }), ...(show ? { show } : {}), ...(sort ? { sort } : {}), ...extra });
+    for (const [k, v] of [...p.entries()]) if (!v) p.delete(k);
+    const s = p.toString();
+    return `/learn${s ? `?${s}` : ""}`;
+  };
+  const close = q({});
+  const wayOf = (b: LearnView["books"][number]): Way => b.way ?? bookWay(b.catalog ? categoryOf(b.catalog) : null, b.catalog?.subjects ?? []);
+  const shownBooks = view.books.filter((b) => !show || b.status === BOOK_SHOW[show]);
+  const shownItems = (items ?? []).filter((i) => !show || i.status === show).sort((a, b) => (sort === "title" ? a.title.localeCompare(b.title) : sort === "oldest" ? a.at.localeCompare(b.at) : b.at.localeCompare(a.at)));
   const row = (books: { id: string; title: string; category?: string }[], subjects: { id: string; name: string }[]) => (
     <div className="flex flex-wrap gap-4">
       {books.map((b) => {
         const full = byId.get(b.id)!;
         return (
-          <Link key={b.id} href={`/learn?book=${b.id}${keep}`} className={cn("hover:bg-accent flex w-24 flex-col items-center gap-2 rounded-lg p-2 text-center transition", open === b.id && "bg-accent")} aria-label={`${b.title}, book, ${full.status}`}>
+          <Link key={b.id} href={q({ book: b.id })} className={cn("hover:bg-accent flex w-24 flex-col items-center gap-2 rounded-lg p-2 text-center transition", open === b.id && "bg-accent")} aria-label={`${b.title}, book, ${full.status}`}>
             {full.catalog && coverUrl(full.catalog, "S") ? (
               <span className="flex flex-col overflow-hidden rounded-sm border">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -135,53 +159,91 @@ function Shelves({ view, items, all, open, openItem }: { view: LearnView; items:
     </Card>
   );
   const sections = [...WAYS, LEISURE].map((w) => {
-    const books = w.id === "leisure" ? [] : view.books.filter((b) => wayOf(b) === w.id);
+    const books = w.id === "leisure" ? [] : shownBooks.filter((b) => wayOf(b) === w.id);
     const teaching = w.id === "teaching";
-    const sh = shelvesOf({ ...view, books }, teaching && all, teaching);
-    const here = (items ?? []).filter((i) => placeOf(i) === w.id);
+    const sh = shelvesOf({ ...view, books }, teaching && all && !show, teaching);
+    const here = shownItems.filter((i) => placeOf(i) === w.id);
     return { w, books, sh, here, count: books.length + here.length };
   });
+  const visible = sections.filter((s) => s.w.id !== "leisure" || s.count);
   return (
-    <section className="space-y-10">
+    <section className="space-y-8">
+      {removed ? (
+        <form action={restoreItemAction} className="bg-muted flex flex-wrap items-center justify-between gap-2 rounded-lg px-4 py-3 text-sm" role="status">
+          <input type="hidden" name="item" value={removed.id} />
+          <span>Removed {removed.title}.</span>
+          <Button size="sm" variant="outline">Undo</Button>
+        </form>
+      ) : null}
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Note>Arranged by the ways of learning Aristotle names: teaching, dialectic, imitation and practice. Each item shows its medium.</Note>
           <Button asChild variant="ghost" size="sm"><Link href={all ? "/learn?filled=1" : "/learn"}>{all ? "Only filled shelves" : "All 20 shelves"}</Link></Button>
         </div>
-        <nav className="flex flex-wrap gap-2" aria-label="Ways of learning">
-          {sections.filter((s) => s.w.id !== "leisure" || s.count).map((s) => (
+        <nav className="bg-background/95 sticky top-0 z-[5] -mx-1 flex flex-wrap items-center gap-2 px-1 py-2 backdrop-blur" aria-label="Ways of learning">
+          {visible.map((s) => (
             <a key={s.w.id} href={`#${s.w.id}`} className="hover:bg-accent rounded-full border px-3 py-1 text-xs transition">{s.w.label} <span className="text-muted-foreground">{s.count}</span></a>
           ))}
+          <span className="text-muted-foreground ml-auto flex flex-wrap items-center gap-1 text-xs" aria-label="Show">
+            {SHOW.map(([id, label]) => <Link key={id || "all"} href={q({ show: id })} aria-current={show === id ? "true" : undefined} className={cn("rounded px-2 py-1", show === id ? "bg-accent text-foreground" : "hover:text-foreground")}>{label}</Link>)}
+            <span aria-hidden="true">·</span>
+            {[["", "Newest"], ["oldest", "Oldest"], ["title", "Title"]].map(([id, label]) => <Link key={id || "newest"} href={q({ sort: id! })} aria-current={sort === id ? "true" : undefined} className={cn("rounded px-2 py-1", sort === id ? "bg-accent text-foreground" : "hover:text-foreground")}>{label}</Link>)}
+          </span>
         </nav>
       </div>
-      {sections.filter((s) => s.w.id !== "leisure" || s.count).map(({ w, books, sh, here }) => (
-        <section key={w.id} id={w.id} className="scroll-mt-20 space-y-4">
-          <div>
-            <h2 className="text-base font-semibold">{w.label}</h2>
+      {visible.map(({ w, books, sh, here }) => (
+        <details key={w.id} id={w.id} open className="group scroll-mt-16 space-y-4">
+          <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+            <span className="flex items-baseline gap-2"><h2 className="text-base font-semibold">{w.label}</h2><span className="text-muted-foreground text-xs group-open:hidden">Show</span></span>
             <Note>{w.about}</Note>
+          </summary>
+          <div className="mt-4 space-y-4">
+            {here.length ? (
+              <ul className="grid gap-3 sm:grid-cols-2">
+                {here.map((i) => (
+                  <li key={i.id}>
+                    <Link href={`/learn/items/${i.id}`} className="hover:bg-accent flex gap-3 rounded-lg border p-3 transition">
+                      {i.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={i.image} alt="" loading="lazy" className="h-16 w-16 shrink-0 rounded object-cover" />
+                      ) : null}
+                      <span className="min-w-0 flex-1 space-y-1">
+                        <span className="flex flex-wrap items-center gap-2">
+                          <Badge variant="secondary">{mediumOf(i.medium).label}</Badge>
+                          <span className="text-muted-foreground text-xs">{statusLabel(i)}{i.parts ? ` · ${i.part ?? 0} of ${i.parts}` : ""}{i.tookPart ? " · took part" : ""}</span>
+                        </span>
+                        <span className="line-clamp-2 block text-sm font-medium">{i.title}</span>
+                        {i.by ? <span className="text-muted-foreground block text-xs">{i.by}</span> : null}
+                        {i.lesson ? <span className="line-clamp-2 block text-xs">{i.lesson}</span> : null}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            {sh.shelves.map((s) => shelf(`${w.id}-${s.id}`, s.id, s.name, Boolean(s.books.length || s.subjects.length), row(s.books, s.subjects)))}
+            {sh.unshelved.books.length || sh.unshelved.subjects.length ? shelf(`${w.id}-?`, "?", "Not yet placed (the catalog gives no category)", true, row(sh.unshelved.books, sh.unshelved.subjects)) : null}
+            {w.id === "teaching" && !view.books.length ? <Note>No books yet. <Link className="underline underline-offset-4" href="/learn/browse">Browse books</Link> and each one you add goes on its shelf.</Note> : null}
+            {w.id !== "teaching" && w.id !== "leisure" && !books.length && !here.length ? (
+              <div className="space-y-2">
+                <Note>Nothing here yet{show ? " with that status" : ""}.{starters[w.id]?.length ? " To start with, from the lists:" : ""}</Note>
+                {starters[w.id]?.length ? (
+                  <ul className="text-sm">
+                    {starters[w.id]!.slice(0, 4).map((s) => <li key={s.title}>{s.title}{s.by ? <span className="text-muted-foreground"> · {s.by}</span> : null} <span className="text-muted-foreground text-xs">({s.list})</span></li>)}
+                  </ul>
+                ) : null}
+                {starters[w.id]?.length ? <Link href="/learn/lists" className="text-sm underline underline-offset-4">See the lists</Link> : null}
+              </div>
+            ) : null}
           </div>
-          {here.length ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {here.map((i) => (
-                <Link key={i.id} href={`/learn?item=${i.id}${keep}`} className={cn("hover:bg-accent block space-y-1 rounded-lg border p-3 transition", openItem === i.id && "bg-accent")}>
-                  <span className="flex items-center gap-2">
-                    <Badge variant="secondary">{mediumOf(i.medium).label}</Badge>
-                    <span className="text-muted-foreground text-xs">{statusLabel(i)}</span>
-                  </span>
-                  <span className="line-clamp-2 block text-sm font-medium">{i.title}</span>
-                  {i.by ? <span className="text-muted-foreground block text-xs">{i.by}</span> : null}
-                  {i.lesson ? <span className="line-clamp-2 block text-xs">{i.lesson}</span> : null}
-                </Link>
-              ))}
-            </div>
-          ) : null}
-          {sh.shelves.map((s) => shelf(`${w.id}-${s.id}`, s.id, s.name, Boolean(s.books.length || s.subjects.length), row(s.books, s.subjects)))}
-          {sh.unshelved.books.length || sh.unshelved.subjects.length ? shelf(`${w.id}-?`, "?", "Not yet placed (the catalog gives no category)", true, row(sh.unshelved.books, sh.unshelved.subjects)) : null}
-          {w.id === "teaching" && !view.books.length ? <Note>No books yet. <Link className="underline underline-offset-4" href="/learn/browse">Browse books</Link> and each one you add goes on its shelf.</Note> : null}
-          {w.id !== "teaching" && !books.length && !here.length ? <Note>Nothing here yet.</Note> : null}
-        </section>
+        </details>
       ))}
-      {items ? <AddItem /> : <Note>Lectures, debates, films, music and games are not set up on this database yet.</Note>}
+      {items ? (
+        <>
+          <AddItem books={kept} />
+          <ImportItems kept={items.map((i) => ({ medium: i.medium, title: i.title }))} />
+        </>
+      ) : <Note>Lectures, debates, films, music and games are not set up on this database yet.</Note>}
       {book ? (
         <>
         <Link href={close} aria-label="Close" tabIndex={-1} className="fixed inset-0 z-10 bg-black/40" />
@@ -216,8 +278,14 @@ function Shelves({ view, items, all, open, openItem }: { view: LearnView; items:
             <div className="flex flex-wrap gap-2">
               {WAYS.map((w) => <Button key={w.id} size="sm" name="way" value={w.id} variant={wayOf(book) === w.id ? "default" : "outline"} aria-pressed={wayOf(book) === w.id}>{w.label}</Button>)}
             </div>
-            {book.way ? <Button size="sm" variant="ghost" name="way" value="">Back to {WAYS.find((w) => w.id === bookWay(book.catalog ? categoryOf(book.catalog) : null))!.label.toLowerCase()}, from its category</Button> : null}
+            {book.way ? <Button size="sm" variant="ghost" name="way" value="">Back to {WAYS.find((w) => w.id === bookWay(book.catalog ? categoryOf(book.catalog) : null, book.catalog?.subjects ?? []))!.label.toLowerCase()}, from its catalog</Button> : null}
           </form>
+          {(items ?? []).some((i) => i.work && i.work === book.catalog?.work) ? (
+            <div className="space-y-1">
+              <p className="text-xs font-medium">Adaptations you keep</p>
+              {(items ?? []).filter((i) => i.work && i.work === book.catalog?.work).map((i) => <Link key={i.id} href={`/learn/items/${i.id}`} className="block text-sm underline underline-offset-4">{i.title} <span className="text-muted-foreground">({mediumOf(i.medium).label})</span></Link>)}
+            </div>
+          ) : null}
           {book.subjects.length ? (
             <div className="space-y-2">
               <p className="text-xs font-medium">Subjects</p>
@@ -233,84 +301,7 @@ function Shelves({ view, items, all, open, openItem }: { view: LearnView; items:
         </aside>
         </>
       ) : null}
-      {item ? (
-        <>
-        <Link href={close} aria-label="Close" tabIndex={-1} className="fixed inset-0 z-10 bg-black/40" />
-        <aside className="bg-background fixed inset-y-0 right-0 z-20 w-full max-w-80 space-y-4 overflow-y-auto border-l p-6 shadow-lg" aria-label={item.title}>
-          <div className="flex items-start justify-between gap-2">
-            <h2 className="text-lg font-semibold leading-tight">{item.title}</h2>
-            <Button asChild variant="ghost" size="icon" aria-label="Close"><Link href={close}><XIcon /></Link></Button>
-          </div>
-          <Note>{[mediumOf(item.medium).label, item.by].filter(Boolean).join(" · ")}</Note>
-          {item.url ? <a href={item.url} target="_blank" rel="noreferrer" className="block truncate text-sm underline underline-offset-4">{item.url}</a> : null}
-          <form action={changeItemAction} className="flex flex-wrap gap-2">
-            <input type="hidden" name="item" value={item.id} />
-            {(["want", "doing", "done"] as const).map((s) => (
-              <Button key={s} size="sm" name="status" value={s} variant={item.status === s ? "default" : "outline"} aria-pressed={item.status === s}>{statusLabel({ ...item, status: s })}</Button>
-            ))}
-          </form>
-          <form action={changeItemAction} className="space-y-2">
-            <input type="hidden" name="item" value={item.id} />
-            <p className="text-xs font-medium">Way of learning</p>
-            <div className="flex flex-wrap gap-2">
-              {WAYS.map((w) => {
-                const on = (item.way ?? mediumOf(item.medium).way) === w.id;
-                return <Button key={w.id} size="sm" name="way" value={w.id} variant={on ? "default" : "outline"} aria-pressed={on}>{w.label}</Button>;
-              })}
-            </div>
-            {item.way ? <Button size="sm" variant="ghost" name="way" value="">Back to {WAYS.find((w) => w.id === mediumOf(item.medium).way)!.label.toLowerCase()}, from its medium</Button> : null}
-          </form>
-          <form action={changeItemAction} className="space-y-2">
-            <input type="hidden" name="item" value={item.id} />
-            <label className="block space-y-1.5 text-xs font-medium">What it taught you<Textarea name="lesson" rows={4} maxLength={4000} defaultValue={item.lesson ?? ""} /></label>
-            {mediumOf(item.medium).lesson && !item.lesson ? <Note>Until you say what it taught you, it is kept under Rest and leisure.</Note> : null}
-            <Button size="sm">Save</Button>
-          </form>
-          <form action={removeItemAction}>
-            <input type="hidden" name="item" value={item.id} />
-            <Button size="sm" variant="ghost">Remove</Button>
-          </form>
-        </aside>
-        </>
-      ) : null}
     </section>
-  );
-}
-
-/** Keep a lecture, debate, discussion, podcast, film, series, theatre, music, art or game. */
-function AddItem() {
-  return (
-    <Card className="py-5">
-      <CardHeader className="px-5"><CardTitle className="text-sm">Add a lecture, debate, film, music or game</CardTitle></CardHeader>
-      <CardContent className="px-5">
-        <form action={addItemAction} className="grid gap-4 sm:grid-cols-2">
-          <label className="block space-y-1.5 text-sm font-medium">Medium
-            <select name="medium" className={SELECT} defaultValue="lecture">
-              {WAYS.map((w) => <optgroup key={w.id} label={w.label}>{MEDIA.filter((m) => m.way === w.id).map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}</optgroup>)}
-            </select>
-          </label>
-          <label className="block space-y-1.5 text-sm font-medium">Status
-            <select name="status" className={SELECT} defaultValue="done">
-              <option value="done">Done</option>
-              <option value="doing">Under way</option>
-              <option value="want">Want to</option>
-            </select>
-          </label>
-          <label className="block space-y-1.5 text-sm font-medium sm:col-span-2">Title<Input name="title" required maxLength={300} /></label>
-          <label className="block space-y-1.5 text-sm font-medium">By (optional)<Input name="by" maxLength={200} /></label>
-          <label className="block space-y-1.5 text-sm font-medium">Link (optional)<Input name="url" type="url" maxLength={1000} /></label>
-          <label className="block space-y-1.5 text-sm font-medium sm:col-span-2">Way of learning
-            <select name="way" className={SELECT} defaultValue="">
-              <option value="">The medium&apos;s way</option>
-              {WAYS.map((w) => <option key={w.id} value={w.id}>{w.label}</option>)}
-            </select>
-          </label>
-          <label className="block space-y-1.5 text-sm font-medium sm:col-span-2">What it taught you (optional)<Textarea name="lesson" rows={3} maxLength={4000} /></label>
-          <p className="text-muted-foreground text-xs sm:col-span-2">A game, music or art is kept under Rest and leisure until you say what it taught you.</p>
-          <div className="sm:col-span-2"><Button size="sm">Add</Button></div>
-        </form>
-      </CardContent>
-    </Card>
   );
 }
 

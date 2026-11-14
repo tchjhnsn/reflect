@@ -62,3 +62,11 @@ describe("the log", () => {
     expect(logByDay(late, -360)[0]!.day).toBe("2026-11-11");
   });
 });
+
+describe("items in the log", () => {
+  it("shows adding, finishing, practising and lessons in the medium's words", async () => {
+    const { learnActs, actText } = await import("./log");
+    const acts = learnActs({ books: [], claims: [], grasps: [], items: [{ title: "Chess", done: "Played", addedAt: "2026-11-14T01:00:00.000Z", startedOn: null, finishedOn: "2026-11-14", sessions: ["2026-11-13"], lessons: ["2026-11-14T02:00:00.000Z"] }] });
+    expect(acts.map(actText)).toEqual(["Added Chess to your shelves", "Played Chess", "Practised Chess", "Wrote what Chess taught you"]);
+  });
+});

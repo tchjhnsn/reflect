@@ -27,6 +27,7 @@ export const LEISURE = { id: "leisure", label: "Rest and leisure", about: "Games
 export const MEDIA = [
   { id: "lecture", label: "Lecture", way: "teaching", done: "Watched", doing: "Watching", lesson: false },
   { id: "course", label: "Course", way: "teaching", done: "Finished", doing: "Taking", lesson: false },
+  { id: "article", label: "Article", way: "teaching", done: "Read", doing: "Reading", lesson: false },
   { id: "debate", label: "Debate", way: "dialectic", done: "Watched", doing: "Watching", lesson: false },
   { id: "discussion", label: "Discussion", way: "dialectic", done: "Heard", doing: "Listening", lesson: false },
   { id: "podcast", label: "Podcast", way: "dialectic", done: "Heard", doing: "Listening", lesson: false },
@@ -45,10 +46,12 @@ export const ITEM_STATUS = ["want", "doing", "done"] as const;
 export type ItemStatus = (typeof ITEM_STATUS)[number];
 
 /**
- * Where a book sits by default: stories, poetry and drama teach by imitation (Thema F fiction, DC poetry, DD
- * drama, and the children's fiction sections), every other book by teaching. The person can move it.
+ * Where a book sits by default: written dialogues (a catalog subject naming dialogues, as Plato's do) by
+ * dialectic; stories, poetry and drama by imitation (Thema F fiction, DC poetry, DD drama, and the children's
+ * fiction sections); every other book by teaching. The person can move it.
  */
-export function bookWay(category: string | null | undefined): Way {
+export function bookWay(category: string | null | undefined, subjects: readonly string[] = []): Way {
+  if (subjects.some((s) => /\bdialogues?\b/i.test(s))) return "dialectic";
   const c = (category ?? "").toUpperCase();
   return c.startsWith("F") || c === "DC" || c === "DD" || c === "YF" || c === "YB" ? "imitation" : "teaching";
 }

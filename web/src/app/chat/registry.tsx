@@ -7,7 +7,7 @@ import { ArrowRightIcon } from "lucide-react";
 import { defineRegistry } from "@json-render/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { addBookFromChat, keepClaimFromChat } from "./actions";
+import { addBookFromChat, keepClaimFromChat, addItemFromChat } from "./actions";
 import { catalog } from "./catalog";
 
 function Tap({ label, doneText, already, run }: { label: string; doneText: string; already?: boolean; run: () => Promise<void> }) {
@@ -61,6 +61,17 @@ export const { registry } = defineRegistry(catalog, {
           {props.holders ? <div className="text-muted-foreground text-xs">Held by {props.holders}</div> : null}
         </div>
         <Badge variant="outline">{props.stance}</Badge>
+      </div>
+    ),
+    FoundItem: ({ props }) => (
+      <div className="flex items-center gap-3 rounded-lg border bg-card p-3 shadow-xs">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {props.image ? <img src={props.image} alt="" className="h-14 w-14 shrink-0 rounded object-cover" /> : null}
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-medium">{props.title}</div>
+          <div className="text-muted-foreground text-xs">{[props.medium, props.by, props.source].filter(Boolean).join(" · ")}</div>
+        </div>
+        {props.kept ? <Badge variant="secondary">On your shelves</Badge> : <Tap label="Add" doneText="Added" run={() => addItemFromChat(props.item)} />}
       </div>
     ),
     ProposeClaim: ({ props }) => (
