@@ -6,6 +6,8 @@ import { requireUser } from "@/server/session";
 import { getItem, listUnits } from "@/server/ways-store";
 import { lectureOf, lecturesOf } from "@/server/courses";
 import { UnitPlayer } from "../../../unit-player";
+import { LectureQuiz } from "../../../quiz";
+import { latestQuiz } from "@/server/quiz-store";
 import { CourseShell, courseHref } from "../../../../courses/shell";
 
 export const metadata: Metadata = { title: "Learn" };
@@ -25,7 +27,7 @@ export default async function LecturePage({ params }: { params: Promise<{ id: st
   const at = course?.lectures.findIndex((l) => String(l.n) === n) ?? -1;
   if (!course || at < 0) notFound();
   const ref = course.lectures[at]!;
-  const [lecture, units] = await Promise.all([lectureOf(course.site, ref), listUnits(user.id, id)]);
+  const [lecture, units, quiz] = await Promise.all([lectureOf(course.site, ref), listUnits(user.id, id), latestQuiz(user.id, id, n)]);
   const unit = units.find((u) => u.unit === n);
   const done = new Set(units.filter((u) => u.doneOn).map((u) => u.unit));
   const nav = course.lectures.map((l) => ({ n: l.n, title: l.title, href: `/learn/items/${id}/lectures/${l.n}`, done: done.has(String(l.n)) }));
@@ -48,6 +50,7 @@ export default async function LecturePage({ params }: { params: Promise<{ id: st
             transcript={lecture.transcript} notes={item.notes.filter((x) => x.unit === n)} next={next?.href ?? null}
           />
         ) : <p className="text-muted-foreground text-sm">{site.name} did not answer just now. Try again in a moment.</p>}
+        {lecture?.transcript.length ? <LectureQuiz item={id} unit={n} transcript={lecture.transcript} start={quiz} /> : null}
         <p className="text-muted-foreground text-xs">From {site.name}, under the {site.license} license. Reflect plays it from the publisher and keeps no copy.</p>
       </div>
     </CourseShell>
