@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { PAGE } from "@/components/page-header";
 import { requireUser } from "@/server/session";
 import { reasonFor } from "@/server/learn-reason-store";
-import { LearnHeader } from "../../header";
+import { TaskHeader } from "@/components/headers";
 import { browseAddAction, keepReasonAction } from "../../actions";
 import { LocalDay } from "../../items/local-day";
 import { courseHref } from "../shell";
@@ -55,10 +55,9 @@ export default async function WhyPage({ searchParams }: { searchParams: Promise<
 
   return (
     <main className={PAGE}>
-      <LearnHeader on="browse" />
+      <TaskHeader back={{ href: courseHref(site.url, title), label: "Back to the course" }} title={title} position="Why I am learning this" />
       <div className="mt-6 max-w-2xl space-y-6">
         <header className="space-y-2">
-          <p className="text-muted-foreground text-sm"><Link href={courseHref(site.url, title)} className="hover:underline">{title}</Link></p>
           <h1 className="text-3xl font-semibold tracking-tight">Why I am learning this</h1>
           <p className="text-muted-foreground leading-relaxed">Before you start, write what is causing you to learn this and what it is for. It is kept in your journal, and you will read it again when you finish and before you are examined.</p>
         </header>

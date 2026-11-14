@@ -9,7 +9,8 @@ import { PAGE } from "@/components/page-header";
 import { requireUser } from "@/server/session";
 import { learnView } from "@/server/learn-store";
 import { openLibrary } from "@/server/browse";
-import { LearnHeader } from "../../header";
+import { ThingHeader } from "@/components/headers";
+import { browseCrumbs } from "../../crumbs";
 
 export const metadata: Metadata = { title: "List" };
 export const dynamic = "force-dynamic";
@@ -33,11 +34,10 @@ export default async function ListPage({ params }: { params: Promise<{ id: strin
   const progress = pathProgress(books.map((b) => mine.get(b.work) ?? null));
   return (
     <main className={PAGE}>
-      <LearnHeader on="browse" />
+      <ThingHeader back="/learn/lists" crumbs={[...browseCrumbs(), { label: "Lists", href: "/learn/lists" }]} title={list.name} />
       <section className="mt-8 space-y-5">
         <div className="space-y-1">
-          <p className="text-muted-foreground text-sm"><Link href="/learn/lists" className="hover:underline">Lists</Link></p>
-          <h2 className="text-2xl font-semibold tracking-tight">{list.name}</h2>
+          <h1 id="page-title" className="text-2xl font-semibold tracking-tight">{list.name}</h1>
           <p className="text-muted-foreground max-w-prose text-sm">{list.about}</p>
           <p className="text-muted-foreground text-xs">Source: {list.source}</p>
         </div>

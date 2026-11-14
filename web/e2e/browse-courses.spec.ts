@@ -9,7 +9,7 @@ test("browse courses, start one, and take its first lecture in Reflect", async (
   await expect(page.getByRole("heading", { name: "Courses to take here" })).toBeVisible({ timeout: 60_000 });
   await page.getByRole("navigation", { name: "What to browse" }).getByRole("link", { name: "Courses" }).click();
   await page.getByLabel("Search courses from Open Yale and MIT").fill("death");
-  await page.getByRole("button", { name: "Search" }).click();
+  await page.getByLabel("Search courses from Open Yale and MIT").press("Enter");
   const card = page.locator("li", { hasText: "Death (PHIL 176)" }).first();
   await expect(card).toBeVisible({ timeout: 60_000 });
   await page.waitForLoadState("networkidle");

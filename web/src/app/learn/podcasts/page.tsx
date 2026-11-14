@@ -7,7 +7,8 @@ import { PAGE } from "@/components/page-header";
 import { requireUser } from "@/server/session";
 import { listItems, listUnits } from "@/server/ways-store";
 import { showFor } from "@/server/podcasts";
-import { LearnHeader } from "../header";
+import { ThingHeader } from "@/components/headers";
+import { browseCrumbs } from "../crumbs";
 import { browseAddAction } from "../actions";
 import { LocalDay } from "../items/local-day";
 
@@ -32,16 +33,15 @@ export default async function ShowPage({ searchParams }: { searchParams: Promise
   const episodeHref = (key: string) => (kept ? `/learn/items/${kept.id}/episodes/${key}` : `/learn/podcasts/episode?u=${encodeURIComponent(url)}&k=${key}&t=${encodeURIComponent(title)}`);
   return (
     <main className={PAGE}>
-      <LearnHeader on="browse" />
+      <ThingHeader back="/learn/browse?m=podcast" crumbs={browseCrumbs("podcast")} title={title} />
       <div className="mt-6 space-y-6">
-        <p className="text-muted-foreground text-sm"><Link href="/learn/browse?m=podcast" className="hover:underline">Podcasts</Link></p>
         <header className="flex gap-4">
           {/^https:\/\//.test(image) ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={image} alt="" className="size-28 shrink-0 rounded-lg border object-cover" />
           ) : null}
           <div className="min-w-0 space-y-2">
-            <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+            <h1 id="page-title" className="text-2xl font-semibold tracking-tight">{title}</h1>
             {by ? <p className="text-muted-foreground">{by}</p> : null}
             <p className="text-muted-foreground text-sm">{show ? `${show.episodes.length} episodes, each heard here` : "The show's feed could not be read just now."}</p>
             {kept ? <Button asChild size="sm" variant="outline"><Link href={`/learn/items/${kept.id}`}>On your shelves</Link></Button> : (

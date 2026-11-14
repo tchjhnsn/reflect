@@ -8,7 +8,7 @@ import { lectureOf, lecturesOf } from "@/server/courses";
 import { UnitPlayer } from "../../../unit-player";
 import { LectureQuiz } from "../../../quiz";
 import { latestQuiz } from "@/server/quiz-store";
-import { CourseShell, courseHref } from "../../../../courses/shell";
+import { CourseShell, courseHref, lectureHeader } from "../../../../courses/shell";
 
 export const metadata: Metadata = { title: "Learn" };
 export const dynamic = "force-dynamic";
@@ -34,10 +34,9 @@ export default async function LecturePage({ params }: { params: Promise<{ id: st
   const prev = nav[at - 1], next = nav[at + 1];
   const site = COURSE_SITES[course.site];
   return (
-    <CourseShell course={item.title} overview={courseHref(course.url, item.title)} lectures={nav} current={ref.n} prev={prev} next={next} on="shelves">
+    <CourseShell course={item.title} overview={courseHref(course.url, item.title)} lectures={nav} current={ref.n} prev={prev} next={next} header={lectureHeader({ course: item.title, overview: courseHref(course.url, item.title), at: at + 1, of: course.lectures.length, prev, next })}>
       <div className="space-y-5">
         <header className="space-y-2">
-          <p className="text-muted-foreground text-sm"><Link href={`/learn/items/${id}`} className="hover:underline">{item.title}</Link> · Lecture {at + 1} of {course.lectures.length}</p>
           <h1 className="text-3xl font-semibold tracking-tight">{ref.title}</h1>
           {item.by ? <p className="text-muted-foreground">{item.by}</p> : null}
           {lecture?.overview ? <p className="max-w-prose leading-relaxed">{lecture.overview}</p> : null}

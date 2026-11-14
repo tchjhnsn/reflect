@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { PAGE } from "@/components/page-header";
 import { currentUser } from "@/server/session";
 import { examinationByToken } from "@/server/examination-store";
-import { LearnHeader } from "../../header";
+import { TaskHeader } from "@/components/headers";
 import { attestAction, joinExaminationAction } from "../../examinations/actions";
 import { ExamRecord } from "../../examinations/record";
 
@@ -28,10 +28,9 @@ export default async function ExaminePage({ params }: { params: Promise<{ token:
   const me = e.examiners.find((x) => x.userId === user.id);
   return (
     <main className={PAGE}>
-      <LearnHeader on="shelves" />
+      <TaskHeader back={{ href: `/learn/courses?u=${encodeURIComponent(e.courseUrl)}&t=${encodeURIComponent(e.courseTitle)}`, label: "The course" }} title={e.courseTitle} position={`Examination, ${e.status === "open" ? "open" : "closed"}`} />
       <div className="mt-6 max-w-3xl space-y-8">
         <header className="space-y-2">
-          <p className="text-muted-foreground text-sm">{e.courseTitle} · {e.status === "open" ? "Open" : "Closed"}</p>
           <h1 className="text-3xl font-semibold tracking-tight">{e.name} asks you to examine them</h1>
           <p className="text-muted-foreground leading-relaxed">Question them on what they say they know from {e.courseTitle}. It is not a test with a grade: afterwards, say in your own words whether you attest that they know it.</p>
         </header>

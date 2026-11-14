@@ -13,6 +13,8 @@ import { reasonFor } from "@/server/learn-reason-store";
 import { originLabel } from "@reflect/core/origins";
 import { END_KINDS } from "@reflect/core/learn-reason";
 import { LearnHeader } from "../header";
+import { ThingHeader } from "@/components/headers";
+import { browseCrumbs, shelfCrumbs } from "../crumbs";
 import { browseAddAction } from "../actions";
 import { BookGrid } from "../book-card";
 import { LocalDay } from "../items/local-day";
@@ -56,7 +58,7 @@ export default async function CoursePage({ searchParams }: { searchParams: Promi
   const toc = [{ id: "why", label: "Why I am learning this" }, { id: "course", label: "About the course" }];
   const prereqs = outline.sections.prerequisites.flatMap((p) => p.lines);
   const textCount = books.length + unfound.length;
-  const facts = [course.lectures.length ? `${course.lectures.length} lectures` : "No lecture videos", textCount ? `${textCount} required ${textCount === 1 ? "text" : "texts"}` : "No required texts listed", prereqs.length ? `Prerequisites: ${prereqs.slice(0, 2).map((p) => (p.length > 60 ? `${p.slice(0, 57)}...` : p)).join("; ")}` : "No prerequisites listed", kept ? `${finished.size} finished` : null].filter(Boolean);
+  const facts = [`From ${credit.name}`, course.lectures.length ? `${course.lectures.length} lectures` : "No lecture videos", textCount ? `${textCount} required ${textCount === 1 ? "text" : "texts"}` : "No required texts listed", prereqs.length ? `Prerequisites: ${prereqs.slice(0, 2).map((p) => (p.length > 60 ? `${p.slice(0, 57)}...` : p)).join("; ")}` : "No prerequisites listed", kept ? `${finished.size} finished` : null].filter(Boolean);
   const whyHref = (start: boolean) => `/learn/courses/why?u=${encodeURIComponent(site.url)}&t=${encodeURIComponent(title)}${by ? `&by=${encodeURIComponent(by)}` : ""}${course.image ? `&img=${encodeURIComponent(course.image)}` : ""}${start ? "&go=start" : ""}`;
   const allDone = Boolean(kept && course.lectures.length && course.lectures.every((l) => finished.has(String(l.n))));
   const none = (what: string) => <p className="text-muted-foreground text-sm">{credit.name} lists no {what} for this course.</p>;
@@ -71,17 +73,23 @@ export default async function CoursePage({ searchParams }: { searchParams: Promi
     </div>
   );
 
+  const primary = kept
+    ? (next ? <Button asChild size="sm"><Link href={href(next.n)}>{finished.size ? "Continue" : "Start"}: Lecture {next.n}</Link></Button> : null)
+    : reason
+      ? <form action={browseAddAction}><input type="hidden" name="medium" value="course" /><input type="hidden" name="title" value={title} /><input type="hidden" name="url" value={site.url} />{by ? <input type="hidden" name="by" value={by} /> : null}{course.image ? <input type="hidden" name="image" value={course.image} /> : null}<LocalDay /><Button size="sm" name="go" value="start">Start the course</Button></form>
+      : <Button asChild size="sm"><Link href={whyHref(true)}>Start the course</Link></Button>;
+  const header = <ThingHeader back={kept ? "/learn" : "/learn/browse?m=course"} crumbs={kept ? shelfCrumbs(kept.way ?? "teaching") : browseCrumbs("course")} title={title} action={primary} />;
+
   return (
-    <CourseShell course={title} overview={courseHref(site.url, title)} lectures={lectures} current={null} toc={toc} on={kept ? "shelves" : "browse"}>
+    <CourseShell header={header} course={title} overview={courseHref(site.url, title)} lectures={lectures} current={null} toc={toc}>
       <header className="space-y-4">
-        <p className="text-muted-foreground text-sm"><Link href="/learn/browse?m=course" className="hover:underline">Courses</Link> · {credit.name}</p>
         <div className="flex flex-col gap-5 sm:flex-row">
           {course.image ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={course.image} alt="" className="aspect-video w-full rounded-lg border object-cover sm:w-56" />
           ) : null}
           <div className="min-w-0 space-y-2">
-            <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
+            <h1 id="page-title" className="text-3xl font-semibold tracking-tight">{title}</h1>
             {by ? <p className="text-muted-foreground">{by}</p> : null}
             <p className="text-muted-foreground text-sm">{facts.join(" · ")}</p>
             <div className="flex flex-wrap gap-2 pt-1">
@@ -116,7 +124,7 @@ export default async function CoursePage({ searchParams }: { searchParams: Promi
         </div>
       </header>
 
-      <section id="why" className="scroll-mt-6 rounded-lg border p-4">
+      <section id="why" className="scroll-mt-20 rounded-lg border p-4">
         {reason ? (
           <div className="space-y-3">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -140,7 +148,7 @@ export default async function CoursePage({ searchParams }: { searchParams: Promi
         )}
       </section>
 
-      <section id="course" className="scroll-mt-6">
+      <section id="course" className="scroll-mt-20">
         <SyllabusTabs tabs={OUTLINE.filter((o) => o.id !== "more" || outline.sections.more.length).map((o) => ({
           id: o.id, label: o.label,
           content: o.id === "about" ? (

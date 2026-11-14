@@ -17,7 +17,7 @@ test("a game moves from rest to practice with a lesson, keeps sessions, and a re
   await page.getByLabel("What it taught you").fill("Influence over territory: a stone's worth is where it stands.");
   await page.getByRole("button", { name: "Keep", exact: true }).click();
   await expect(page.getByText("Influence over territory")).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByText("My shelves · Practice")).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "Practice" })).toBeVisible();
 
   await page.getByLabel("Minutes").fill("30");
   await page.getByRole("button", { name: "Keep session" }).click();

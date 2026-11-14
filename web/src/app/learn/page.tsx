@@ -180,7 +180,7 @@ function Shelves({ view, items, all, open, removed, show, sort, starters, kept }
           <Note>Arranged by the ways of learning Aristotle names: teaching, dialectic, imitation and practice. Each item shows its medium.</Note>
           <Button asChild variant="ghost" size="sm"><Link href={all ? "/learn?filled=1" : "/learn"}>{all ? "Only filled shelves" : "All 20 shelves"}</Link></Button>
         </div>
-        <nav className="bg-background/95 sticky top-0 z-[5] -mx-1 flex flex-wrap items-center gap-2 px-1 py-2 backdrop-blur" aria-label="Ways of learning">
+        <nav className="bg-background/95 sticky top-[6.5rem] z-[5] md:top-14 -mx-1 flex flex-wrap items-center gap-2 px-1 py-2 backdrop-blur" aria-label="Ways of learning">
           {visible.map((s) => (
             <a key={s.w.id} href={`#${s.w.id}`} className="hover:bg-accent rounded-full border px-3 py-1 text-xs transition">{s.w.label} <span className="text-muted-foreground">{s.count}</span></a>
           ))}
@@ -192,7 +192,7 @@ function Shelves({ view, items, all, open, removed, show, sort, starters, kept }
         </nav>
       </div>
       {visible.map(({ w, books, sh, here }) => (
-        <details key={w.id} id={w.id} open className="group scroll-mt-16 space-y-4">
+        <details key={w.id} id={w.id} open className="group scroll-mt-40 space-y-4 md:scroll-mt-28">
           <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
             <span className="flex items-baseline gap-2"><h2 className="text-base font-semibold">{w.label}</h2><span className="text-muted-foreground text-xs group-open:hidden">Show</span></span>
             <Note>{w.about}</Note>

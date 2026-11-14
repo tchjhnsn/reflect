@@ -26,7 +26,8 @@ import { ideasNaming } from "@reflect/core/ideas";
 import { learnView } from "@/server/learn-store";
 import { listClaims } from "@/server/claims-store";
 import { publishedBy } from "@/server/published-store";
-import { LearnHeader } from "../../header";
+import { ThingHeader } from "@/components/headers";
+import { shelfCrumbs } from "../../crumbs";
 import {
   addItemSubjectsAction, addSessionAction, changeItemAction, editItemAction, keepItemClaimAction, removeItemAction, removeItemSubjectAction, removeSessionAction,
   setItemDatesAction, setItemFactsAction, setItemStanceAction, setTranscriptAction, unpublishQuoteFormAction,
@@ -94,9 +95,8 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
   const hidden = <input type="hidden" name="item" value={item.id} />;
   return (
     <main className={PAGE}>
-      <LearnHeader on="shelves" />
+      <ThingHeader back="/learn" crumbs={shelfCrumbs(place)} title={item.title} action={nextLecture ? <Button size="sm" asChild><Link href={`/learn/items/${item.id}/lectures/${nextLecture.n}`}>{finished.size || begun.size ? "Continue" : "Start"}: Lecture {nextLecture.n}</Link></Button> : undefined} />
       <div className="mt-6 space-y-6">
-        <p className="text-muted-foreground text-sm"><Link href={`/learn#${place}`} className="hover:underline">My shelves</Link> · {place === "leisure" ? "Rest and leisure" : WAYS.find((w) => w.id === place)!.label}</p>
         <header className="flex gap-4">
           {item.image ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -104,7 +104,7 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
           ) : null}
           <div className="min-w-0 space-y-1">
             <div className="flex flex-wrap items-center gap-2"><Badge variant="secondary">{m.label}</Badge>{item.tookPart ? <Badge variant="outline">Took part</Badge> : null}</div>
-            <h1 className="text-2xl font-semibold tracking-tight">{item.title}</h1>
+            <h1 id="page-title" className="text-2xl font-semibold tracking-tight">{item.title}</h1>
             {item.by ? <p className="text-muted-foreground">{item.by}</p> : null}
             {course ? <p className="text-muted-foreground text-sm">From {COURSE_SITES[course.site].name} · {lectures.length} lectures · {finished.size} finished · <Link href={`/learn/courses?u=${encodeURIComponent(course.url)}&t=${encodeURIComponent(item.title)}`} className="underline underline-offset-4">About the course and its syllabus</Link></p> : null}
             {course ? <p className="max-w-prose text-sm leading-relaxed"><span className="font-medium">Why I am learning this: </span>{reason ? <>{reason.cause.length > 220 ? `${reason.cause.slice(0, 217)}...` : reason.cause} <Link href={`/journal/w/${reason.workId}`} className="text-muted-foreground underline underline-offset-4">In your journal</Link></> : <Link href={`/learn/courses/why?u=${encodeURIComponent(course.url)}&t=${encodeURIComponent(item.title)}`} className="underline underline-offset-4">Write it</Link>}</p> : null}

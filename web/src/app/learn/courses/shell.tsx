@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { CheckIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
-import { LearnHeader } from "../header";
+import { TaskHeader } from "@/components/headers";
+import { Button } from "@/components/ui/button";
 
 export type ShellLecture = { n: number; title: string; href: string; done: boolean };
 export type ShellLink = { title: string; href: string };
@@ -42,16 +43,16 @@ function Nav({ course, overview, lectures, current }: { course: string; overview
  * in view, the page in the middle, and what is on the page at the right; on a phone the sidebar folds into a menu at
  * the top. Previous and next close every lecture.
  */
-export function CourseShell({ course, overview, lectures, current, toc, prev, next, on, children }: {
+export function CourseShell({ header, course, overview, lectures, current, toc, prev, next, children }: {
   course: string; overview: string; lectures: ShellLecture[]; current: number | null;
-  toc?: { id: string; label: string }[]; prev?: ShellLink | null; next?: ShellLink | null; on: "browse" | "shelves"; children: ReactNode;
+  toc?: { id: string; label: string }[]; prev?: ShellLink | null; next?: ShellLink | null; /** The page's header: the course's own (`ThingHeader`) or a lecture's (`lectureHeader`). */ header: ReactNode; children: ReactNode;
 }) {
   return (
     <main className={DOCS}>
-      <LearnHeader on={on} />
+      {header}
       <div className={`mt-6 grid gap-8 lg:grid-cols-[15rem_minmax(0,1fr)] ${toc?.length ? "xl:grid-cols-[15rem_minmax(0,1fr)_12rem]" : ""}`}>
         <aside className="hidden lg:block">
-          <div className="sticky top-6 -ml-2 max-h-[calc(100vh-3rem)] overflow-y-auto pr-2 pb-6"><Nav course={course} overview={overview} lectures={lectures} current={current} /></div>
+          <div className="sticky top-16 -ml-2 max-h-[calc(100vh-5rem)] overflow-y-auto pr-2 pb-6"><Nav course={course} overview={overview} lectures={lectures} current={current} /></div>
         </aside>
         <div className="min-w-0 space-y-8">
           <details className="group rounded-lg border lg:hidden">
@@ -81,7 +82,7 @@ export function CourseShell({ course, overview, lectures, current, toc, prev, ne
         </div>
         {toc?.length ? (
           <aside className="hidden xl:block">
-            <div className="sticky top-6 space-y-2 text-sm">
+            <div className="sticky top-16 space-y-2 text-sm">
               <p className="font-medium">On this page</p>
               <ul className="space-y-1.5">
                 {toc.map((t) => <li key={t.id}><a href={`#${t.id}`} className="text-muted-foreground hover:text-foreground">{t.label}</a></li>)}
@@ -91,5 +92,17 @@ export function CourseShell({ course, overview, lectures, current, toc, prev, ne
         ) : null}
       </div>
     </main>
+  );
+}
+
+/** A lecture's header: back to its course, the course's name and which lecture this is, and the previous and next lectures. */
+export function lectureHeader({ course, overview, at, of, prev, next }: { course: string; overview: string; at: number; of: number; prev?: ShellLink | null; next?: ShellLink | null }) {
+  return (
+    <TaskHeader back={{ href: overview, label: "Back to the course" }} title={course} position={`Lecture ${at} of ${of}`} right={
+      <>
+        {prev ? <Button asChild variant="ghost" size="icon" aria-label={`Previous: ${prev.title}`} title={prev.title}><Link href={prev.href}><ChevronLeftIcon /></Link></Button> : null}
+        {next ? <Button asChild variant="ghost" size="icon" aria-label={`Next: ${next.title}`} title={next.title}><Link href={next.href}><ChevronRightIcon /></Link></Button> : null}
+      </>
+    } />
   );
 }

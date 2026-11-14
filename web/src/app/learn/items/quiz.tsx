@@ -69,7 +69,7 @@ export function LectureQuiz({ item, unit, transcript, start }: { item: string; u
   const done = quiz ? quiz.checked.length === quiz.questions.length : false;
   const missing = quiz ? gaps(quiz.questions, quiz.checked) : [];
   return (
-    <section id="quiz" className="scroll-mt-6 space-y-4">
+    <section id="quiz" className="scroll-mt-20 space-y-4">
       <div className="space-y-1">
         <h2 className="text-xl font-semibold tracking-tight">Quiz yourself</h2>
         <p className="text-muted-foreground text-sm">Questions on what the lecture said and why, written by a model from its transcript. Answer from memory, then check. Only you see this, and it is not graded.</p>

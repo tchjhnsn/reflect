@@ -8,7 +8,8 @@ import { PAGE } from "@/components/page-header";
 import { requireUser } from "@/server/session";
 import { learnView } from "@/server/learn-store";
 import { isFilter, listBooks, openLibrary, PER, type BookSource, type Filter } from "@/server/browse";
-import { LearnHeader } from "../../header";
+import { ThingHeader } from "@/components/headers";
+import { browseCrumbs } from "../../crumbs";
 import { BookGrid } from "../../book-card";
 import { FilterMenu, SortMenu, type ListState } from "../../browse/list-menus";
 import { MoreBooks } from "../../browse/more-books";
@@ -43,7 +44,7 @@ export default async function AuthorPage({ params, searchParams }: { params: Pro
 
   return (
     <main className={PAGE}>
-      <LearnHeader on="browse" />
+      <ThingHeader back="/learn/browse?m=books" crumbs={browseCrumbs("books")} title={a.name} />
       <div className="mt-8 grid gap-8 md:grid-cols-[13rem_1fr]">
         <div className="mx-auto w-40 md:mx-0 md:w-full">
           <div className="bg-muted aspect-[4/5] overflow-hidden rounded-md border shadow-sm">
@@ -55,7 +56,7 @@ export default async function AuthorPage({ params, searchParams }: { params: Pro
         </div>
         <div className="min-w-0 space-y-4">
           <div className="space-y-1">
-            <h2 className="text-3xl leading-tight font-semibold tracking-tight">{a.name}</h2>
+            <h1 id="page-title" className="text-3xl leading-tight font-semibold tracking-tight">{a.name}</h1>
             {a.birth || a.death ? <p className="text-muted-foreground">{a.birth ?? "?"} – {a.death ?? ""}</p> : null}
           </div>
           {a.bio ? <Bio text={a.bio} /> : <p className="text-muted-foreground text-sm">The open library has no biography for this author yet.</p>}

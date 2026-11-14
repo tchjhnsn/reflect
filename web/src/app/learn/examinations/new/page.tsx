@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PAGE } from "@/components/page-header";
 import { requireUser } from "@/server/session";
-import { LearnHeader } from "../../header";
+import { TaskHeader } from "@/components/headers";
 import { createExaminationAction } from "../actions";
 import { reasonFor } from "@/server/learn-reason-store";
 
@@ -27,10 +27,9 @@ export default async function NewExaminationPage({ searchParams }: { searchParam
   const title = one(sp.t) || "This course";
   return (
     <main className={PAGE}>
-      <LearnHeader on="shelves" />
+      <TaskHeader back={{ href: `/learn/courses?u=${encodeURIComponent(site.url)}&t=${encodeURIComponent(title)}`, label: "Back to the course" }} title={title} position="Examination" />
       <div className="mt-6 max-w-2xl space-y-6">
         <header className="space-y-2">
-          <p className="text-muted-foreground text-sm"><Link href={`/learn/courses?u=${encodeURIComponent(site.url)}&t=${encodeURIComponent(title)}`} className="hover:underline">{title}</Link></p>
           <h1 className="text-3xl font-semibold tracking-tight">Put yourself under examination</h1>
           <p className="text-muted-foreground leading-relaxed">Say what you know from this course and will answer for. You then invite people to examine you, and you meet them in person. There is no grade: each examiner writes in their own words whether they attest that you know it, and that is kept with your record.</p>
         </header>
