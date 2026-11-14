@@ -23,6 +23,7 @@ import { searchBooks } from "@reflect/core/openlibrary";
 import { learnView } from "@/server/learn-store";
 import { highlightBooks } from "@/server/highlights";
 import { definitionsOf, lookupWord, type Definition } from "@reflect/core/wiktionary";
+import { lectureOf, lecturesOf } from "@/server/courses";
 
 const openLibrary = (url: string) => fetch(url, { headers: { "user-agent": "reflect-app" }, cache: "no-store" });
 const status = (v: FormDataEntryValue | null): BookStatus => ((BOOK_STATUS as readonly string[]).includes(String(v)) ? (String(v) as BookStatus) : "want");
@@ -469,4 +470,14 @@ export async function unpublishQuoteFormAction(form: FormData): Promise<void> {
   const user = await requireUser();
   await unpublishQuote(user.id, field(form, "id"));
   if (field(form, "item")) revalidatePath(`/learn/items/${field(form, "item")}`);
+}
+
+/** A lecture's recording, for playing it from a course's list of lectures without opening its page. */
+export async function lectureMediaAction(courseUrl: string, n: number): Promise<{ youtube: string | null; video: string | null; audio: string | null } | null> {
+  await requireUser();
+  const course = await lecturesOf(String(courseUrl));
+  const ref = course?.lectures.find((l) => l.n === Number(n));
+  if (!course || !ref) return null;
+  const l = await lectureOf(course.site, ref);
+  return { youtube: l?.youtube ?? ref.youtube, video: l?.video ?? null, audio: l?.audio ?? null };
 }

@@ -207,3 +207,34 @@ export async function courseInfo(raw: string, f: Fetch): Promise<CourseInfo | nu
   const syl = await f(`${c.url}pages/syllabus/`);
   return { ...c, ...ocwCourse(home), syllabus: syl ? ocwSyllabus(syl) : [], lectures: lectures?.lectures ?? [] };
 }
+
+/** A syllabus section that lists books to read: Texts, Readings, Textbook, Books. */
+export const isTextsHeading = (h: string): boolean => /^(required\s+)?(texts?|readings?|textbooks?|books?)\b/i.test(h.replace(/:$/, "").trim());
+
+export type TextCitation = { title: string; author: string | null; isbn: string | null };
+
+/**
+ * One line of a syllabus's texts read as a book to find: "Plato, Phaedo", "Browning, Christopher. Ordinary Men. New
+ * York: ...", a chapter "Barnes, Julian. "The Dream." In History of the World..." (the book it is in), or any line with
+ * an ISBN. Null for a heading such as "Course Packet:" or a line that is not a citation.
+ */
+export function textCitation(line: string): TextCitation | null {
+  const l = line.replace(/\s+/g, " ").trim();
+  if (!l || /:$/.test(l) || l.length > 400) return null;
+  const isbn = /ISBN(?:-1[03])?:?\s*([\d-]{10,17}X?)/i.exec(l)?.[1]?.replace(/-/g, "") ?? null;
+  const edited = /\bEdited by\b|\beds?\.\s/i.test(l);
+  // Last, First. Title. Publisher...
+  const mla = /^(?:The readings are assigned in:\s*)?([A-Z][\p{L}'’-]+(?: [A-Z][\p{L}'’-]+)?), ([A-Z][\p{L}.'’ -]{0,40}?)\. (.+)$/u.exec(l);
+  if (mla) {
+    const [, last, first, rest] = mla;
+    const author = `${first!.trim()} ${last}`;
+    const chapter = /^["“]/.test(rest!) ? /\bIn ([^.]+?)\.(?:\s|$)/.exec(rest!)?.[1] : null;
+    if (/^["“]/.test(rest!) && !chapter) return null;
+    const title = (chapter ?? /^(.+?)\.(?:\s|$)/.exec(rest!)?.[1] ?? rest!).replace(/["“”]/g, "").trim();
+    return title ? { title, author: chapter && edited ? null : author, isbn } : null;
+  }
+  // Author, Title
+  const plain = /^([A-Z][\p{L}.'’ -]{1,40}?), (.+)$/u.exec(l);
+  if (plain && plain[1]!.split(" ").length <= 4 && !/[.:;]/.test(plain[2]!.replace(/\.$/, ""))) return { title: plain[2]!.replace(/\.$/, "").trim(), author: plain[1]!.trim(), isbn };
+  return isbn ? { title: "", author: null, isbn } : null;
+}
