@@ -1,3 +1,4 @@
+import { kinSpace } from "@reflect/core/tile-spaces";
 import { incomeSummary, kindOf, type RecordFacts } from "@reflect/core/life";
 import { forLater, forNow, needsNow, parseRef, stemsOf, toEarn, type Job, type Suggestion } from "@reflect/core/work-browse";
 import { lifeActs, lifeRecords, type LifeAct, type LifeRecord } from "./life-store";
@@ -21,6 +22,7 @@ export type Workspace = {
   left: number | null;
   hours: number | null;
   learningHours: number | null;
+  careHours: number;
   items: LearnItem[];
   now: Suggestion[];
   later: Suggestion[];
@@ -37,7 +39,7 @@ export const jobOf = (r: LifeRecord): Job | null => {
 };
 
 export async function workspace(userId: string, today = new Date().toISOString().slice(0, 10)): Promise<Workspace> {
-  const [work, home, acts, items] = await Promise.all([lifeRecords(userId, "work"), lifeRecords(userId, "home"), lifeActs(userId), listItems(userId)]);
+  const [work, home, kin, acts, items] = await Promise.all([lifeRecords(userId, "work"), lifeRecords(userId, "home"), lifeRecords(userId, "kin"), lifeActs(userId), listItems(userId)]);
   const since = new Date(Date.parse(`${today}T00:00:00Z`) - 27 * 86400_000).toISOString().slice(0, 10);
   const minutes = await learningMinutes(userId, since);
   const wrote = acts.filter((a) => a.kind === "wrote");
@@ -85,6 +87,7 @@ export async function workspace(userId: string, today = new Date().toISOString()
     left,
     hours,
     learningHours: minutes ? Math.round((minutes / 60 / 4) * 10) / 10 : null,
+    careHours: kinSpace(kin, acts, today).careHours,
     items,
     now: forNow(all, { toEarn: left, hours, wanted: wantedJobs, stems }),
     later: forLater(all, { stems, wanted: wantedJobs }),
