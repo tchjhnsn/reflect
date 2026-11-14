@@ -15,8 +15,14 @@ test("browse courses, start one, and take its first lecture in Reflect", async (
   await page.waitForLoadState("networkidle");
   if (await card.getByRole("button", { name: "Start here" }).count()) await card.getByRole("button", { name: "Start here" }).click();
   else await card.getByRole("link", { name: "Open" }).click();
-  await expect(page.locator("#lectures")).toBeVisible({ timeout: 60_000 });
-  await page.locator("#lectures").getByRole("link", { name: "Course Introduction" }).click();
+  // Started, it opens the kept course with its lectures listed; opened, the course's page lists them in its sidebar.
+  await page.waitForURL(/\/learn\/(items|courses)/, { timeout: 60_000 });
+  await page.waitForLoadState("networkidle");
+  if (/\/learn\/items\//.test(page.url())) await page.locator("#lectures").getByRole("link", { name: "Course Introduction" }).click({ timeout: 60_000 });
+  else {
+    if (!(await page.getByRole("navigation", { name: "This course" }).filter({ visible: true }).count())) await page.locator("details summary").first().click();
+    await page.getByRole("navigation", { name: "This course" }).filter({ visible: true }).getByRole("link", { name: "Course Introduction" }).click({ timeout: 60_000 });
+  }
   await expect(page.getByRole("heading", { level: 1, name: "Course Introduction" })).toBeVisible({ timeout: 60_000 });
   await page.getByRole("button", { name: "Transcript" }).click();
   await expect(page.getByRole("button", { name: /^Chapter 1\./ })).toBeVisible();
@@ -29,17 +35,16 @@ test("browse courses, start one, and take its first lecture in Reflect", async (
   }
 });
 
-// A course's own page, explored before keeping it: its syllabus in tabs with its texts as books, a lecture played in
-// place from the list, and the lecture's page with its transcript closed until opened.
+// A course's own page, explored before keeping it: its syllabus in tabs with its texts as books, its lectures in the
+// course's sidebar, and a lecture's page with its transcript closed until opened.
 test("explore a course before keeping it", async ({ page }) => {
   test.setTimeout(240_000);
   await page.goto(`/learn/courses?u=${encodeURIComponent("https://oyc.yale.edu/history/hist-202")}`);
   await expect(page.getByRole("heading", { level: 1, name: /European Civilization/ })).toBeVisible({ timeout: 60_000 });
   await page.getByRole("tab", { name: "Required texts" }).click();
   await expect(page.getByRole("tabpanel").getByRole("link", { name: "Germinal" }).first()).toBeVisible();
-  await page.locator("#lectures li").nth(1).getByRole("button").first().click();
-  await expect(page.locator("#lectures iframe")).toBeVisible({ timeout: 60_000 });
-  await page.locator("#lectures li").nth(1).getByRole("link", { name: "Open" }).click();
+  if (!(await page.getByRole("navigation", { name: "This course" }).filter({ visible: true }).count())) await page.locator("details summary").first().click();
+  await page.getByRole("navigation", { name: "This course" }).filter({ visible: true }).getByRole("listitem").nth(1).getByRole("link").click();
   await expect(page.getByLabel("Search the transcript")).toHaveCount(0, { timeout: 60_000 });
   await page.getByRole("button", { name: "Transcript" }).click();
   await expect(page.getByRole("button", { name: /^Chapter 1\./ })).toBeVisible();

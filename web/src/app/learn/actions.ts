@@ -496,16 +496,6 @@ export async function unpublishQuoteFormAction(form: FormData): Promise<void> {
   if (field(form, "item")) revalidatePath(`/learn/items/${field(form, "item")}`);
 }
 
-/** A lecture's recording, for playing it from a course's list of lectures without opening its page. */
-export async function lectureMediaAction(courseUrl: string, n: number): Promise<{ youtube: string | null; video: string | null; audio: string | null } | null> {
-  await requireUser();
-  const course = await lecturesOf(String(courseUrl));
-  const ref = course?.lectures.find((l) => l.n === Number(n));
-  if (!course || !ref) return null;
-  const l = await lectureOf(course.site, ref);
-  return { youtube: l?.youtube ?? ref.youtube, video: l?.video ?? null, audio: l?.audio ?? null };
-}
-
 /** Writes a new quiz from a lecture's transcript for a course the person keeps, and keeps it. */
 export async function quizAction(itemId: string, unit: string): Promise<Quiz | { error: string }> {
   const user = await requireUser();

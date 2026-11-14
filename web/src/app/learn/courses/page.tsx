@@ -18,7 +18,6 @@ import { BookGrid } from "../book-card";
 import { LocalDay } from "../items/local-day";
 import { CourseShell, DOCS, courseHref, lectureHref } from "./shell";
 import { SyllabusTabs } from "./syllabus-tabs";
-import { LectureList } from "./lecture-list";
 
 export const metadata: Metadata = { title: "Course" };
 export const dynamic = "force-dynamic";
@@ -54,7 +53,7 @@ export default async function CoursePage({ searchParams }: { searchParams: Promi
   const unfound = texts.filter((t) => !t.book && !/:$/.test(t.line)).map((t) => t.line);
   const mine = new Map(view.books.filter((b) => b.catalog?.work).map((b) => [b.catalog!.work, b.status]));
   const lectures = course.lectures.map((l) => ({ n: l.n, title: l.title, href: href(l.n), done: finished.has(String(l.n)), youtube: l.youtube }));
-  const toc = [{ id: "why", label: "Why I am learning this" }, { id: "course", label: "About the course" }, lectures.length ? { id: "lectures", label: "Lectures" } : null].filter((t) => t !== null);
+  const toc = [{ id: "why", label: "Why I am learning this" }, { id: "course", label: "About the course" }];
   const prereqs = outline.sections.prerequisites.flatMap((p) => p.lines);
   const textCount = books.length + unfound.length;
   const facts = [course.lectures.length ? `${course.lectures.length} lectures` : "No lecture videos", textCount ? `${textCount} required ${textCount === 1 ? "text" : "texts"}` : "No required texts listed", prereqs.length ? `Prerequisites: ${prereqs.slice(0, 2).map((p) => (p.length > 60 ? `${p.slice(0, 57)}...` : p)).join("; ")}` : "No prerequisites listed", kept ? `${finished.size} finished` : null].filter(Boolean);
@@ -73,7 +72,7 @@ export default async function CoursePage({ searchParams }: { searchParams: Promi
   );
 
   return (
-    <CourseShell course={title} overview={courseHref(site.url, title)} lectures={lectures} current={null} toc={toc} sidebar={false} on={kept ? "shelves" : "browse"}>
+    <CourseShell course={title} overview={courseHref(site.url, title)} lectures={lectures} current={null} toc={toc} on={kept ? "shelves" : "browse"}>
       <header className="space-y-4">
         <p className="text-muted-foreground text-sm"><Link href="/learn/browse?m=course" className="hover:underline">Courses</Link> · {credit.name}</p>
         <div className="flex flex-col gap-5 sm:flex-row">
@@ -170,14 +169,6 @@ export default async function CoursePage({ searchParams }: { searchParams: Promi
           ) : outline.sections[o.id].length ? parts(outline.sections[o.id], outline.sections[o.id].length > 1 || o.id === "more") : none(o.id === "prerequisites" ? "prerequisites" : o.id === "assignments" ? "assignments" : "grading"),
         }))} />
       </section>
-
-      {lectures.length ? (
-        <section id="lectures" className="scroll-mt-6 space-y-3">
-          <h2 className="text-xl font-semibold tracking-tight">Lectures</h2>
-          <p className="text-muted-foreground text-sm">Open a lecture here to play it, or go to its page for the transcript{kept ? ", your notes and your place" : ""}.</p>
-          <LectureList courseUrl={site.url} rows={lectures} />
-        </section>
-      ) : null}
 
       <p className="text-muted-foreground text-xs">From {credit.name}, under the {credit.license} license. Reflect reads it from the publisher and keeps no copy.</p>
     </CourseShell>

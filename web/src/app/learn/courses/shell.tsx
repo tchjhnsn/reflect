@@ -42,25 +42,25 @@ function Nav({ course, overview, lectures, current }: { course: string; overview
  * in view, the page in the middle, and what is on the page at the right; on a phone the sidebar folds into a menu at
  * the top. Previous and next close every lecture.
  */
-export function CourseShell({ course, overview, lectures, current, toc, prev, next, on, sidebar = true, children }: {
+export function CourseShell({ course, overview, lectures, current, toc, prev, next, on, children }: {
   course: string; overview: string; lectures: ShellLecture[]; current: number | null;
-  toc?: { id: string; label: string }[]; prev?: ShellLink | null; next?: ShellLink | null; on: "browse" | "shelves"; /** False on the course's own page, which lists the lectures itself. */ sidebar?: boolean; children: ReactNode;
+  toc?: { id: string; label: string }[]; prev?: ShellLink | null; next?: ShellLink | null; on: "browse" | "shelves"; children: ReactNode;
 }) {
   return (
     <main className={DOCS}>
       <LearnHeader on={on} />
-      <div className={`mt-6 grid gap-8 ${sidebar ? `lg:grid-cols-[15rem_minmax(0,1fr)] ${toc?.length ? "xl:grid-cols-[15rem_minmax(0,1fr)_12rem]" : ""}` : toc?.length ? "lg:grid-cols-[minmax(0,1fr)_12rem]" : ""}`}>
-        {sidebar ? <aside className="hidden lg:block">
+      <div className={`mt-6 grid gap-8 lg:grid-cols-[15rem_minmax(0,1fr)] ${toc?.length ? "xl:grid-cols-[15rem_minmax(0,1fr)_12rem]" : ""}`}>
+        <aside className="hidden lg:block">
           <div className="sticky top-6 -ml-2 max-h-[calc(100vh-3rem)] overflow-y-auto pr-2 pb-6"><Nav course={course} overview={overview} lectures={lectures} current={current} /></div>
-        </aside> : null}
+        </aside>
         <div className="min-w-0 space-y-8">
-          {sidebar ? <details className="group rounded-lg border lg:hidden">
+          <details className="group rounded-lg border lg:hidden">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-sm font-medium [&::-webkit-details-marker]:hidden">
               <span className="truncate">{current === null ? course : `Lecture ${current} · ${course}`}</span>
               <ChevronDownIcon className="size-4 shrink-0 transition group-open:rotate-180" />
             </summary>
             <div className="max-h-[60vh] overflow-y-auto border-t p-2"><Nav course={course} overview={overview} lectures={lectures} current={current} /></div>
-          </details> : null}
+          </details>
           {children}
           {prev || next ? (
             <nav aria-label="Previous and next" className="grid gap-3 border-t pt-6 sm:grid-cols-2">
@@ -80,7 +80,7 @@ export function CourseShell({ course, overview, lectures, current, toc, prev, ne
           ) : null}
         </div>
         {toc?.length ? (
-          <aside className={sidebar ? "hidden xl:block" : "hidden lg:block"}>
+          <aside className="hidden xl:block">
             <div className="sticky top-6 space-y-2 text-sm">
               <p className="font-medium">On this page</p>
               <ul className="space-y-1.5">
