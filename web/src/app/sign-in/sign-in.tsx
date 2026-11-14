@@ -35,7 +35,11 @@ export function SignIn() {
     else {
       const next = oauthNext(result.data);
       if (next) window.location.href = next;
-      else router.replace("/");
+      else {
+        // Sent here from a page that needs an account (an invitation to examine someone): back to it after.
+        const back = new URLSearchParams(window.location.search).get("next");
+        router.replace(back && back.startsWith("/") && !back.startsWith("//") ? back : "/");
+      }
     }
   };
 

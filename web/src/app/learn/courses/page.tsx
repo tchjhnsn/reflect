@@ -8,6 +8,7 @@ import { requireUser } from "@/server/session";
 import { learnView } from "@/server/learn-store";
 import { listItems, listUnits } from "@/server/ways-store";
 import { courseInfoOf, syllabusTexts } from "@/server/courses";
+import { listExaminations } from "@/server/examination-store";
 import { LearnHeader } from "../header";
 import { browseAddAction } from "../actions";
 import { BookGrid } from "../book-card";
@@ -32,7 +33,7 @@ export default async function CoursePage({ searchParams }: { searchParams: Promi
   const sp = await searchParams;
   const site = courseSite(one(sp.u));
   if (!site) notFound();
-  const [course, items, view] = await Promise.all([courseInfoOf(site.url), listItems(user.id), learnView(user.id)]);
+  const [course, items, view, exams] = await Promise.all([courseInfoOf(site.url), listItems(user.id), learnView(user.id), listExaminations(user.id, site.url)]);
   const kept = items.find((i) => courseSite(i.url)?.url === site.url);
   const units = kept ? await listUnits(user.id, kept.id) : [];
   const finished = new Set(units.filter((u) => u.doneOn).map((u) => u.unit));
@@ -93,7 +94,11 @@ export default async function CoursePage({ searchParams }: { searchParams: Promi
                   <Button size="sm" variant="outline">Want to</Button>
                 </form>
               )}
+              <Button asChild size="sm" variant="outline"><Link href={`/learn/examinations/new?u=${encodeURIComponent(site.url)}&t=${encodeURIComponent(title)}`}>Put yourself under examination</Link></Button>
             </div>
+            {exams.length ? (
+              <p className="text-sm">Your examinations: {exams.map((x, i) => <span key={x.id}>{i ? ", " : ""}<Link href={`/learn/examinations/${x.id}`} className="underline underline-offset-4">{new Date(x.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} ({x.status === "open" ? "open" : `closed, ${x.examiners.filter((y) => y.attests).length} attested`})</Link></span>)}</p>
+            ) : null}
           </div>
         </div>
       </header>
