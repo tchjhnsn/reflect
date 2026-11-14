@@ -44,3 +44,22 @@ test("explore a course before keeping it", async ({ page }) => {
   await page.getByRole("button", { name: "Transcript" }).click();
   await expect(page.getByRole("button", { name: /^Chapter 1\./ })).toBeVisible();
 });
+
+// Putting yourself under examination on a course: what you answer for, then the link to invite examiners. Examiners
+// joining and attesting are covered by the store's test, since open mode has one person.
+test("put yourself under examination on a course", async ({ page }) => {
+  test.setTimeout(240_000);
+  await page.goto(`/learn/courses?u=${encodeURIComponent("https://oyc.yale.edu/philosophy/phil-176")}&t=Death`);
+  await page.getByRole("link", { name: "Put yourself under examination" }).click();
+  await expect(page.getByRole("heading", { name: "Put yourself under examination" })).toBeVisible({ timeout: 60_000 });
+  await page.waitForLoadState("networkidle");
+  await page.getByLabel("Your name, as your examiners will see it").fill("Test Candidate");
+  await page.getByLabel("What you will answer for").fill("Why death is bad for the one who dies.");
+  await page.getByRole("button", { name: "Put yourself under examination" }).click();
+  await expect(page.getByRole("heading", { name: "Your examination" })).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByLabel("Invitation link")).toHaveValue(/\/learn\/examine\//);
+  await expect(page.getByText("Why death is bad for the one who dies.")).toBeVisible();
+  const link = await page.getByLabel("Invitation link").inputValue();
+  await page.goto(link);
+  await expect(page.getByRole("heading", { name: "Your examination" })).toBeVisible({ timeout: 60_000 });
+});
